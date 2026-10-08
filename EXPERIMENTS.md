@@ -192,6 +192,46 @@ Bunların hepsi D-025'e girdi.
 
 ---
 
+## EXP-010 — MFCC: yayınlanmış çalışmanın sadık yeniden üretimi
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 (planlandı) |
+| DURUM | Planlandı — kod ve test hazır; Colab'da `notebooks/10_mfcc_baseline.ipynb` |
+| Araştırma sorusu | RQ1 tabanı — Makalenin tarifi ve protokolü bizim veride aynı AUC aralığını (≈0.65–0.77) veriyor mu? |
+| Beklenti (önceden) | Makale kuralıyla seçilen "en iyi" modeller 0.65–0.77 aralığında. 14 modelin medyanı bundan ~0.03–0.06 düşük (seçim iyimserliği). Fold SD ~0.05–0.10 [HYPOTHESIS] |
+| Veri | Orijinal `.m4a` → 22.05 kHz → `librosa.effects.trim(top_db=60)` → 44 özellik (D-031); 342 katılımcı, görev başına 342 (görev 4: 341) |
+| Split | Görev başına `StratifiedKFold(5, shuffle=True, random_state=42)`, katılımcı düzeyinde (makale) |
+| Model | 14 model (makale), varsayılan ayarlar; fold içinde StandardScaler → SMOTE |
+| Metrikler | Fold AUC ort ± SD, havuzlanmış OOF AUC + bootstrap CI, dengeli doğruluk, duyarlılık/özgüllük, doğruluk, F1 (makaleyle karşılaştırma için) |
+| Script / sonuç | `scripts/run_mfcc_baselines.py --exp EXP-010` → `reports/mfcc/EXP-010_mfcc.{md,json}`; OOF Drive `experiments/EXP-010_mfcc-paper/` |
+
+**Yorum kuralı (önceden):**
+- Aralığa ulaşılırsa: veri ve özellik tarifi makaleyle tutarlı.
+- Ulaşılamazsa: farkın olası nedenleri yazılır (bilinmeyen kırpma eşiği, 2 eksik katılımcı, kütüphane sürümleri). Bu da bir sonuçtur.
+- Her durumda sonuç bir **üst sınırdır** (D-028).
+
+---
+
+## EXP-011 — MFCC: aynı özellikler, bizim protokolümüz (RQ1 tabanı)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 (planlandı) |
+| DURUM | Planlandı — kod ve test hazır |
+| Araştırma sorusu | RQ1, RQ4, RQ5, RQ6 — Seçim iyimserliği ve tek-split şansı olmadan MFCC özellikleri ne kadar ayırıyor? Hangi görev, ve görev füzyonu yardımcı oluyor mu? |
+| Beklenti (önceden) | [HYPOTHESIS] Bu deneyde makalenin iki iyimserlik kaynağı yok (tek split, test sonucuna göre seçim). Beklenenler: LR görev başına EXP-010'un "en iyi"sinden düşük (~0.60–0.70); füzyon tek görevlerden yüksek; hepsi bağlam referansının (~0.93) belirgin altında; yaş referansı ~0.68 |
+| Veri | Harmonize önbellek (D-030) → 22.05 kHz → 44 özellik (D-031) |
+| Split | `outer_r0–r4` (D-029): 5 tekrar × 5 fold = 25 dış fold; iç 5-fold yalnız düzenlileştirme seçimi |
+| Model | **LR (birincil)**, SVM-RBF, GradientBoosting; sabit ızgaralar, `neg_log_loss`; sınıf/örnek ağırlığı |
+| Referans (aynı fold'lar) | Yaş, bağlam (saat + saat² + tarih), yaş + bağlam — sesi kullanmayan LR |
+| Metrikler | Fold AUC ort ± SD (25 fold) ve aralık; tekrar-ortalamalı OOF'tan havuzlanmış AUC + %95 bootstrap CI; dengeli doğruluk |
+| Script / sonuç | `scripts/run_mfcc_baselines.py --exp EXP-011` → `reports/mfcc/EXP-011_mfcc.{md,json}`; OOF Drive `experiments/EXP-011_mfcc-protocol/` |
+
+**Yorum kuralı (önceden):**
+- Derin modellerle karşılaştırma bu deneyin **LR füzyon** ve **LR görev başına** sonuçlarıyla yapılır. Yöntem: aynı fold'larda eşleştirilmiş ΔAUC (D-011).
+- Bütün sayılar üst sınırdır. Bağlamın etkisi değerlendirme aşamasında aynı OOF tahminleri üzerinde ölçülür (D-028).
+
+---
+
 ## Planlanan deneyler (ID'ler başlarken verilecek)
 
 **Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**
@@ -201,9 +241,9 @@ Bunların hepsi D-025'e girdi.
 | 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
 | 1b | ~~EXP-003, EXP-004/004b, SIM-001~~ → tamamlandı (kayıt bağlamı belgelendi) | RQ7 | — |
 | 1c | ~~Split dosyaları~~ → üretildi ve Colab'da aynı sha256 ile teyit edildi (`make_splits.py`, D-029; manifest `reports/splits/`) | altyapı | — |
-| 1d | **Harmonize ses önbelleği** (`build_audio_cache.py`, D-015, D-018, D-021, D-030) — kod ve test hazır; Colab'da `03_audio_cache.ipynb` ile üretilecek | altyapı | 1c |
-| 2 | MFCC sadık yeniden üretim (EXP-010) | RQ1 | 1d |
-| 3 | MFCC, ortak protokol (EXP-011) | RQ1, RQ4, RQ5 | 1c, 1d |
+| 1d | ~~Harmonize ses önbelleği~~ → Colab'da üretildi ve doğrulandı (D-030; rapor `reports/audio_cache/`) | altyapı | 1c |
+| 2 | **MFCC sadık yeniden üretim (EXP-010)** — kod ve test hazır (D-031) | RQ1 | 1d |
+| 3 | **MFCC, ortak protokol (EXP-011)** — kod ve test hazır (D-031) | RQ1, RQ4, RQ5, RQ6 | 1c, 1d |
 | 4 | Dondurulmuş gömme + lineer prob (6 backbone × 7 görev); gömmeler saklanır (D-028) | RQ3, RQ4, RQ5 | Ses önbelleği, smoke test |
 | 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
 | 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü Faz 2 sonunda yazılır | RQ2, RQ3 | 4 ve 5 tamam |
