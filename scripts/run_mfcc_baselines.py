@@ -101,7 +101,7 @@ def paper_models() -> dict:
     def ens_base():
         return [("gb", GradientBoostingClassifier(random_state=SEED)),
                 ("xgb", XGBClassifier(random_state=SEED, eval_metric="logloss", n_jobs=2)),
-                ("cat", CatBoostClassifier(random_state=SEED, verbose=0, thread_count=2)),
+                ("cat", CatBoostClassifier(random_state=SEED, verbose=0, thread_count=2, allow_writing_files=False)),
                 ("mlp", MLPClassifier(random_state=SEED))]
     return {
         "NaiveBayes": GaussianNB(), "KNN": KNeighborsClassifier(), "DecisionTree": DecisionTreeClassifier(random_state=SEED),
@@ -109,7 +109,7 @@ def paper_models() -> dict:
         "SVM": SVC(probability=True, random_state=SEED), "MLP": MLPClassifier(random_state=SEED),
         "RandomForest": RandomForestClassifier(random_state=SEED), "AdaBoost": AdaBoostClassifier(random_state=SEED),
         "GradientBoosting": GradientBoostingClassifier(random_state=SEED),
-        "CatBoost": CatBoostClassifier(random_state=SEED, verbose=0, thread_count=2),
+        "CatBoost": CatBoostClassifier(random_state=SEED, verbose=0, thread_count=2, allow_writing_files=False),
         "XGBoost": XGBClassifier(random_state=SEED, eval_metric="logloss", n_jobs=2),
         "VotingEnsemble": VotingClassifier(ens_base(), voting="soft"),
         "StackingEnsemble": StackingClassifier(ens_base(), final_estimator=LogisticRegression(max_iter=1000),
