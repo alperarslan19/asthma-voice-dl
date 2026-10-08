@@ -58,12 +58,15 @@ oof_predictions*.csv
 experiments/
 models/
 splits/*.csv
-# Sensitive clinical audit outputs
-results/
+# Sensitive clinical audit outputs (katılımcı ID'li veri-kalitesi listeleri içerir)
 reports/clinical_audit/
+# NOT: results/ artık izleniyor — results/registry.csv yalnız agrega metrik içerir (D-013);
+# katılımcı düzeyi tahminler experiments/ altında Drive'da kalır.
 # --- Python / Jupyter ---
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
-notebooks/01_data_audit.ipynb
+# NOT: notebooks/ izleniyor; commit'ten önce çıktıları temizle (Edit → Clear all outputs).
+participant_context.csv
+participant_session_times.csv

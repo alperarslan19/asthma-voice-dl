@@ -1,0 +1,247 @@
+{
+  "n_files": 2393,
+  "n_participants_with_audio": 342,
+  "encoding_chains": {
+    "files_per_chain": {
+      "apple": 1759,
+      "ffmpeg": 634
+    },
+    "participants_by_chain_mix": {
+      "apple+ffmpeg": 285,
+      "apple": 55,
+      "ffmpeg": 2
+    },
+    "by_chain": {
+      "apple": {
+        "audio_bit_rate": {
+          "count": 1759.0,
+          "mean": 184852.84,
+          "std": 1506.793,
+          "min": 181024.0,
+          "1%": 181771.64,
+          "50%": 184749.0,
+          "99%": 188232.04,
+          "max": 189120.0
+        },
+        "bandwidth_khz": {
+          "count": 1759.0,
+          "mean": 15.086,
+          "std": 4.212,
+          "min": 11.273,
+          "1%": 11.662,
+          "50%": 13.148,
+          "99%": 24.0,
+          "max": 24.0
+        },
+        "duration_s": {
+          "count": 1759.0,
+          "mean": 10.547,
+          "std": 0.283,
+          "min": 6.664,
+          "1%": 10.133,
+          "50%": 10.517,
+          "99%": 11.328,
+          "max": 13.611
+        },
+        "trail_silence_s": {
+          "count": 1759.0,
+          "mean": 0.238,
+          "std": 0.782,
+          "min": 0.0,
+          "1%": 0.0,
+          "50%": 0.03,
+          "99%": 6.034,
+          "max": 8.28
+        },
+        "noise_floor_db": {
+          "count": 1759.0,
+          "mean": -53.571,
+          "std": 7.99,
+          "min": -71.06,
+          "1%": -66.545,
+          "50%": -56.434,
+          "99%": -30.866,
+          "max": -24.308
+        },
+        "sample_rates": {
+          "48000": 1758,
+          "44100": 1
+        }
+      },
+      "ffmpeg": {
+        "audio_bit_rate": {
+          "count": 634.0,
+          "mean": 159792.421,
+          "std": 8713.787,
+          "min": 141185.0,
+          "1%": 143275.73,
+          "50%": 159179.5,
+          "99%": 184622.21,
+          "max": 196166.0
+        },
+        "bandwidth_khz": {
+          "count": 634.0,
+          "mean": 23.006,
+          "std": 3.185,
+          "min": 11.578,
+          "1%": 12.137,
+          "50%": 24.0,
+          "99%": 24.0,
+          "max": 24.0
+        },
+        "duration_s": {
+          "count": 634.0,
+          "mean": 9.879,
+          "std": 0.725,
+          "min": 4.352,
+          "1%": 7.174,
+          "50%": 10.069,
+          "99%": 11.193,
+          "max": 11.605
+        },
+        "trail_silence_s": {
+          "count": 634.0,
+          "mean": 0.171,
+          "std": 0.476,
+          "min": 0.0,
+          "1%": 0.0,
+          "50%": 0.1,
+          "99%": 0.803,
+          "max": 6.15
+        },
+        "noise_floor_db": {
+          "count": 634.0,
+          "mean": -53.801,
+          "std": 7.22,
+          "min": -69.81,
+          "1%": -66.878,
+          "50%": -55.966,
+          "99%": -32.478,
+          "max": -28.2
+        },
+        "sample_rates": {
+          "48000": 634
+        }
+      }
+    },
+    "ffmpeg_share_by_slot": {
+      "1": 0.178,
+      "2": 0.307,
+      "3": 0.193,
+      "4": 0.299,
+      "5": 0.319,
+      "6": 0.307,
+      "7": 0.251
+    },
+    "chain_vs_retake_fisher_p": 0.19662941284561533,
+    "min_bandwidth_khz": 11.2734375,
+    "min_bandwidth_khz_by_chain": {
+      "apple": 11.27,
+      "ffmpeg": 11.58
+    },
+    "recommended_lowpass_khz": 11.0
+  },
+  "date_checks": {
+    "n_participants_file_vs_csv_date_differ": 4,
+    "their_labels": {
+      "asthma": 4
+    },
+    "delta_days": [
+      -30,
+      1,
+      5,
+      182
+    ],
+    "n_csv_date_missing_filled_from_file": 1,
+    "n_with_audio_but_no_date": 1
+  },
+  "start_hour_by_label": {
+    "healthy": {
+      "n": 58,
+      "median": 15.158333333333333,
+      "q25": 13.866666666666667,
+      "q75": 16.454166666666666,
+      "frac_before_noon": 0.20689655172413793,
+      "min": 10.233333333333333,
+      "max": 20.85
+    },
+    "asthma": {
+      "n": 282,
+      "median": 11.091666666666667,
+      "q25": 10.220833333333333,
+      "q75": 12.55,
+      "frac_before_noon": 0.6950354609929078,
+      "min": 8.8,
+      "max": 20.066666666666666
+    }
+  },
+  "n_with_start_hour": 340,
+  "design_balance": [
+    {
+      "design": "E1  tam kohort",
+      "n_asthma": 283,
+      "n_healthy": 59,
+      "pairs": 16697,
+      "hour_auc": 0.158,
+      "date_auc": 0.808,
+      "age_auc": 0.681,
+      "halfwidth_95": 0.069,
+      "p_above_0_5": 1.0
+    },
+    {
+      "design": "E1h tam kohort + aynı 1 saat dilimi",
+      "n_asthma": 208,
+      "n_healthy": 51,
+      "pairs": 1399,
+      "hour_auc": 0.422,
+      "date_auc": 0.823,
+      "age_auc": 0.708,
+      "halfwidth_95": 0.094,
+      "p_above_0_5": 1.0
+    },
+    {
+      "design": "E2  zaman penceresi",
+      "n_asthma": 98,
+      "n_healthy": 57,
+      "pairs": 5586,
+      "hour_auc": 0.125,
+      "date_auc": 0.436,
+      "age_auc": 0.671,
+      "halfwidth_95": 0.079,
+      "p_above_0_5": 1.0
+    },
+    {
+      "design": "E2h zaman penceresi + aynı 1 saat dilimi",
+      "n_asthma": 65,
+      "n_healthy": 50,
+      "pairs": 395,
+      "hour_auc": 0.378,
+      "date_auc": 0.375,
+      "age_auc": 0.704,
+      "halfwidth_95": 0.125,
+      "p_above_0_5": 1.0
+    },
+    {
+      "design": "E3  aynı gün",
+      "n_asthma": 39,
+      "n_healthy": 52,
+      "pairs": 177,
+      "hour_auc": 0.103,
+      "date_auc": 0.5,
+      "age_auc": 0.711,
+      "halfwidth_95": 0.121,
+      "p_above_0_5": 1.0
+    },
+    {
+      "design": "E3h aynı gün + aynı 1 saat dilimi",
+      "n_asthma": 9,
+      "n_healthy": 14,
+      "pairs": 14,
+      "hour_auc": 0.214,
+      "date_auc": 0.5,
+      "age_auc": 0.929,
+      "halfwidth_95": 0.25,
+      "p_above_0_5": 0.936
+    }
+  ]
+}

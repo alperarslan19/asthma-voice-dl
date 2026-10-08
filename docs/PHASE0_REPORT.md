@@ -4,9 +4,9 @@
 |---|---|
 | Tarih | 2026-10-08 |
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
-| Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Henüz denetlenmedi** — `soundData` bu oturumda yok; `scripts/audit_audio.py` hazır ve testli. |
+| Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Literatür, klinik denetim, girdi sözleşmeleri, protokol, zaman stratejisi ve altyapı tamam; ses denetimi, eşleme doğrulaması ve MFCC baseline bekliyor |
-| Son güncelleme | 2026-10-08 (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-08 (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -19,6 +19,8 @@ Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** b
 3. **"%82 doğruluk" çoğunluk sınıfı seviyesinde.** 284/344 = **0.826**. Yayınlanmış en iyi model (gelecek, Voting) doğruluk 0.820, duyarlılık 0.933, özgüllük 0.283 → **dengeli doğruluk ≈ 0.61**. [FACT] Bu yüzden doğruluk tek başına raporlanmayacak. [DECISION]
 4. **"STFT mi waveform mu?" pretrained modeller için serbest bir seçim değil.** PANNs, BEATs ve WavLM'nin üçü de API'de **ham dalga formu** alır ve temsili *kendi içinde* üretir (PANNs: STFT→64 bantlı log-Mel; BEATs: 128 bantlı Kaldi fbank; WavLM: öğrenilmiş CNN). Bizim işimiz doğru sampling rate'i ve modelin kendi frontend'ini kullanmak; kendi STFT'mizi hesaplayıp vermek ön-eğitimli ağırlıklarla uyumsuzluk yaratır. [FROM OFFICIAL DOCS] Doğrulanmış tuzaklar: CNN10 yalnızca **32 kHz** sürümüyle var; WavLM **Base+ normalizasyon yapmaz, Large yapar**; PANNs modeli `train()` modunda **SpecAugment'i kendiliğinden uygular**.
 5. **Eşleme kuralı veri ekibinden geldi.** Dosyalar `<ID>_<slot>.m4a`; 1 = aaa, 2 = araba, 3 = ana, 4 = ordu, 5 = gelecek, 6 = titiz, 7 = ünlem (düzeltilmiş bildirim). Son dosya 101344_7 → 101345–101348'in sesi yok, birincil kohort 344 (D-002). Ses denetimi ve kısa bir dinleme teyidi bitmeden model eğitimine geçilmeyecek. [FROM DATA TEAM + DECISION]
+6. **Ses denetimi (4. tur).** 2 393 dosya; hepsi `.m4a` AAC-LC mono, biri dışında 48 kHz; kopya yok, konum etiketi yok. **Tarih dengesizliği dosya zaman damgalarıyla doğrulandı.** **Yeni confounder: günün saati.** Hastalar sağlıklılardan belirgin biçimde daha erken saatte kaydedilmiş (AUC 0.13–0.17). Dosyaların %27'si ayrı bir FFmpeg zincirinden geçmiş. Ses işleme yalnız teknik farkları giderebilir; tarih, saat ve hasta profili sesin kendisinde (Bölüm 6.8, D-021). [FACT]
+7. **Kayıt bağlamı (5. tur, EXP-003).** Sesi hiç kullanmadan **tarih + saat etiketi AUC 0.931 ± 0.032 ile ele veriyor**; saat tek başına 0.841. Sağlıklılar çoğunlukla öğleden sonra (medyan 15:10), hastalar sabah (medyan 11:05) kaydedilmiş. Zaman penceresi saati kontrol etmiyor (saat orada 0.873). Bu yüzden birincil soru, ses modeli sonuçları görülmeden önce değiştirildi: **"ses, kayıt bağlamı ve yaşın ötesinde astım bilgisi taşıyor mu?"** (D-023, Bölüm 6.9). [FACT + DECISION]
 
 ---
 
@@ -148,25 +150,25 @@ ID numarası kayıt sırasıyla artıyor (Spearman ρ = 0.985 ile tarih) — yan
 
 **Yorum:** Zaman-örtüşen alt kohortta sigara daha güçlü bir ayırıcı (0.653; tam kohortta 0.593) — çünkü erken dönemde kaydedilen hastalarda aktif içici oranı düşük (%25; geç dönem hastalarında %37, sağlıklılarda %49). Alt kohort zamanı kontrol eder ama başka confounder'ları büyütebilir. [FACT/INFERENCE] Bir ses modelinin "işe yaradığını" söyleyebilmek için en az (a) yaş-only baseline'ı aşması, (b) zaman-örtüşen alt kohortta da çalışması ve (c) yaşın ötesinde bilgi taşıdığını göstermesi gerekir. [DECISION] Fold'lar arası AUC yayılımı (0.51–0.83) tek bir fold sonucuna neden güvenilemeyeceğini somut olarak gösteriyor. [FACT]
 
-### 2.3 Ses verisi (bekliyor — `scripts/audit_audio.py`)
+### 2.3 Ses verisi — denetim sonuçları (Colab, 2026-10-08)
 
-**Veri ekibinin bildirdikleri [FROM DATA TEAM]:** iPhone 14, ağızdan 10 cm, tüm kayıtlar aynı yerde; mono; 48 kHz (teyit edildi); `.m4a` (düzeltilmiş bildirim); adlandırma `<ID>_<slot>.m4a`; son dosya `101344_7.m4a`; toplam 344 katılımcı. Makaledeki toplam (2 408 kayıt, 401 dk) 344 × 7 ve ~10 s/kayıt ile tutarlı. [FACT] Hepsi denetimle doğrulanacak. [NEEDS VERIFICATION]
+| Kontrol | Sonuç | Etiket |
+|---|---|---|
+| Dosya sayısı | **2 393** (beklenen 344 × 7 = 2 408; makale de 2 408 diyor) | [FACT] |
+| Sesi hiç olmayan | **101043** (astım), **101149** (sağlıklı, demografisi de yok), 101345–101348 (sağlıklı) | [FACT] |
+| Eksik tek kayıt | **101244** (astım): slot 4 (ordu) yok | [FACT] |
+| Sesli katılımcı | **342 = 283 astım / 59 sağlıklı**; 341'inde 7/7 kayıt | [FACT] |
+| Format | Hepsi `.m4a`, AAC-LC, mono; 2 392 dosya 48 kHz, **1 dosya 44.1 kHz** (astım, geç dönem) | [FACT] |
+| Bitrate | 141–196 kbps (medyan 184) | [FACT] |
+| Etkin bant genişliği | İki tepeli: medyan 13.5 kHz, ≥%5'i 24 kHz, en düşük 11.3 kHz | [FACT] |
+| Süre | Medyan 10.5 s (%1: 8.4 s, en kısa 4.4 s, en uzun 13.6 s) | [FACT] |
+| Kodlama zinciri | 1 759 Apple (`iso5`, Core Media, zaman damgalı) / **634 FFmpeg** (`Lavf59.16.100`, zaman damgasız) | [FACT] |
+| Dosya tarihi ↔ CSV tarihi | Apple dosyalarında **%98.7 aynı gün** (1 754 dosya); birkaç aykırı (−30 / +182 gün) | [FACT] |
+| Kopyalar | Birebir kopya yok; yakın kopya yok (katılımcılar arası en yüksek parmak izi korelasyonu 0.51) | [FACT] |
+| Gizlilik | Konum etiketi yok | [FACT] |
+| Dinleme teyidi | 21 kayıt (her slottan 3) eşlemeyle uyumlu; 101042 ve 101050 farklı kişiler | [FROM USER] |
 
-Script, Colab'da çalıştığında şunları ölçecek:
-
-| Ölçüm | Neden |
-|---|---|
-| Dosya sayısı (beklenen 2 408), uzantı, kapsayıcı, codec, bitrate, SR, kanal, süre | Format tekdüzeliği; "48 kHz mono `.m4a`" bildiriminin doğrulanması |
-| Etkin bant genişliği (kayıplı kodlayıcının alçak geçiren kesimi) | PANNs-32k 14 kHz'e kadar bakar; kesimin yeri ve dönemler arası sabitliği |
-| Meta veri etiketleri: iOS sürümü, kodlayıcı, cihaz modeli, marka | Kayıt zinciri zamanla değişti mi? (zamansal confounder'ın en olası akustik yolu) |
-| Dosya içi kayıt zamanı ↔ CSV tarihi | Tarihin bağımsız doğrulanması; CSV'de tarihi eksik 3 sağlıklının tarihi |
-| Konum etiketi var/yok (değer **yazılmaz**) | Gizlilik |
-| Katılımcı × slot eşlemesi: OK / EKSİK / ÇOKLU; dosyası hiç olmayanlar | Eşleme tablosu |
-| Dosya hash'i, çözülmüş PCM hash'i, spektro-zamansal parmak izi | Birebir ve yakın kopya (duplicate leakage) |
-| Baş/son sessizlik, gürültü tabanı, konuşma seviyesi, SNR vekili, tepe, kırpılma | Kayıt koşulu ölçümleri |
-| Tüm bunların etiketle ve **yalnız hastalarda** kayıt dönemiyle ilişkisi | Etiket sabitken dönemi ayıran bir ölçüm = kayıt koşulları değişmiş |
-
-Script, kendi kendine yeten bir testle (`tests/test_audit_audio.py`) doğrulandı: sahte katılımcılar ve bilerek hatalar konmuş sahte ses dosyaları üretir. Yakalanan tuzaklar: eksik dosya, aynı slot için iki uzantı, video akışlı mp4, kalıba uymayan adlar, dosyası olmayan katılımcı, tarihi kaymış dosya, CSV'de tarihi olmayan ama dosyada olan katılımcı, konum etiketi (değeri hiçbir çıktıda yok), geç dönemde farklı iOS sürümü + yüksek gürültü (dönemle p ≈ 10⁻⁵¹), geç dönemde düşük bitrate (bant genişliği 21.3 → 18.1 kHz). Testler script'teki iki gerçek hatayı da yakaladı (meta veri sütunlarının eşleme tablosuna taşınmaması; pandas'ta `df.take`'in sütun değil metot olması). [FACT]
+Makaledeki 2 408 kayıtla aradaki 15 dosyalık fark (101043 ve 101149'un 7'şer kaydı + 101244'ün 1 kaydı) veri ekibine sorulacak. Kayıt koşullarının etiket ve dönemle ilişkisinin yorumu Bölüm 6.7'de; ölçüm yöntemi `scripts/audit_audio.py`'nin başındaki açıklamada ve `tests/test_audit_audio.py`'de.
 
 ---
 
@@ -184,7 +186,7 @@ Script, kendi kendine yeten bir testle (`tests/test_audit_audio.py`) doğruland�
 | 6 | titiz | `101001_6.m4a` |
 | 7 | ünlem | `101001_7.m4a` |
 
-İlk bildirimdeki slot 2/3 çelişkisi veri ekibinin düzeltmesiyle giderildi. Yine de her slottan 3 kayıt dinlenerek kısa bir teyit yapılır (~5 dk): yanlış bir eşleme RQ4/RQ5'i ve makaleyle görev bazlı karşılaştırmayı sessizce bozar. `configs/slot_task_map.yaml` teyitten sonra `confirmed_by_listening` olur. [DECISION, D-019]
+İlk bildirimdeki slot 2/3 çelişkisi veri ekibinin düzeltmesiyle giderildi. Her slottan 3 kayıt dinlendi ve eşlemeyle uyumlu bulundu → `configs/slot_task_map.yaml`: `confirmed_by_listening`. [FROM USER, D-019]
 
 **CSV'deki `UUID_k` alanı ne olacak?** UUID = veri toplama sistemindeki form alanı; `k` = muhtemelen kabul edilen denemenin sırası. [HYPOTHESIS] Dışa aktarılan dosyanın hangi denemeye karşılık geldiği dosya adından anlaşılmıyor. `k > 0` oranı gruba göre farklı (astım %48.9, sağlıklı %34.4; p = 0.038) → yalnız ikincil analizde değişken; modele girdi değil.
 
@@ -392,6 +394,104 @@ E1 her zaman raporlanır ama **başlık sayısı E2'dir**; E1 − E2 farkı ayr�
 - Veri ekibine: Nisan sonrası kaydedilmiş sağlıklı var mı?
 - Aynı protokolle (aynı telefon, oda, uygulama) yeni 20–30 sağlıklı ve birkaç hasta kaydı → **zamansal dış doğrulama seti**. Modelin özgüllüğünü yeni koşullarda ölçmenin tek yolu budur.
 
+### 6.7 Ses denetiminin stratejiye kattıkları (2026-10-08, 4. tur)
+
+1. **Tarih dengesizliği gerçek, CSV yanılsaması değil.** Apple zincirindeki 1 754 dosyada dosya içi kayıt tarihi, CSV tarihiyle %98.7 oranında aynı gün. Bu, sağlıklıların Apple dosyalarının **en az %92'sinin (271/293)** CSV tarihiyle aynı gün kaydedildiği anlamına geliyor. Yani sağlıklılar gerçekten Ocak–Nisan 2024'te kaydedilmiş. [FACT]
+2. **Yeni confounder: günün saati.** Zaman damgası olan dosyalarda hastalar, sağlıklılardan belirgin biçimde daha erken saatte kaydedilmiş. Saat → etiket AUC'si görev başına 0.13–0.17 (n = 233–281 dosya); yani hasta–sağlıklı çiftlerinin yaklaşık %85'inde hasta daha erken saatte kaydedilmiş. Çoklu karşılaştırma sınırı yaklaşık 0.33, bu değerler onun çok dışında. [FACT] Günün saati sesi iki yoldan etkileyebilir [INFERENCE]:
+   - *fizyolojik:* sabah sesi, gün içinde ses yorgunluğu, astım semptomlarının sabaha karşı ağırlaşması;
+   - *ortam:* klinik yoğunluğu, gürültü.
+   Tarih gibi bu da **tasarımdan gelen** bir confounder'dır.
+3. **İki kodlama zinciri var.**
+   - 1 759 dosya doğrudan Apple kaydı: marka `iso5`, "Core Media Audio", zaman damgalı.
+   - 634 dosya FFmpeg'den geçmiş: `Lavf59.16.100`, marka `M4A `, zaman damgasız.
+   Zincir etiketle ilişkili değil (FFmpeg oranı sağlıklı %29, hasta %26; p = 0.22), ama hastalarda dönemle ilişkili (erken %34, geç %21; p = 6×10⁻¹⁰). [FACT] FFmpeg'in yalnız kapsayıcıyı mı değiştirdiği yoksa sesi yeniden mi kodladığı henüz bilinmiyor. [NEEDS VERIFICATION — bitrate ve bant genişliğinin zincire göre dağılımı gösterecek]
+4. **Bant genişliği iki tepeli.** Medyan 13.5 kHz; dosyaların en az %5'i 24 kHz (hiç kesim yok); en düşük 11.3 kHz. Muhtemelen zincire bağlı. [HYPOTHESIS]
+5. **Prosedür farkları (orta düzey).** Çoklu karşılaştırma düzeltmesinden sonra:
+   - *etikete göre:* yalnız süre (slot 4, AUC 0.34) sınırı aşıyor; sağlıklıların kayıtları biraz daha uzun.
+   - *hastalarda döneme göre:* süre, baş/son sessizlik ve saat (AUC 0.35–0.36 / 0.63–0.64) sınırı aşıyor; gürültü tabanı sınırda (0.37); bitrate ve bant genişliği aşmıyor.
+   Şans sınırları (Bonferroni, 84 test) etiket için ≈ 0.36/0.64, dönem için ≈ 0.38/0.62. [INFERENCE] Yani zamanla değişen şeyler daha çok **kayıt prosedürü** (ne zaman başlatıp durdurulduğu, günün hangi saati), kodlayıcı değil.
+
+**Strateji güncellemesi:** Günün saati E1–E3'e ek bir kontrol gerektirir (D-022): saat-only baseline (EXP-003), aynı gün tasarımının "aynı gün + aynı yarım gün" sürümü (sayılar yeterliyse) ve saate göre alt grup performansı. Saat yalnız Apple zincirindeki dosyalarda var (~%73); FFmpeg zincirindeki katılımcılar için bilinmiyor.
+
+### 6.8 "Sesi temizleyerek ya da değiştirerek bu sorunu çözebilir miyiz?"
+
+**Kısa cevap: kısmen.** Ses işleme, yalnızca **teknik ve bilinen** farkları giderebilir; işe yarayıp yaramadığı da **ölçülerek** gösterilmelidir. Elimizdeki en güçlü confounder'lar (tarih, günün saati, hasta profili) teknik değil, sesin kendisinde yaşıyor; hiçbir filtre onları gideremez.
+
+| Fark kanalı | Nerede yaşıyor | Ses işleme giderir mi? |
+|---|---|---|
+| Dosya meta verisi (iOS/kodlayıcı adı, marka, zaman damgası) | Dosya başlığında | **Zaten sorun değil:** modele yalnız çözülmüş ses örnekleri gider, etiketler atılır (D-018) |
+| Kodlayıcının bant genişliği kesimi (11–24 kHz) | Seste, ~11 kHz üstünde | **Evet:** tüm dosyaları en düşük kesimin altından alçak geçiren filtreyle eşitlemek. 16 kHz modellerde resample zaten 8 kHz'te keser; sorun yalnız 32 kHz PANNs yolunda |
+| Sampling rate farkı (1 dosya 44.1 kHz) | Seste | **Evet:** ortak SR'ye resample |
+| Baş/son sessizlik, kaydı başlatma/durdurma alışkanlığı | Seste, konuşma dışında | **Evet:** kenar kırpma |
+| Durağan oda gürültüsü (uğultu, klima) | Seste, konuşmanın altında da | **Kısmen:** eğitimde gürültü karıştırma (değişmezlik öğretir); gürültü giderme önerilmez |
+| AAC sıkıştırma izleri (konuşma bandında) | Seste | **Hayır:** geri alınamaz; yeniden kodlama üstüne yeni iz ekler |
+| Oda yankısı, mikrofon açısı/mesafesi | Sesin "rengi" | **Güvenilir biçimde hayır** |
+| Günün saati (sabah sesi, yorgunluk, astım ritmi) | Sesin kendisinde (fizyoloji) | **Hayır** |
+| Hasta profili kayması (tedavi basamağı, SFT) | Sesin kendisinde | **Hayır** |
+
+**Önerilen üç fikrin değerlendirmesi:**
+
+1. *"Hepsini aynı DAW'dan export etmek, iOS izi kalmasın."* iOS izi dosyanın **meta verisinde**; model onu hiç görmüyor. Modelin gördüğü örneklerdeki izler (bant genişliği, sıkıştırma artefaktı) ise export ile silinmez. Kayıplı export üstüne yeni bir sıkıştırma katmanı ekler; kayıpsız export (WAV) ise bizim çözme zincirimizin aynısıdır. Fikir doğru yöne bakıyor, ama iz meta veride değil örneklerde, ve onun doğru karşılığı **bant sınırlama + ortak SR**.
+2. *"Gürültüyü temizleyip hepsine aynı arka planı eklemek."* Varsayılan olarak önerilmez, üç nedenle:
+   - (a) Gürültü gidericiler "temiz konuşma" için eğitilmiştir. Nefesli ses, hava türbülansı ve hırıltı gibi **astımla ilişkili olabilecek** bileşenleri de gürültü sayıp silebilirler. [INFERENCE]
+   - (b) Gidericinin çıktısı girişteki gürültünün türüne ve SNR'ye bağlıdır. Farklı koşullarda farklı artefakt ("musical noise") üretir, yani confounder'ı silmez, şeklini değiştirir. [INFERENCE]
+   - (c) Geri dönüşsüz bir işlemdir. Sonra performans düşük çıkarsa "sinyal mi yoktu, yoksa biz mi sildik?" ayrılamaz.
+3. *"Hepsine aynı arka plan gürültüsünü eklemek."* Bu bir **maskeleme**dir. Ancak eklenen gürültü her kaydın kendi gürültüsünden yüksekse farkları örter; bunun bedeli herkes için SNR kaybıdır. Konuşma bandındaki farklara (yankı, mesafe, saat) da dokunmaz. Daha iyi bir sürüm, gürültüyü **yalnız eğitimde ve rastgele** karıştırmaktır (Boll ve ark.): model arka plana güvenmemeyi öğrenir, test verisi ise değişmez. Bu D-016 kapsamında bir ablasyon olarak denenecek.
+
+**Bunun yerine yapacağımız (D-021):** kayıpsız çözme (meta veri atılır) → ortak SR → 32 kHz yolu için ~11 kHz alçak geçiren filtre (kesin değer envanterden seçilecek) → kenar kırpma → tepe normalizasyonu. Gürültü giderme yok, DAW/kayıplı export yok.
+
+**İşe yaradığını nasıl ölçeceğiz?** Elimizde mükemmel bir ölçü çubuğu var. Kodlama zinciri (Apple / FFmpeg) **bilinen, teknik** ve iki grupta da bulunan bir etiket. Harmonizasyondan önce ve sonra bir **"zincir probu"** çalıştırılacak: ses gömmelerinden zincir tahmin edilebiliyor mu? Önce tahmin edilebiliyor, sonra ≈ 0.5 ise harmonizasyon teknik kanalı kapatmış demektir. Aynı ölçüm hastalarda dönem probu (D-020) için de yapılacak. Kanıt yoksa "temizledik" denmeyecek.
+
+### 6.9 Kayıt bağlamı analizi (EXP-003) ve revize birincil test (D-023) — 5. tur
+
+**Kodlama zincirleri.** Zincir katılımcı düzeyinde değil, **dosya düzeyinde** karışık: 285 katılımcının kayıtlarında iki zincir birlikte var, 55'inde yalnız Apple, 2'sinde yalnız FFmpeg. [FACT] FFmpeg dosyaları yalnızca yeniden paketlenmemiş, **yeniden kodlanmış**: bitrate medyanı 159 kbps (Apple 185), bant genişliği neredeyse hep 24 kHz (Apple'da çoğunlukla 12–14), süre biraz daha kısa (10.1 / 10.5 s). [FACT] Zincir yeniden deneme numarasıyla ilişkili değil (p = 0.20); slot 1 ve 3'te biraz daha az. Mekanizma bilinmiyor; muhtemelen iki ayrı kayıt/yükleme yolu var. [HYPOTHESIS → veri ekibine soru] En düşük kodlayıcı kesimi 11.27 kHz → **alçak geçiren kesim 11.0 kHz** (D-021).
+
+**Günün saati — veri setinin en güçlü confounder'ı.** Seans başlangıç saati 340/342 katılımcıda biliniyor; zincir dosya düzeyinde karıştığı için neredeyse herkesin en az bir zaman damgalı dosyası var.
+
+| | Seans başlangıcı (medyan, IQR) | Öğleden önce |
+|---|---|---|
+| Astım (n = 282) | 11:05 (10:13–12:33) | %70 |
+| Sağlıklı (n = 58) | 15:10 (13:52–16:27) | %21 |
+
+**EXP-003 — sesi kullanmayan bağlam baseline'ları** (lojistik regresyon, 5-fold × 20, ort. ± SD):
+
+| Özellik | Ses kohortu (282/58) | Zaman penceresi (97/57) |
+|---|---|---|
+| Saat | 0.841 ± 0.061 | **0.873 ± 0.053** |
+| Tarih | 0.806 ± 0.055 | 0.558 ± 0.118 |
+| **Saat + tarih** | **0.931 ± 0.032** | 0.881 ± 0.055 |
+| Yaş | 0.681 ± 0.076 | 0.671 ± 0.080 |
+| Yaş + saat + tarih | 0.933 ± 0.034 | 0.908 ± 0.044 |
+
+Yalnız öğleden sonra kayıtlarına bakmak da yetmiyor: orada saat 0.767, tarih 0.862 ile ayırıyor. Sağlıklılar öğleden sonranın daha geç saatlerinde kaydedilmiş. [FACT]
+
+**Ne demek?** Sesi hiç kullanmadan, yalnızca "ne zaman kaydedildi" bilgisi etiketi AUC 0.93 ile ele veriyor. Kayıt bağlamının akustik izini (oda, gün ışığı/klima, klinik yoğunluğu, sabah sesi) öğrenen bir model, ses biliminden hiçbir şey öğrenmeden çok yüksek sayılar üretebilir. Yayınlanmış AUC 0.77 bu tavanın altında kalıyor. [FACT + INFERENCE]
+
+**Saat kısmen gerçek fizyoloji olabilir:** sabah sesi, gün içinde ses yorgunluğu, astımın günlük ritmi; ayrıca hastaların kaydı spirometri ve bronkodilatör testi gününe denk geliyor. Bu durumda saati kontrol etmek gerçek sinyalin bir kısmını da siler. Saat-kontrollü sonuçlar bu yüzden **muhafazakâr** okunacak. [INFERENCE]
+
+**Değerlendirme tasarımlarının dengesi.** Tabakalar içinde saat, tarih ve yaşın etiketi hâlâ ne kadar ayırdığı gösteriliyor; 0.5 = tam denge. Kesinlik: gerçek AUC 0.75 varsayımıyla %95 aralığın yarı genişliği (simülasyon).
+
+| Tasarım | Astım / sağlıklı | Saat | Tarih | Yaş | ± kesinlik |
+|---|---|---|---|---|---|
+| E1 tam kohort | 283 / 59 | 0.158 | 0.808 | 0.681 | 0.069 |
+| E1h + aynı 1 saat dilimi | 208 / 51 | 0.422 | 0.823 | 0.708 | 0.094 |
+| E2 zaman penceresi | 98 / 57 | **0.125** | 0.436 | 0.671 | 0.079 |
+| **E2h zaman penceresi + aynı 1 saat dilimi** | 65 / 50 | **0.378** | **0.375** | 0.704 | 0.125 |
+| E3 aynı gün | 39 / 52 | **0.103** | 0.500 | 0.711 | 0.121 |
+| E3h aynı gün + aynı 1 saat dilimi | 9 / 14 | 0.214 | 0.500 | 0.929 | 0.250 |
+
+**Sonuçlar:**
+- Hiçbir tasarım tarih, saat ve yaşı aynı anda dengelemiyor.
+- E2 ve E3, saat açısından tam kohorttan bile kötü: aynı gün kaydedilenlerde de hastalar sabah, sağlıklılar öğleden sonra.
+- En dengeli seçenek E2h, ama belirsizliği yüksek (±0.125).
+
+**Bu yüzden birincil test değişti (D-023).** Bu karar ses modeli sonuçları görülmeden önce alındı. Birincil soru artık "ses astımı ne kadar iyi ayırıyor?" değil, **"ses, kayıt bağlamı (tarih + saat) ve yaşın ötesinde astım bilgisi taşıyor mu?"**
+
+- **T1 (birincil, artımlı test):** ikinci düzey tekrarlı CV'de "yaş + saat + tarih" modeline OOF ses skoru eklenir. ΔAUC ve eşleştirilmiş katılımcı-bootstrap CI raporlanır; ses skorunun bağlam-ayarlı odds oranı ve CI'ı da verilir (tavana yakın AUC'de ΔAUC küçük kalacağı için). Kanıt: ΔAUC CI 0'ı dışlıyor **ve** odds oranı CI'ı 1'i dışlıyor.
+- **Destekleyici tasarım:** E2h tabakalı AUC (> 0.5, CI ile), denge sütunlarıyla birlikte.
+- **Her zaman raporlanır:** E1 (makaleyle karşılaştırma), E1h, E2, E3, her biri denge tablosuyla. E2 artık başlık sayısı değil.
+- **Yorum kuralı:** T1 ve E2h aynı yönü göstermiyorsa "bağlamdan bağımsız bir ses sinyali gösterilemedi" denir. Bu da yayınlanabilir, değerli bir sonuçtur.
+
 ---
 
 ## 7. Ortak değerlendirme protokolü (tüm modeller)
@@ -399,8 +499,8 @@ E1 her zaman raporlanır ama **başlık sayısı E2'dir**; E1 − E2 farkı ayr�
 **İstatistiksel birim:** katılımcı. Her deneyde ayrı ayrı raporlanır: N katılımcı (astım/sağlıklı), N kayıt, N segment.
 
 **Kohortlar:**
-- Birincil: analiz edilen görev(ler) için geçerli ses kaydı olan herkes; veri ekibine göre 101001–101344 = **284/60**. Demografik eksiklik yalnız yaş/zaman analizlerinden çıkarır (101149 birincil analizde). [DECISION, D-002 — KABUL]
-- Zorunlu zaman kontrolleri: zaman penceresi 156 (99/57) ve aynı gün tasarımı 12 gün (39/51) — Bölüm 6.
+- Birincil: analiz edilen görev(ler) için geçerli ses kaydı olan herkes → **342 katılımcı (283 astım / 59 sağlıklı)**; görev 4 (ordu) için 282 / 59. Sesi olmayanlar: 101043, 101149, 101345–101348. [FACT + DECISION, D-002 — KABUL]
+- Zorunlu zaman kontrolleri: zaman penceresi 155 (98/57) ve aynı gün tasarımı 12 gün (39/51) — Bölüm 6; günün saati için ek kontroller — Bölüm 6.7, D-022.
 
 **Split (D-009):**
 - Dış döngü: katılımcı düzeyinde, **etiket × kayıt dönemi (erken / geç / bilinmiyor) × yaş grubu (≤40 / >40 / bilinmiyor)** ile tabakalı 5-fold (her test fold'una zaman penceresinden orantılı katılımcı düşsün diye); ucuz modellerde 5 tekrar (25 fold), fine-tune'da ölçülen maliyete göre 1–3 tekrar.
@@ -420,7 +520,7 @@ E1 her zaman raporlanır ama **başlık sayısı E2'dir**; E1 − E2 farkı ayr�
 
 **Model karşılaştırması (D-011):** aynı fold'larda eşleştirilmiş ΔAUC; Nadeau–Bengio düzeltilmiş tekrarlı-CV t-testi; tekrar başına havuzlanmış OOF'ta DeLong. Bir iyileşme ancak (i) ΔAUC CI'ı sıfırı dışlıyor ve (ii) yön zaman-örtüşen alt kohortta da korunuyorsa "destekleniyor" sayılır.
 
-**Her başlık sonucu için zorunlu kontroller:** E1/E2/E3 üç düzeyli değerlendirme ve Bölüm 6.3'teki karar kuralı (Katman 5); yaş-only ve yaş+cinsiyet+sigara baseline'ı; "yaşın ötesinde bilgi" (OOF ses skoru + yaş vs yalnız yaş, ikinci düzey CV); zaman-örtüşen alt kohort; dönem probu (yalnız hastalarda erken vs geç kayıt, ses gömmelerinden); kayıt-koşulu baseline'ı (gürültü tabanı, süre, sessizlik); alt gruplar (yaş grubu, cinsiyet, sigara; hastalarda SFT normal/anormal, GINA kontrol, basamak).
+**Her başlık sonucu için zorunlu kontroller:** birincil artımlı test T1 (ses skoru, yaş + saat + tarih ötesinde; D-023) ve destekleyici E2h, denge tablosuyla; E1/E1h/E2/E3 her zaman raporlanır; yaş-only ve yaş+cinsiyet+sigara baseline'ı; "yaşın ötesinde bilgi" (OOF ses skoru + yaş vs yalnız yaş, ikinci düzey CV); zaman-örtüşen alt kohort; dönem probu (yalnız hastalarda erken vs geç kayıt, ses gömmelerinden); kayıt-koşulu baseline'ı (gürültü tabanı, süre, sessizlik); alt gruplar (yaş grubu, cinsiyet, sigara; hastalarda SFT normal/anormal, GINA kontrol, basamak).
 
 ---
 
@@ -478,16 +578,31 @@ Kod, eşleme doğrulandıktan sonra yazılacak (ses verisi olmadan test edilemez
 7. GINA kontrol sayıları neden makalede 47/237, dışa aktarımda 41/242?
 8. Geç dönem hastalarında tedavi basamağı 4 oranı %82'den %36'ya, SFT "kombine" oranı %19'dan %41'e değişmiş (ölçülen FEV1 değerleri ise benzer): işe alım kaynağı ya da kodlama pratiği değişti mi?
 9. Nisan 2024 sonrası kaydedilmiş sağlıklı gönüllü var mı? Aynı protokolle yeni kayıt toplamak mümkün mü? (Bölüm 6.6)
-10. CSV'ye göre sağlıklılar yalnız 9 Ocak – 2 Nisan 2024 arasında, 15 günde kaydedilmiş (hastalar 67 günde). Sağlıklılar için "veri toplama tarihi" gerçek kayıt günü mü, yoksa sisteme giriş tarihi mi?
+10. ~~Sağlıklıların tarihi gerçek kayıt günü mü?~~ → Evet: dosya zaman damgaları doğruladı (Bölüm 6.7).
+11. Makalede 2 408 kayıt var, dışa aktarımda 2 393: 101043 ve 101149'un kayıtları ve 101244'ün slot 4 kaydı nerede?
+12. Dosyaların %27'si FFmpeg'den geçmiş ve yeniden kodlanmış (`Lavf59.16.100`, zaman damgasız, farklı bitrate ve bant genişliği). Aynı katılımcının kayıtlarında iki yol karışık. Hangi durumda dosyalar bu yoldan geçiyor (yükleme hatası sonrası yeniden deneme, web arayüzü, sunucuda dönüştürme)?
+13. Sağlıklılar neden çoğunlukla öğleden sonra (medyan 15:10), hastalar sabah (medyan 11:05) kaydedildi (klinik iş akışı, personel gönüllüler)? **Hastaların ses kaydı spirometri ve bronkodilatör (reversibilite) testinden önce mi sonra mı alındı?** Sonra ise ilaç sesi etkileyebilir.
+14. 4 hastada dosya tarihi CSV tarihinden farklı (−30, +1, +5, +182 gün): CSV mi dosya mı doğru?
 
 **Karar bekleyen yok.** D-015 (ön işleme) ve D-016 (augmentation) ses denetiminden sonra Faz 1'de kesinleşecek.
 
 ---
 
-## 12. Faz 0 durum raporu (3. tur)
+## 12. Faz 0 durum raporu (5. tur)
 
-- **Ne yaptık?** Düzeltilmiş eşlemeyi (2 = araba, 3 = ana), `.m4a` ve 48 kHz bilgisini işledik. "Her tarihte iki grup da var mı?" sorusunu CSV'den gün düzeyinde test ettik. Tarih alanının geçerliliğini SFT tarihi ve yaşla doğruladık. Klinik profilin kayıt dönemini ne kadar ayırdığını ölçtük (EXP-002). Negatif kontrollerin uygulanış biçimini yazdık (D-020).
-- **Ne öğrendik?** 67 kayıt gününün 52'sinde yalnız hasta var; 245 hasta (%86) sağlıklısız günlerde kaydedilmiş. Tarih alanı hastalar için gerçek ziyaret günü (%97.5 SFT ile aynı gün). Klinik profil hastalar içinde dönemi AUC 0.855 ile ayırıyor; bunun büyük kısmı tedavi basamağından geliyor, ölçülen spirometri ise ayırmıyor (0.536). Yani sesten dönem tahmini, klinik profil kontrol edilmeden yorumlanamaz.
-- **Hangi kararları aldık?** D-002 onaylandı (4 ek sağlıklı dışarıda), D-019 güncellendi (eşleme veri ekibinden, dinleme = teyit), D-018 (48 kHz teyit), D-020 (negatif kontrol tasarımı).
-- **Hangi belirsizlikler kaldı?** Bölüm 11; en önemlisi sağlıklıların gerçek kayıt günleri (dosya zaman damgası çözecek) ve geç dönemde kayıt koşullarının değişip değişmediği.
-- **Bir sonraki minimum gerekli adım:** repo'yu GitHub'a yükle → `soundData`'yı zip'leyip Drive'a koy → `notebooks/01_data_audit.ipynb`'i CPU runtime'da çalıştır → `audio_audit.md`'yi (özellikle "dosya kayıt zamanı vs CSV tarihi" ve "meta veri ↔ dönem" satırlarını), dinleme teyidini ve kimlik kontrolünü paylaş. Eşleme doğrulanana kadar model eğitimi yok.
+- **Ne yaptık?** `audio_inventory.csv` ve `recording_map.csv` ile kodlama zincirlerini karakterize ettik, katılımcı düzeyinde kayıt bağlamını (tarih, seans saati) çıkardık, sesi kullanmayan bağlam baseline'larını çalıştırdık (EXP-003) ve altı değerlendirme tasarımının dengesini ölçtük. Hepsi `scripts/analyze_recording_context.py` ile tekrar üretilebilir.
+- **Ne öğrendik?**
+  - FFmpeg dosyaları yeniden kodlanmış ve dosya düzeyinde karışık.
+  - En düşük kesim 11.27 kHz.
+  - Günün saati veri setinin en güçlü confounder'ı: tarih + saat sesi kullanmadan AUC 0.93.
+  - Hiçbir değerlendirme tasarımı tarih, saat ve yaşı birlikte dengelemiyor; E2 ve E3 saat açısından dengesiz.
+- **Hangi kararları aldık?**
+  - **D-023:** birincil test = bağlam + yaş ötesinde artımlı ses bilgisi (T1); destekleyici E2h; E2 başlık olmaktan çıktı.
+  - **D-021:** kesim 11.0 kHz.
+  - **D-022:** sayılarla güncellendi.
+  - **D-024:** kayıt tarihi kaynağı dosya zaman damgası.
+- **Hangi belirsizlikler kaldı?** Bölüm 11; en kritiği ses kaydının spirometri/bronkodilatörden önce mi sonra mı alındığı (S13) ve FFmpeg yolunun nedeni (S12).
+- **Bir sonraki minimum gerekli adım:** Faz 1'e geç:
+  1. `scripts/make_splits.py` — etiket × dönem × yaş tabakalı, katılımcı düzeyi tekrarlı 5-fold; kesişim = 0 assert'leri; sha256.
+  2. `scripts/build_audio_cache.py` — D-021 harmonizasyonu (kayıpsız çözme, 11.0 kHz alçak geçiren, 32/16 kHz, kenar kırpma, tepe normalizasyonu) ve doğrulama ölçümleri.
+  3. MFCC baseline (EXP-010/011) ve ardından T1 analizinin altyapısı.
