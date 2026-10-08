@@ -126,6 +126,70 @@ Tasarım dengesi (tabakalı AUC; 0.5 = denge) ve kesinlik: rapor Bölüm 6.9. En
 
 **Bilinen kısıtlar.** Saat yalnız Apple zincirindeki zaman damgalarından (2 katılımcıda yok); saat kısmen gerçek fizyoloji olabilir (sabah sesi, astım ritmi, bronkodilatör sonrası kayıt — veri ekibine soruldu); doğrusal model.
 
+**EXP-003 eki (6. tur) — her tasarımın "yalnız bağlam" referansı.** Bağlam-only modelin OOF skoru (5-fold × 20) her tasarımın tabakaları içinde değerlendirildi (rapor Bölüm F, `recording_context.md` F). E2h'de: yalnız yaş **0.703**, saat + tarih **0.351**, yaş + saat + tarih 0.497. → Ham E2h AUC'sinin şans çizgisi 0.5 değil ve kestirmenin türüne göre değişiyor; E2h testi koşullu lojistik regresyona çevrildi (D-025).
+
+---
+
+## EXP-004 — Günün saatinin kaba akustik izi (etiket içinde) + EXP-004b klinik profil
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-08 |
+| DURUM | Tamamlandı |
+| Araştırma sorusu | RQ7 — Etiket sabitken, sabah ve öğleden sonra kayıtları kaba ses ölçümleriyle ayrılabiliyor mu? (b) Sabah ve öğleden sonra hastaları klinik olarak farklı mı? |
+| Beklenti (önceden) | Oda koşulları gün içinde değişiyorsa (klinik yoğunluğu, klima) gürültü tabanı veya seviye ayırır [HYPOTHESIS] |
+| Veri | `audio_inventory.csv` denetim ölçümleri (katılımcı ortalaması) + `participant_context.csv`; öğleden sonra = seans başlangıcı ≥ 12:00 |
+| Model | (a) Tek ölçüm AUC + 500 permütasyon (eşik %0.3–99.7, ~11 ölçüm için kaba Bonferroni); (b) tüm ölçümler, lojistik regresyon, 5-fold × 20 |
+| Script / sonuç | `scripts/analyze_recording_context.py` Bölüm E, E-b → `reports/recording_context/recording_context.{md,json}` |
+
+| Analiz | n (öğleden sonra) | CV AUC ort ± SD | Şanstan ayrılan tekil değişken |
+|---|---|---|---|
+| Hastalar: ses ölçümleri → öğleden sonra | 282 (86) | 0.549 ± 0.067 | yok |
+| Sağlıklılar: ses ölçümleri → öğleden sonra | 58 (46) | 0.525 ± 0.179 | yok |
+| **EXP-004b** hastalar: klinik profil → öğleden sonra | 282 (86) | 0.528 ± 0.071 (fold %2.5–97.5: 0.37–0.64) | yalnız dönem (p = 0.023, düzeltmesiz) |
+
+**Yorum.** **Olumsuz sonuç.** Kaba, ölçülebilir bir "sabah/öğleden sonra odası" farkı yok. Bu yüzden harmonizasyon saat confounding'ine karşı kozmetik kalır (D-026). Sabah ve öğleden sonra hastaları klinik olarak benzer. Bu sayede etiket içi saat kontrastı (Spisak kısmi testi, N5) temiz bir kontrol olarak kullanılabilir; tarih yine kovaryat olarak eklenir.
+
+**Bilinen kısıtlar.**
+- Kaba ölçümler ince spektral veya prozodik izleri görmez → derin gömmeler EXP-020'de test edilecek.
+- Sağlıklılarda sabah kaydı yalnız 12 kişi → güç çok düşük.
+- Öğleden sonra sınırı 12:00 (ikili).
+
+---
+
+## SIM-001 — T1'in gücü ve yanlış pozitif riski (ses kullanmadan, gerçek bağlamla)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-08 |
+| DURUM | Tamamlandı (tasarım simülasyonu; model deneyi değil) |
+| Soru | Bağlamdan bağımsız sinyal varsa T1 onu yakalar mı (güç)? Ses yalnız bağlamı kodluyorsa T1 yanılır mı (yanlış pozitif)? |
+| Veri | Gerçek etiket, saat, tarih, yaş, kayıt günü (339 kişi: 282/57; 65 gün). Ses skoru yapay: `γ·astım + 1·kestirme(bağlam) + N(0,1)` |
+| Senaryolar | S1 düzgün kestirme (doğru belirtilmiş), S2 basamak kestirme ("sabah mı", "geç dönem mi"), S3 ölçülmemiş güne özgü etki |
+| Testler | T1 kuadratik bağlam; T1 spline (4 df) bağlam; T1 spline + gün-kümeli SE; E2h koşullu lojistik regresyon |
+| Simülasyon | Hücre başına 500, tohum 0 |
+| Script / sonuç | `scripts/simulate_t1_power.py` → `reports/recording_context/SIM-001_t1_power.{md,json}` |
+
+Sonuç tablosu ve yorum: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2.4.
+
+| Bulgu | Sayı |
+|---|---|
+| Kuadratik bağlam modelinde yanlış pozitif (S2, basamak kestirme) | **0.216** (spline 0.060, E2h-KLR 0.060) |
+| Güne özgü ölçülmemiş etkide yanlış pozitif (S3) | spline 0.122, gün-kümeli 0.110, E2h-KLR 0.142; p < 0.01'de 0.034 |
+| %80 güç için minimum aynı-bağlam AUC'si | ≈ 0.69 (α = 0.05), ≈ 0.74 (α ≈ 0.01) |
+| Saptanabilir sinyalde ortalama ΔAUC | 0.002–0.007 |
+
+**Yorum.**
+- T1'in bağlam modeli spline olmalı.
+- ΔAUC karar istatistiği olamaz.
+- Bilgi örtüşme bölgesinde: tam kohort T1 gücü ≈ E2h-KLR gücü.
+- Güne özgü bağlam kalıntı bir yanlış pozitif riski.
+
+Bunların hepsi D-025'e girdi.
+
+**Bilinen kısıtlar.**
+- Ses skoru yapay: tek boyutlu, normal gürültülü. Gerçek güç daha düşük olacak.
+- Kestirme gücü λ = 1 sabit.
+- Spline df (4) önceden sabit.
+
 ---
 
 ## Planlanan deneyler (ID'ler başlarken verilecek)
@@ -133,13 +197,15 @@ Tasarım dengesi (tabakalı AUC; 0.5 = denge) ve kesinlik: rapor Bölüm 6.9. En
 |---|---|---|---|
 | 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
 | 1b | ~~EXP-003~~ → tamamlandı; kesim 11.0 kHz | RQ7 | — |
+| 1b' | ~~EXP-004/004b, SIM-001~~ → tamamlandı; test spesifikasyonu D-025 | RQ7 | — |
 | 1c | Split dosyaları (`make_splits.py`) + harmonize ses önbelleği (`build_audio_cache.py`, D-021) | altyapı | D-024 ile yeniden hesaplanan dönem |
 | 2 | MFCC sadık yeniden üretim | RQ1 | Eşleme doğrulandı |
 | 3 | MFCC, ortak protokol + kontroller | RQ1, RQ4, RQ5, RQ7 | Split dosyaları |
-| 4 | Dondurulmuş gömme + lineer prob (6 backbone × 7 görev), E1/E2/E3 ile | RQ3, RQ4, RQ5 | Ses önbelleği, smoke test |
-| 4b | Zamansal negatif kontroller N1–N3 + **zincir probu** (harmonizasyon öncesi/sonrası, D-021) | RQ7 | 4 ile aynı gömmeler |
+| 4a | **EXP-020** dondurulmuş gömmelerde bağlam probları (etiket içi saat, dönem, zincir) → karar kapısı **G1** | RQ7 | Ses önbelleği, smoke test |
+| 4b | **EXP-021** dondurulmuş gömme + lineer prob (6 backbone; katılımcı düzeyi = onaylayıcı aile, görev bazlı = keşifsel), lens seti L1–L8 (D-025, D-026), gün-gruplu duyarlılık | RQ3, RQ4, RQ5, RQ7 | 4a |
+| 4c | **EXP-022** koşullu azaltma (hasta-içi residualization, bağlam-dengeli ağırlık) | RQ7 | G1 pozitif |
 | 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
-| 6 | Fine-tune (seçilmiş backbone/görev) | RQ2, RQ3 | 4 ve 5 tamam |
+| 6 | **EXP-030** fine-tune (D-027): T1'e göre seçilmiş 1–2 backbone, kısmi FT, sabit epoch, kol A (+ koşullu kol B) | RQ2, RQ3, RQ7 | 4 ve 5 tamam |
 | 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ7, RQ8, RQ9 | OOF tahminleri |
 
 ---

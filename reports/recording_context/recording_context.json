@@ -243,5 +243,220 @@
       "halfwidth_95": 0.25,
       "p_above_0_5": 0.936
     }
-  ]
+  ],
+  "exp004_time_of_day_acoustic_signature": {
+    "asthma": {
+      "n": 282,
+      "n_afternoon": 86,
+      "single_feature_auc": {
+        "noise_floor_db": {
+          "auc": 0.465,
+          "beyond_chance": false
+        },
+        "speech_level_db": {
+          "auc": 0.493,
+          "beyond_chance": false
+        },
+        "snr_proxy_db": {
+          "auc": 0.521,
+          "beyond_chance": false
+        },
+        "rms_dbfs": {
+          "auc": 0.497,
+          "beyond_chance": false
+        },
+        "bandwidth_khz": {
+          "auc": 0.503,
+          "beyond_chance": false
+        },
+        "duration_s": {
+          "auc": 0.494,
+          "beyond_chance": false
+        },
+        "lead_silence_s": {
+          "auc": 0.43,
+          "beyond_chance": false
+        },
+        "trail_silence_s": {
+          "auc": 0.523,
+          "beyond_chance": false
+        },
+        "active_frac": {
+          "auc": 0.499,
+          "beyond_chance": false
+        },
+        "audio_bit_rate": {
+          "auc": 0.548,
+          "beyond_chance": false
+        },
+        "chain_ffmpeg": {
+          "auc": 0.437,
+          "beyond_chance": false
+        }
+      },
+      "all_features_cv_auc": {
+        "mean": 0.548823780794369,
+        "sd": 0.06735436482046571
+      }
+    },
+    "healthy": {
+      "n": 58,
+      "n_afternoon": 46,
+      "single_feature_auc": {
+        "noise_floor_db": {
+          "auc": 0.395,
+          "beyond_chance": false
+        },
+        "speech_level_db": {
+          "auc": 0.661,
+          "beyond_chance": false
+        },
+        "snr_proxy_db": {
+          "auc": 0.65,
+          "beyond_chance": false
+        },
+        "rms_dbfs": {
+          "auc": 0.659,
+          "beyond_chance": false
+        },
+        "bandwidth_khz": {
+          "auc": 0.46,
+          "beyond_chance": false
+        },
+        "duration_s": {
+          "auc": 0.582,
+          "beyond_chance": false
+        },
+        "lead_silence_s": {
+          "auc": 0.526,
+          "beyond_chance": false
+        },
+        "trail_silence_s": {
+          "auc": 0.721,
+          "beyond_chance": false
+        },
+        "active_frac": {
+          "auc": 0.4,
+          "beyond_chance": false
+        },
+        "audio_bit_rate": {
+          "auc": 0.549,
+          "beyond_chance": false
+        },
+        "chain_ffmpeg": {
+          "auc": 0.463,
+          "beyond_chance": false
+        }
+      },
+      "all_features_cv_auc": {
+        "mean": 0.5252592592592593,
+        "sd": 0.17911207408200633
+      }
+    }
+  },
+  "exp004b_clinical_profile_am_vs_pm_patients": {
+    "n": 282,
+    "n_pm": 86,
+    "univariate_p": {
+      "asthma_step": 0.0847,
+      "sft_dx": 0.9462,
+      "smoking": 0.1227,
+      "sex": 1.0,
+      "gina_control": 0.1703,
+      "ics_use": 0.3698,
+      "allergic_rhinitis": 0.2529,
+      "age": 0.7636,
+      "act_total": 0.8875,
+      "fev1_pct": 0.4059,
+      "fvc_pct": 0.5483,
+      "fev1_fvc": 0.4001,
+      "period(early/late)": 0.0227
+    },
+    "clinical_cv_auc": {
+      "mean": 0.5280705547176135,
+      "sd": 0.07109276217152735,
+      "p2.5": 0.3747737556561086,
+      "p97.5": 0.6440887380593262
+    }
+  },
+  "context_only_reference_by_design": {
+    "age": {
+      "E1  tam kohort": {
+        "mean": 0.674,
+        "sd": 0.005
+      },
+      "E1h tam kohort + aynı 1 saat dilimi": {
+        "mean": 0.703,
+        "sd": 0.005
+      },
+      "E2  zaman penceresi": {
+        "mean": 0.665,
+        "sd": 0.008
+      },
+      "E2h zaman penceresi + aynı 1 saat dilimi": {
+        "mean": 0.703,
+        "sd": 0.009
+      },
+      "E3  aynı gün": {
+        "mean": 0.691,
+        "sd": 0.021
+      },
+      "E3h aynı gün + aynı 1 saat dilimi": {
+        "mean": 0.914,
+        "sd": 0.029
+      }
+    },
+    "hour+date": {
+      "E1  tam kohort": {
+        "mean": 0.93,
+        "sd": 0.002
+      },
+      "E1h tam kohort + aynı 1 saat dilimi": {
+        "mean": 0.817,
+        "sd": 0.004
+      },
+      "E2  zaman penceresi": {
+        "mean": 0.81,
+        "sd": 0.004
+      },
+      "E2h zaman penceresi + aynı 1 saat dilimi": {
+        "mean": 0.351,
+        "sd": 0.016
+      },
+      "E3  aynı gün": {
+        "mean": 0.885,
+        "sd": 0.009
+      },
+      "E3h aynı gün + aynı 1 saat dilimi": {
+        "mean": 0.639,
+        "sd": 0.091
+      }
+    },
+    "age+hour+date": {
+      "E1  tam kohort": {
+        "mean": 0.93,
+        "sd": 0.003
+      },
+      "E1h tam kohort + aynı 1 saat dilimi": {
+        "mean": 0.854,
+        "sd": 0.008
+      },
+      "E2  zaman penceresi": {
+        "mean": 0.827,
+        "sd": 0.004
+      },
+      "E2h zaman penceresi + aynı 1 saat dilimi": {
+        "mean": 0.497,
+        "sd": 0.02
+      },
+      "E3  aynı gün": {
+        "mean": 0.918,
+        "sd": 0.008
+      },
+      "E3h aynı gün + aynı 1 saat dilimi": {
+        "mean": 0.861,
+        "sd": 0.075
+      }
+    }
+  }
 }

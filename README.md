@@ -6,8 +6,9 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 
 ## Nereden başlamalı
 1. `docs/PHASE0_REPORT.md` — ne bildiğimiz, ne bilmediğimiz, neden böyle tasarladığımız
-2. `docs/COLAB_WORKFLOW.md` — GitHub / Drive / Colab kurulumu ve her oturumun başı
-3. `notebooks/01_data_audit.ipynb` — şu anki adım
+2. `docs/CONFOUND_CONTROL_DESIGN.md` — kayıt bağlamı confounder'ına karşı yöntemlerin değerlendirmesi ve deney tasarımı (ham ses → pretrained → fine-tune)
+3. `docs/COLAB_WORKFLOW.md` — GitHub / Drive / Colab kurulumu ve her oturumun başı
+4. `notebooks/01_data_audit.ipynb` — ses denetimi (tamamlandı)
 
 ## Proje haritası
 
@@ -20,9 +21,10 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 0 | Zamansal confounder stratejisi (E1 tam / E2 zaman penceresi / E3 aynı gün + negatif kontroller) | ✅ D-017 |
 | 0 | Ses denetimi + eşleme + dinleme teyidi | ✅ 342 katılımcı (283/59), 2 393 kayıt |
 | 0 | Harmonizasyon (D-021, kesim 11.0 kHz), kayıt bağlamı analizi EXP-003, revize birincil test (D-023) | ✅ |
-| 1 | **Split dosyaları + harmonize ses önbelleği** | ⏳ **sıradaki adım** |
+| 0 | Confounder kontrol yöntemlerinin değerlendirmesi, EXP-004/004b, SIM-001, test spesifikasyonu (D-025/026/027 önerildi) | ✅ |
+| 1 | **Split dosyaları + harmonize ses önbelleği + değerlendirme lensleri (`evaluate_context.py`)** | ⏳ **sıradaki adım** |
 | 1 | MFCC baseline yeniden üretimi (EXP-010/011) | ⏸ split dosyalarından sonra |
-| 2 | Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone) | ⏸ |
+| 2 | Smoke test'ler, bağlam probları (EXP-020, kapı G1), dondurulmuş gömme + lineer prob (EXP-021, 6 backbone) | ⏸ |
 | 3 | Sıfırdan CNN, fine-tune, füzyon, confounder ve alt grup analizleri | ⏸ |
 
 ## Klasörler
@@ -41,6 +43,7 @@ tests/                script testleri (gerçek veri gerektirmez): python tests/t
 ## Değişmez kurallar
 - Split katılımcı düzeyinde; segment sayısı hasta sayısı değildir.
 - İstatistik öğrenen her işlem (ölçekleme, SMOTE, augmentation havuzu) yalnız train fold'unda.
-- Birincil test: ses skoru, kayıt bağlamı (tarih + saat) ve yaşın ötesinde bilgi ekliyor mu (D-023); her sonuç E-tasarımları ve denge tablosuyla raporlanır.
+- Birincil test: ses skoru, kayıt bağlamı (tarih + saat) ve yaşın ötesinde bilgi ekliyor mu (T1: spline bağlam modeli + olabilirlik testi; D-023, D-025). Her sonuç aynı lens setiyle (L1–L8) raporlanır. Ham AUC kanıt değildir.
+- Fine-tune backbone'u bağlamdan bağımsız katkıya (T1) göre seçilir, ham AUC'ye göre değil; confounded doğrulama metriğiyle early stopping yapılmaz (D-027).
 - Olumsuz sonuçlar silinmez.
 - Smoke test geçmeden tam eğitim yok; her epoch checkpoint.
