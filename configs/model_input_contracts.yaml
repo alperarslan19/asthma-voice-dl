@@ -6,7 +6,11 @@ source_audio:   # bizim kayıtlarımız (D-018)
   reported_by_data_team: {device: "iPhone 14", distance_cm: 10, location: "hep aynı yer", channels: 1,
                           sample_rate: 48000, container: ".m4a", naming: "<ID>_<slot>.m4a"}
   note: "48 kHz ve .m4a veri ekibince teyit edildi (2026-10-08); audit_audio.py dosya düzeyinde doğrular"
-  codec: "AAC beklenir"                       # needs_verification (audit_audio.py)
+  codec: "AAC-LC (denetimle doğrulandı: 2393/2393)"
+  audit_2026_10_08: {n_files: 2393, sr_48000: 2392, sr_44100: 1, bitrate_kbps: "141-196 (medyan 184)",
+                     bandwidth_khz: "11.3-24 (medyan 13.5, iki tepeli)",
+                     encoding_chains: {apple_core_media: 1759, ffmpeg_lavf59_16_100: 634}}
+  harmonization: "D-021: kayıpsız çözme, ortak SR, 32k yolu için ~11 kHz alçak geçiren (değer envanterden), kenar kırpma, tepe normalizasyonu; gürültü giderme YOK"
   decode: "ffmpeg, yalnız ilk ses akışı, meta veri atılır, float32 mono, native SR"
   resample: {to_32k: "scipy.signal.resample_poly(up=2, down=3)", to_16k: "scipy.signal.resample_poly(up=1, down=3)"}
   cache_dtype: float32                        # int16 değil: AAC çözümü ±1'i aşabilir

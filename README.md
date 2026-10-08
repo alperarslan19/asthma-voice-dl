@@ -18,9 +18,10 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 0 | Model girdi sözleşmeleri (resmi kaynaklardan) | ✅ |
 | 0 | Değerlendirme protokolü, altyapı, karar/deney günlükleri | ✅ (D-002, D-009 kesinleşti) |
 | 0 | Zamansal confounder stratejisi (E1 tam / E2 zaman penceresi / E3 aynı gün + negatif kontroller) | ✅ D-017 |
-| 0 | **Ses denetimi + eşleme + kısa dinleme teyidi** | ⏳ **sıradaki adım** — `01_data_audit.ipynb` |
-| 0 | MFCC baseline yeniden üretimi | ⏸ eşleme doğrulanınca |
-| 1 | Split dosyaları, ses önbelleği (16/32 kHz), MFCC ortak protokol | ⏸ |
+| 0 | Ses denetimi + eşleme + dinleme teyidi | ✅ 342 katılımcı (283/59), 2 393 kayıt |
+| 0 | Harmonizasyon (D-021, kesim 11.0 kHz), kayıt bağlamı analizi EXP-003, revize birincil test (D-023) | ✅ |
+| 1 | **Split dosyaları + harmonize ses önbelleği** | ⏳ **sıradaki adım** |
+| 1 | MFCC baseline yeniden üretimi (EXP-010/011) | ⏸ split dosyalarından sonra |
 | 2 | Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone) | ⏸ |
 | 3 | Sıfırdan CNN, fine-tune, füzyon, confounder ve alt grup analizleri | ⏸ |
 
@@ -40,6 +41,6 @@ tests/                script testleri (gerçek veri gerektirmez): python tests/t
 ## Değişmez kurallar
 - Split katılımcı düzeyinde; segment sayısı hasta sayısı değildir.
 - İstatistik öğrenen her işlem (ölçekleme, SMOTE, augmentation havuzu) yalnız train fold'unda.
-- Her başlık sonucu üç düzeyde raporlanır (tam kohort / zaman penceresi / aynı gün) ve yaş-only baseline'la karşılaştırılır; başlık sayısı zaman penceresidir (D-017).
+- Birincil test: ses skoru, kayıt bağlamı (tarih + saat) ve yaşın ötesinde bilgi ekliyor mu (D-023); her sonuç E-tasarımları ve denge tablosuyla raporlanır.
 - Olumsuz sonuçlar silinmez.
 - Smoke test geçmeden tam eğitim yok; her epoch checkpoint.
