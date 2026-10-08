@@ -438,7 +438,7 @@ DURUM: KABUL · Tarih: 2026-10-08 (7. tur, Alper'in yönlendirmesi ve onayı) ·
   - `docs/CONFOUND_CONTROL_DESIGN.md`: değerlendirme aşamasının yol haritası.
 
 ## D-029 — Split dosyalarının üretim ayrıntıları
-DURUM: KABUL · Tarih: 2026-10-08 (7. tur) · D-003, D-009 ve D-024'ün uygulanışı; yeni bir tasarım kararı değil
+DURUM: KABUL · Tarih: 2026-10-08 (7. tur) · D-003, D-009 ve D-024'ün uygulanışı; yeni bir tasarım kararı değil · **Colab'da teyit edildi** (8. tur): scikit-learn 1.6.1 / numpy 2.1.3 / pandas 2.2.3 ile 5 dosyanın sha256'ı manifestle aynı
 - **KARAR:**
   1. **Kohort:** en az bir geçerli kaydı (`recording_map.csv`'de `status == OK`) olan herkes → 342 (283 astım / 59 sağlıklı). Tüm görevler için **tek** split kullanılır; bir görevde kaydı eksik olan katılımcı (101244, görev 4) o görevin analizinde yalnızca yer almaz.
   2. **Tabakalar:** etiket × dönem × yaş grubu (D-009).
@@ -469,3 +469,65 @@ DURUM: KABUL · Tarih: 2026-10-08 (7. tur) · D-003, D-009 ve D-024'ün uygulan�
   - `scikit-learn` sürümü değişirse fold atamaları değişebilir → sha256 karşılaştırması bunu yakalar.
 - **BİLİMSEL SONUÇ:** Split, hiçbir model sonucuna bakılmadan, yalnız katılımcı tablosundan bir kez üretilir. Sonuca göre split seçimi (selection bias) yapısal olarak imkânsızdır.
 - **UYGULAMA:** `scripts/make_splits.py`, `tests/test_make_splits.py`, `reports/splits/splits_manifest.{json,md}`.
+
+## D-030 — Ses önbelleğinin üretim ayrıntıları
+DURUM: KABUL (uygulama ayrıntısı; parametrelere Colab'da çalıştırmadan önce itiraz edilebilir) · Tarih: 2026-10-08 (8. tur) · D-008, D-015, D-018, D-021'in uygulanışı
+- **KARAR:**
+  1. **Girdi ve veri sürümü:**
+     - `recording_map.csv`'de `status == OK` olan 2 393 kayıt işlenir.
+     - Her dosyanın sha256'ı denetimdeki (`file_sha256`) ile aynı olmalı; değilse script durur.
+  2. **Çözme (D-018):**
+     - `audit_audio.decode` (denetimle aynı fonksiyon): ilk ses akışı, native SR, float32, meta veri yok.
+     - Tek 44.1 kHz dosya `resample_poly(160, 147)` ile 48 kHz'e çevrilir.
+  3. **Kenar kırpma (D-015):**
+     - Kural ses denetimindeki aktif-kare kuralıyla aynıdır:
+       - 25 ms kare, 10 ms adım;
+       - eşik = en yüksek kare − 35 dB;
+       - SNR vekili (p95 − p10) > 20 dB ise eşik en az gürültü tabanı + 10 dB.
+     - İlk ve son aktif kareden sonra **0.10 s pay** bırakılır.
+     - Sınırlar 48 kHz sinyalde saniye olarak bir kez hesaplanır ve iki hedef SR'ye aynen uygulanır.
+     - İç sessizliklere dokunulmaz.
+  4. **Hedef SR'ler (D-008):** `resample_poly` 48→32 kHz (2/3) ve 48→16 kHz (1/3). Resample ve filtre **tüm sinyale** uygulanır, kesim sonra yapılır; böylece kesim noktalarında filtre geçişi oluşmaz.
+  5. **32 kHz alçak geçiren (D-021):**
+     - Doğrusal fazlı FIR: 511 tap, Kaiser β = 8.6, sıfır gecikme.
+     - −6 dB noktası 11.0 kHz; 10.8 kHz'e kadar düz; en dar kodlayıcı kesiminde (11.27 kHz) −94 dB.
+     - 16 kHz yolunda ek filtre yok: `resample_poly`'nin kendi süzgeci 8 kHz'te keser.
+  6. **Tepe normalizasyonu (D-015):**
+     - Her SR sürümü kendi tepe değerine göre **−1 dBFS**'e (0.891) getirilir.
+     - Uygulanan kazanç (dB) dizinde saklanır, yani mutlak şiddet bilgisi kaybolmaz, yalnız girdiden çıkar.
+  7. **Depolama (D-018):**
+     - SR başına tek bir little-endian float32 dosya (`audio_32k.f32`, `audio_16k.f32`), `np.memmap` ile okunur.
+     - Yanında `index.csv` (kayıt başına ofset, uzunluk, kırpma, kazanç, bant genişliği) ve `cache_info.json` (parametreler, sürümler, sha256).
+     - Konum: Drive `data_derived/audio_cache_v1/`. Önbellek bir kez üretilir; yeniden üretim bilinçli bir karardır.
+  8. **Doğrulama:**
+     - NaN/Inf yok;
+     - her parçanın tepesi hedefte;
+     - ofsetler bitişik;
+     - örnek sayısı süreyle tutarlı;
+     - ilk 20 kayıt yeniden işlenince birebir aynı;
+     - 32 kHz yolunda etkin bant genişliği zincir başına önce / sonra.
+     
+     Agrega rapor `reports/audio_cache/` altında.
+  9. **Pencereleme önbellekte yapılmaz.** 4 s / 2 s pencere ve kısa kayıtların sıfırla doldurulması (D-015) eğitim yükleyicisinde yapılır.
+- **NEDEN:**
+  - Denetimle aynı kırpma kuralı kullanıldığı için, ne kadar kırpılacağı önceden biliniyor (envanterden tahmin):
+    - kalan süre medyan 10.3 s, en kısa 2.3 s;
+    - 17 kayıt 4 s'den kısa kalacak;
+    - toplam 6.7 saat ses → 32 kHz ≈ 3.1 GB, 16 kHz ≈ 1.5 GB.
+  - Baştaki sessizliğin süresi katılımcı düzeyinde etiketle ilişkili: AUC 0.369, sağlıklılarda daha uzun (ses denetimi envanteri). [FACT] Bu, sesle ilgisiz bir ipucudur. 0.10 s payla kırpınca bütün kayıtlarda kalan baş sessizliği en fazla 0.1 s olur. [INFERENCE]
+  - Sahte veriyle test (`tests/test_build_audio_cache.py`, 9 kontrol): 1.0 s / 2.0 s sessizlik → 0.88 s / 1.89 s kırpıldı; 24 kHz geniş bantlı kaynak → 11.1 kHz. [FACT]
+- **ALTERNATİFLER:**
+  - Kırpma sınırını her SR'de ayrı hesaplamak: sürümler arasında farklı sınırlar.
+  - Önce kesip sonra resample etmek: kesim noktalarında filtre geçişi.
+  - IIR / Butterworth filtre: faz bozulması, `filtfilt` kenar etkileri.
+  - Kayıt başına ayrı `.npy`: Drive'dan binlerce küçük dosya okumak yavaş.
+  - int16 depolama: boyut yarıya iner ve normalizasyondan sonra kırpma riski yoktur; ama D-018'i değiştirir. Yalnız Drive alanı yetmezse ayrı karar olarak.
+  - RMS normalizasyonu: D-015'te değerlendirildi, seçilmedi.
+- **RİSK:**
+  - Düşük SNR'li kayıtlarda (%12) yalnız tepeye-göre eşik çalışır → bu kayıtlarda daha az kırpılır.
+  - Tepe normalizasyonu mutlak şiddeti girdiden siler (D-015 riski).
+  - 11 kHz kesim, 32 kHz modellerin 11–14 kHz mel bantlarını boşaltır (D-021 riski).
+  - Filtre, kodlayıcıların 11 kHz altındaki spektral şekillendirmesini silemez.
+  - ffmpeg sürümü değişirse çözülen örnekler bit düzeyinde değişebilir → önbellek bir kez üretilir ve sha256'ı saklanır.
+- **BİLİMSEL SONUÇ:** Bütün modeller aynı, doğrulanmış ve sabit girdiyi görür. Ön işleme farkı modeller arası karşılaştırmayı bozamaz.
+- **UYGULAMA:** `scripts/build_audio_cache.py`, `tests/test_build_audio_cache.py`, `notebooks/03_audio_cache.ipynb`, `reports/audio_cache/`.
