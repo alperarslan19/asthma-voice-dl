@@ -238,7 +238,7 @@ DURUM: KABUL · Güncellendi (5. tur): saat 340/342 katılımcıda biliniyor (se
 - **UYGULAMA:** `recording_map.csv`'deki `creation_local` → katılımcı düzeyinde ilk kaydın yerel saati.
 
 ## D-023 — Birincil soru ve test revize edildi: ses, kayıt bağlamı ve yaşın ötesinde bilgi taşıyor mu?
-DURUM: KABUL · Tarih: 2026-10-08 (5. tur) · **Ses modeli sonuçları görülmeden önce alındı** · D-017'deki "başlık sayısı E2" kuralının yerine geçer · Ayrıntı: rapor Bölüm 6.9
+DURUM: KABUL (birincil soru) · **test ayrıntıları kısmen DEĞİŞTİRİLDİ → D-025** (6. tur: ham E2h AUC'sinin şans çizgisi 0.5 değil; kuadratik bağlam modeli yanlış pozitif üretiyor; ΔAUC tavanda güçsüz) · Tarih: 2026-10-08 (5. tur) · **Ses modeli sonuçları görülmeden önce alındı** · D-017'deki "başlık sayısı E2" kuralının yerine geçer · Ayrıntı: rapor Bölüm 6.9
 - **KARAR:**
   - **T1 (birincil):** ikinci düzey tekrarlı CV'de "yaş + saat (+ saat²) + tarih" baseline'ına OOF ses skoru eklenir. Raporlananlar: eşleştirilmiş ΔAUC ve katılımcı-bootstrap CI; ses skorunun bağlam-ayarlı odds oranı ve CI'ı.
   - **Destekleyici:** E2h, yani zaman penceresi + aynı 1 saatlik başlangıç dilimi içinde tabakalı AUC.
@@ -269,3 +269,128 @@ DURUM: KABUL · Tarih: 2026-10-08 (5. tur)
 - **RİSK:** Dosya zaman damgası cihaz saatine bağlı; 4 farkın nedeni veri ekibine soruldu (rapor S14).
 - **BİLİMSEL SONUÇ:** —
 - **UYGULAMA:** `scripts/analyze_recording_context.py` → `participant_context.csv` (`recording_date`, `recording_date_source`).
+
+## D-025 — Birincil test spesifikasyonu revize edildi (T1, E2h, Spisak testleri)
+DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
+- **KARAR:**
+  1. **T1 (birincil):** tek lojistik regresyon `y ~ spline(saat, 4 df) + spline(tarih, 4 df) + yaş + ŝ`.
+     - ŝ = katılımcının dış-fold OOF ses logit'i (tekrarlar boyunca ortalama).
+     - **Karar istatistiği:** ŝ katsayısının olabilirlik oranı testi; SD başına OR ve katılımcı-bootstrap %95 CI.
+     - Duyarlılık analizleri: gün-kümeli SE; daha esnek bağlam modeli (spline 6 df).
+     - İkinci düzey CV ΔAUC yalnız **betimsel**.
+     - Kuadratik saat + doğrusal tarih bağlam modeli (EXP-003 biçimi) T1'de **kullanılmaz**.
+  2. **E2h:** ham tabakalı AUC 0.5'e karşı test edilmez.
+     - Ham AUC, yaş-only, bağlam-only ve yaş + bağlam referans çizgileriyle birlikte raporlanır.
+     - **Test:** E2h içinde 1 saatlik dilimlere göre koşullu lojistik regresyon `y ~ ŝ + yaş + saat + tarih` (E2h-KLR).
+  3. **Spisak testleri** (`mlconfound`, OOF skorlar üzerinde, 1 000 koşullu permütasyon):
+     - *Tam test* (H0: ŝ ⊥ Y | C) → T1'in parametrik olmayan teyidi.
+     - *Kısmi test* (H0: ŝ ⊥ C | Y) → model bağlamı kullanıyor mu?
+     - C çok boyutlu verilemiyorsa, çapraz-fit edilmiş bağlam eğilim skoru (`logit p̂(Y | yaş, saat, tarih)`) kullanılır.
+  4. **Onaylayıcı aile:** katılımcı düzeyinde toplanmış 6 dondurulmuş backbone için T1, Holm düzeltmesiyle. Görev bazlı ve tasarım bazlı tüm analizler keşifsel.
+  5. **İddia C1** ("ses, ölçülen bağlam ve yaşın ötesinde astım bilgisi taşıyor") için hepsi gerekir:
+     - Holm-düzeltmeli T1 p < 0.05;
+     - OR CI'ı 1'i dışlıyor;
+     - gün-kümeli duyarlılıkta ve spline 6 df'de yön korunuyor;
+     - E2h-KLR OR'u aynı yönde (CI'ın 1'i dışlaması şart değil);
+     - N3 etkiyi yeniden üretmiyor;
+     - N5 bilgiliyse anlamlı değil.
+     
+     **C2** (model bağlamı kullanıyor) ve **C3** (fine-tuning bağlamdan bağımsız bilgiyi artırdı): tasarım belgesi Bölüm 6.
+- **NEDEN:**
+  - **Bölüm F (rapor):** yalnız yaşı kodlayan bir model E2h'de 0.703 alır; tam kohortta bağlamı öğrenmiş bir model 0.351 alır. Ham E2h AUC'sinin şans çizgisi kestirmenin türüne göre 0.35–0.70 arasında, dolayısıyla tanımsız. [FACT]
+  - **SIM-001 (500 simülasyon, gerçek bağlam):**
+    - Ses yalnız "sabah mı / geç dönem mi" basamaklarını kodladığında kuadratik bağlam modeliyle T1 yanlış pozitif oranı **0.216**. Spline modelle 0.060, E2h-KLR ile 0.060.
+    - Gerçek sinyal saptanabilir düzeydeyken bile (aynı-bağlam AUC 0.70, güç ~%84) ortalama ΔAUC yalnız ≈ 0.004. ΔAUC CI ölçütü bu yüzden neredeyse güçsüz.
+    - Tam kohort T1'in gücü E2h-KLR'ninkine yakın: bilgi örtüşme bölgesinde.
+  - Dinga ve ark. 2020: confound kontrolü model tahminleri üzerinde yapılmalı. Spisak 2022: tam ve kısmi confounder testleri. [FROM PAPER]
+- **ALTERNATİFLER:**
+  - D-023'ü olduğu gibi tutmak: yanlış pozitif riski ve güçsüz ΔAUC ölçütü.
+  - İkinci düzey CV ΔAUC'yi karar istatistiği yapmak: tavanda güçsüz.
+  - Daha esnek bağlam modeli (GBM): 340 kişide aşırı uyum, çıkarım zor.
+  - Yalnız Spisak testleri: koşullu dağılım modeline bağımlı, etki büyüklüğü vermez.
+- **RİSK:**
+  - Ölçülmemiş, güne özgü bağlam varsa (SIM-001 S3) yanlış pozitif ~%12'ye çıkıyor ve gün-kümeli SE bunu düzeltmiyor (65 günün 53'ü tek etiketli).
+  - Güç iyimser tahmin edildi: gerçek OOF skoru daha gürültülü.
+  - %80 güce ancak aynı-bağlam AUC'si ≈ 0.69'da (α = 0.05), Holm düzeyinde (≈ 0.01) ≈ 0.74'te ulaşılıyor; daha küçük gerçek etkiler kaçırılabilir.
+- **BİLİMSEL SONUÇ:** Birincil test artık hem yanlış belirtilmiş bağlam modeline hem tavan etkisine karşı korunuyor. "Olumsuz" sonuç da raporlanabilir hâle geliyor: minimum saptanabilir etki önceden biliniyor.
+- **UYGULAMA:**
+  - `scripts/analyze_recording_context.py` (Bölüm F referans çizgileri) ve `scripts/simulate_t1_power.py` (SIM-001).
+  - Faz 1 `scripts/evaluate_context.py` (L1–L8 lens seti).
+  - `requirements-colab.txt`'ye `statsmodels`, `patsy`, `mlconfound` eklenir.
+
+## D-026 — Confounder kontrol yığını: hangi yöntem ne işe yarar
+DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 0, 3, 4, 7
+- **KARAR:**
+  1. **Kanıt yalnız değerlendirme katmanından gelir:** T1, Spisak, E2h-KLR, karşıt-hücre tablosu, N1–N5, zincir kontrolleri. Her model aynı lens setiyle (L1–L8) raporlanır.
+  2. **Hijyen her zaman uygulanır**, ama "confounding kontrolü" diye raporlanmaz:
+     - katılımcı düzeyinde split; tabakalar etiket × dönem × sabah/öğleden sonra, yaş grubu yalnız her hücrede ≥ 5 kişi kalıyorsa;
+     - D-021 harmonizasyonu.
+  3. **Azaltma yöntemleri koşulludur** (G1 pozitif ya da kısmi test anlamlıysa):
+     - bağlam-dengeli yeniden ağırlıklandırma: ağırlık ∝ 1/p̂(Y|C), train fold'unda çapraz-fit, %1–99'da kırpılır, etkin n raporlanır;
+     - hasta-içi, fold-içi doğrusal residualization: yalnız dondurulmuş gömmelerde.
+  4. **Yapılmayacaklar:**
+     - gürültü giderme, sabit gürültü ekleme, DAW'dan export;
+     - tüm veride (CV öncesi) confound regresyonu;
+     - marjinal gradient reversal;
+     - saat veya tarihi modele girdi olarak vermek.
+     
+     Etiket-koşullu adversarial yalnız araştırma uzantısıdır (planlanmadı).
+  5. **Yeni negatif kontrol N5 (bağlam-vekili):** gömmeden yalnız hastalarda sabah/öğleden sonra tahmin eden modelin OOF skoru T1'e konur. Bilgi eklememeli.
+  6. **Gün-gruplu CV**, dondurulmuş problarda duyarlılık analizi olarak.
+- **NEDEN:**
+  - EXP-004: etiket içinde kaba akustik saat izi yok (hastalar 0.549 ± 0.067) → harmonizasyon saat confound'una dokunmaz.
+  - Codec zinciri etiketle ilişkili değil (p = 0.22).
+  - EXP-004b: sabah ve öğleden sonra hastaları klinik olarak benzer (0.528 ± 0.071) → etiket içi saat kontrastı temiz bir kontroldür.
+  - 65 kayıt gününün 53'ü tek etiketli → güne özgü kestirme riski. [FACT]
+  - Literatür:
+    - Snoek 2019: tüm veride confound regresyonu negatif yanlılık; fold içinde yapılınca sorun yok; alt örneklemeyle karşı-dengeleme pozitif yanlılık.
+    - Dinga 2020: girdi düzeyinde ayarlama yetersiz.
+    - Zhao 2020: düşman yalnız etiket-koşullu alt kohortta eğitilmeli.
+    - Elazar & Goldberg 2018: adversarial kaldırma eksik kalır.
+    - Coppock 2024: rastgele split 0.846 → eşleştirilmiş test ~0.62. [FROM PAPER]
+- **ALTERNATİFLER:**
+  - Önce azaltma, sonra değerlendirme: azaltmanın işe yaradığı gösterilemez.
+  - Adversarial-merkezli tasarım: küçük n, kararsız, kaldırma eksik.
+  - Yalnız ses işleme: saat ve tarih yoluna dokunmaz.
+  - Yalnız E2h: düşük güç, şans çizgisi belirsiz.
+- **RİSK:**
+  - Pozitiflik: sabah kaydedilmiş sağlıklı yalnız 12; geç dönemde hiç sağlıklı yok → bilgi örtüşme bölgesine sınırlı.
+  - Yeniden ağırlıklandırmada ağırlıklar uçlaşabilir.
+  - Hasta-içi residualization, bağlam etkisinin sağlıklılarda da aynı olduğunu varsayar. [HYPOTHESIS]
+  - S13 (bronkodilatör) prosedür yolu hiçbir yöntemle ayrılamaz.
+- **BİLİMSEL SONUÇ:** Yöntemler "kanıt üreten", "hijyen" ve "koşullu azaltma" olarak ayrılır. Azaltma yöntemlerinin başarısı da aynı lenslerle ölçülür.
+- **UYGULAMA:** EXP-020 (G1), EXP-021, EXP-022; `docs/CONFOUND_CONTROL_DESIGN.md`.
+
+## D-027 — Confounding altında fine-tuning protokolü
+DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 6 (EXP-030)
+- **KARAR:**
+  - **Backbone seçimi:** EXP-021'de **T1'e göre** ilk 1–2 backbone. E1'e göre seçilmez; eşitlikte düşük kapasiteli olan seçilir.
+  - **Eğitim kapsamı:** kısmi fine-tune (son blok(lar) + baş). Blok sayısı mimari başına önceden yazılır.
+  - **Hiperparametreler:** sabit Boll değerleri (Adam, lr 1e-4, wd 1e-4, batch 16).
+  - **Epoch:** **sabit sayıda**. Bağlam-confounded doğrulama AUC'siyle early stopping veya checkpoint seçimi yapılmaz. Epoch sayısı fold-0'ın iç train/val kayıp eğrisinden bir kez belirlenir ve dondurulur.
+  - **Kayıp:** sınıf-dengeli.
+  - **Veri:** tüm kayıtlar tek modelde; katılımcı skoru = kayıt logit'lerinin ortalaması.
+  - **Kollar:**
+    - Kol A: standart.
+    - Kol B: + bağlam-dengeli ağırlık. Yalnız G1+ ise ya da A'da kısmi test anlamlıysa çalıştırılır.
+  - **Tekrar:** 3 tekrar × 5 fold. Tekrar r, EXP-021'in r. split'ini ve r. tohumunu kullanır.
+  - **Değerlendirme:** aynı lens seti. Fine-tune vs dondurulmuş karşılaştırması aynı katılımcılarda eşleştirilmiş yapılır: T1 sapma azalması farkı (bootstrap) ve kısmi test.
+  - **Kayıt ve güvenlik:** smoke test ve checkpoint kuralları geçerli.
+- **NEDEN:**
+  - Confounded bir metrikle seçim veya early stopping kestirmeyi ödüllendirir.
+  - İç doğrulama fold'unda ~9 sağlıklı var → eşik ve early stopping çok gürültülü.
+  - Küçük n'de tam fine-tune aşırı uyar.
+  - Tohum varyansı büyük olabilir.
+  - Kilitli test seti yok (D-009 A) → fine-tune "seçim sonrası" keşifsel analizdir.
+- **ALTERNATİFLER:**
+  - Doğrulama AUC'siyle early stopping (Boll): kestirmeyi ödüllendirir.
+  - Bağlam-ağırlıklı doğrulama kaybıyla early stopping: ~9 sağlıklı ve uç ağırlıklar → çok gürültülü.
+  - Tam fine-tune: aşırı uyum.
+  - Görev başına fine-tune: 7 kat maliyet.
+  - E2h'de fine-tune: fold başına ~90 kişi.
+- **RİSK:**
+  - Sabit epoch sayısı fold-0'a özgü olabilir; az veya aşırı uyum riski.
+  - Bütçe ~10–20 T4 saati [INFERENCE; smoke testte ölçülecek].
+  - Beklenen olumsuz sonuç: fine-tuning E1'i artırırken T1'i artırmayabilir ve kısmi confounding'i artırabilir. [HYPOTHESIS]
+- **BİLİMSEL SONUÇ:** Fine-tuning'in katkısı "E1 arttı mı?" ile değil, **"bağlamdan bağımsız bilgi arttı mı?"** ile ölçülür. Olumsuz sonuç da raporlanır.
+- **UYGULAMA:** EXP-030, Faz 3 `scripts/train_finetune.py`.

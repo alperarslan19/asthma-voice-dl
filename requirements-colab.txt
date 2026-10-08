@@ -3,5 +3,7 @@
 soundfile
 openpyxl
 tabulate
-# Faz 1'de eklenecek: librosa, imbalanced-learn, xgboost, catboost, statsmodels
+statsmodels>=0.14   # T1 (lojistik regresyon, koşullu lojistik regresyon), SIM-001
+patsy>=0.5          # spline bağlam modeli
+# Faz 1'de eklenecek: librosa, imbalanced-learn, xgboost, catboost, mlconfound (Spisak testleri; sürüm Faz 1'de sabitlenecek)
 # Faz 2'de eklenecek: torchlibrosa, transformers (+ third_party/panns, third_party/beats resmi kod kopyaları)

@@ -50,3 +50,27 @@ Her sütun: o tasarımın tabakaları İÇİNDE değişkenin etiketi ayırma gü
 | E2h zaman penceresi + aynı 1 saat dilimi | 65/50 | 395 | 0.378 | 0.375 | 0.704 | 0.125 | 1.0 |
 | E3  aynı gün | 39/52 | 177 | 0.103 | 0.5 | 0.711 | 0.121 | 1.0 |
 | E3h aynı gün + aynı 1 saat dilimi | 9/14 | 14 | 0.214 | 0.5 | 0.929 | 0.25 | 0.936 |
+
+## E. EXP-004 — Saatin kaba akustik izi (yalnız aynı etiket içinde; sabah vs öğleden sonra)
+
+- asthma (n=282, öğleden sonra 86): tüm ölçümler birlikte CV AUC 0.549 ± 0.067; şanstan ayrılan tekil ölçüm: yok
+- healthy (n=58, öğleden sonra 46): tüm ölçümler birlikte CV AUC 0.525 ± 0.179; şanstan ayrılan tekil ölçüm: yok
+
+### E-b. EXP-004b — Hastalarda sabah ve öğleden sonra grupları klinik olarak farklı mı?
+
+- n = 282 hasta (öğleden sonra 86); klinik profil → öğleden sonra CV AUC 0.528 ± 0.071 (fold %2.5–97.5: 0.37–0.64)
+- Tek değişkenli p < 0.05 (düzeltmesiz): {'period(early/late)': 0.0227}
+- Tüm tek değişkenli p'ler: {'asthma_step': 0.0847, 'sft_dx': 0.9462, 'smoking': 0.1227, 'sex': 1.0, 'gina_control': 0.1703, 'ics_use': 0.3698, 'allergic_rhinitis': 0.2529, 'age': 0.7636, 'act_total': 0.8875, 'fev1_pct': 0.4059, 'fvc_pct': 0.5483, 'fev1_fvc': 0.4001, 'period(early/late)': 0.0227}
+
+## F. Her tasarımın 'yalnız bağlam' referansı (gerçek şans çizgisi)
+
+Bağlam-only lojistik modelin OOF skoru (5-fold × 20) her tasarımın tabakaları içinde değerlendirildi. Bağlamı mükemmel kodlayan ama hiç astım bilgisi taşımayan bir ses modeli bu AUC'leri alırdı; bir ses modelinin o tasarımdaki sonucu 0.5 ile değil bu sayıyla karşılaştırılmalı.
+
+| tasarım | age | hour+date | age+hour+date |
+|---|---|---|---|
+| E1  tam kohort | 0.674 ± 0.005 | 0.930 ± 0.002 | 0.930 ± 0.003 |
+| E1h tam kohort + aynı 1 saat dilimi | 0.703 ± 0.005 | 0.817 ± 0.004 | 0.854 ± 0.008 |
+| E2  zaman penceresi | 0.665 ± 0.008 | 0.810 ± 0.004 | 0.827 ± 0.004 |
+| E2h zaman penceresi + aynı 1 saat dilimi | 0.703 ± 0.009 | 0.351 ± 0.016 | 0.497 ± 0.020 |
+| E3  aynı gün | 0.691 ± 0.021 | 0.885 ± 0.009 | 0.918 ± 0.008 |
+| E3h aynı gün + aynı 1 saat dilimi | 0.914 ± 0.029 | 0.639 ± 0.091 | 0.861 ± 0.075 |
