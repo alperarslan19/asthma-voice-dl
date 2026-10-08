@@ -6,7 +6,7 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 
 ## Nereden başlamalı
 1. `docs/PHASE0_REPORT.md` — ne bildiğimiz, ne bilmediğimiz, neden böyle tasarladığımız
-2. `docs/CONFOUND_CONTROL_DESIGN.md` — kayıt bağlamı confounder'ına karşı yöntemlerin değerlendirmesi ve deney tasarımı (ham ses → pretrained → fine-tune)
+2. `docs/CONFOUND_CONTROL_DESIGN.md` — kayıt bağlamı confounder'ı: yöntemlerin değerlendirmesi; model geliştirme bittikten sonraki değerlendirme aşamasının yol haritası (D-028)
 3. `docs/COLAB_WORKFLOW.md` — GitHub / Drive / Colab kurulumu ve her oturumun başı
 4. `notebooks/01_data_audit.ipynb` — ses denetimi (tamamlandı)
 
@@ -22,10 +22,13 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 0 | Ses denetimi + eşleme + dinleme teyidi | ✅ 342 katılımcı (283/59), 2 393 kayıt |
 | 0 | Harmonizasyon (D-021, kesim 11.0 kHz), kayıt bağlamı analizi EXP-003, revize birincil test (D-023) | ✅ |
 | 0 | Confounder kontrol yöntemlerinin değerlendirmesi, EXP-004/004b, SIM-001, test spesifikasyonu (D-025/026/027 önerildi) | ✅ |
-| 1 | **Split dosyaları + harmonize ses önbelleği + değerlendirme lensleri (`evaluate_context.py`)** | ⏳ **sıradaki adım** |
-| 1 | MFCC baseline yeniden üretimi (EXP-010/011) | ⏸ split dosyalarından sonra |
-| 2 | Smoke test'ler, bağlam probları (EXP-020, kapı G1), dondurulmuş gömme + lineer prob (EXP-021, 6 backbone) | ⏸ |
-| 3 | Sıfırdan CNN, fine-tune, füzyon, confounder ve alt grup analizleri | ⏸ |
+| 0 | Confounder ayrı araştırma başlığı; değerlendirme geliştirme sonuna (D-028); ön işleme (D-015) ve augmentation (D-016) kabul | ✅ |
+| 1 | Split dosyaları (`make_splits.py`, D-029): 5 tekrar × 5 fold, manifest `reports/splits/` | ✅ (Colab'da sha256 teyidi) |
+| 1 | **Harmonize ses önbelleği (`build_audio_cache.py`, D-015/D-018/D-021)** | ⏳ **sıradaki adım** |
+| 1 | MFCC baseline yeniden üretimi (EXP-010/011) | ⏸ ses önbelleğinden sonra |
+| 2 | Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone) | ⏸ |
+| 3 | Sıfırdan CNN10, ham dalga formundan uçtan uca fine-tune, füzyon, alt gruplar | ⏸ |
+| 4 | **Kayıt bağlamı değerlendirmesi** (D-023, D-028): kaydedilmiş tahminler üzerinde T1, E-tasarımları, negatif kontroller | ⏸ model geliştirme bitince |
 
 ## Klasörler
 ```
@@ -37,13 +40,13 @@ scripts/              tüm mantık (notebook'lar bunları çağırır)
 notebooks/            ince orkestrasyon notebook'ları (Colab)
 configs/              model girdi sözleşmeleri, slot→görev eşlemesi
 reports/              yalnız agrega denetim çıktıları
-tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py
+tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py, python tests/test_make_splits.py
 ```
 
 ## Değişmez kurallar
 - Split katılımcı düzeyinde; segment sayısı hasta sayısı değildir.
 - İstatistik öğrenen her işlem (ölçekleme, SMOTE, augmentation havuzu) yalnız train fold'unda.
-- Birincil test: ses skoru, kayıt bağlamı (tarih + saat) ve yaşın ötesinde bilgi ekliyor mu (T1: spline bağlam modeli + olabilirlik testi; D-023, D-025). Her sonuç aynı lens setiyle (L1–L8) raporlanır. Ham AUC kanıt değildir.
-- Fine-tune backbone'u bağlamdan bağımsız katkıya (T1) göre seçilir, ham AUC'ye göre değil; confounded doğrulama metriğiyle early stopping yapılmaz (D-027).
+- Kayıt bağlamı (tarih + saat) sesi kullanmadan etiketi AUC 0.93 ile ele veriyor. Değerlendirme aşamasına kadar her ses modeli sonucu **üst sınır** olarak raporlanır; tabloda iki referans satırı bulunur: yalnız bağlam 0.93, yalnız yaş 0.68 (D-028). "Ses astım bilgisi taşıyor" iddiası yalnız değerlendirme aşamasındaki artımlı testten çıkar (D-023).
+- Her deney dış-test tahminlerini katılımcı, kayıt ve segment düzeyinde saklar. Fine-tune'da hem en iyi doğrulama checkpoint'inin hem son epoch'un tahminleri saklanır (D-028).
 - Olumsuz sonuçlar silinmez.
 - Smoke test geçmeden tam eğitim yok; her epoch checkpoint.

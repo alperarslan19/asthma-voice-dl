@@ -5,8 +5,8 @@
 | Tarih | 2026-10-08 |
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
-| Durum | Literatür, klinik denetim, girdi sözleşmeleri, protokol, zaman stratejisi ve altyapı tamam; ses denetimi, eşleme doğrulaması ve MFCC baseline bekliyor |
-| Son güncelleme | 2026-10-08 (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
+| Son güncelleme | 2026-10-08 (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -21,12 +21,13 @@ Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** b
 5. **Eşleme kuralı veri ekibinden geldi.** Dosyalar `<ID>_<slot>.m4a`; 1 = aaa, 2 = araba, 3 = ana, 4 = ordu, 5 = gelecek, 6 = titiz, 7 = ünlem (düzeltilmiş bildirim). Son dosya 101344_7 → 101345–101348'in sesi yok, birincil kohort 344 (D-002). Ses denetimi ve kısa bir dinleme teyidi bitmeden model eğitimine geçilmeyecek. [FROM DATA TEAM + DECISION]
 6. **Ses denetimi (4. tur).** 2 393 dosya; hepsi `.m4a` AAC-LC mono, biri dışında 48 kHz; kopya yok, konum etiketi yok. **Tarih dengesizliği dosya zaman damgalarıyla doğrulandı.** **Yeni confounder: günün saati.** Hastalar sağlıklılardan belirgin biçimde daha erken saatte kaydedilmiş (AUC 0.13–0.17). Dosyaların %27'si ayrı bir FFmpeg zincirinden geçmiş. Ses işleme yalnız teknik farkları giderebilir; tarih, saat ve hasta profili sesin kendisinde (Bölüm 6.8, D-021). [FACT]
 7. **Kayıt bağlamı (5. tur, EXP-003).** Sesi hiç kullanmadan **tarih + saat etiketi AUC 0.931 ± 0.032 ile ele veriyor**; saat tek başına 0.841. Sağlıklılar çoğunlukla öğleden sonra (medyan 15:10), hastalar sabah (medyan 11:05) kaydedilmiş. Zaman penceresi saati kontrol etmiyor (saat orada 0.873). Bu yüzden birincil soru, ses modeli sonuçları görülmeden önce değiştirildi: **"ses, kayıt bağlamı ve yaşın ötesinde astım bilgisi taşıyor mu?"** (D-023, Bölüm 6.9). [FACT + DECISION]
-8. **Confounder kontrol yöntemleri (6. tur, Bölüm 6.10).** Yedi yöntem değerlendirildi (`docs/CONFOUND_CONTROL_DESIGN.md`). Kanıtı yalnız değerlendirme katmanı üretir: artımlı test T1, ayarlı E2h, Spisak testleri ve negatif kontroller. Harmonizasyon ve katılımcı split'i hijyendir, confounding kontrolü değildir. Marjinal adversarial eğitim burada astım sinyalini de siler. Üç yeni bulgu test spesifikasyonunu değiştirdi (D-025):
+8. **Confounder kontrol yöntemleri (6. tur, Bölüm 6.10).** Yedi yöntem değerlendirildi (`docs/CONFOUND_CONTROL_DESIGN.md`). Kanıtı yalnız değerlendirme katmanı üretir: artımlı test T1, ayarlı E2h, Spisak testleri ve negatif kontroller. Harmonizasyon ve katılımcı split'i hijyendir, confounding kontrolü değildir. Marjinal adversarial eğitim burada astım sinyalini de siler. Üç yeni bulgu test spesifikasyonunda değişiklik önerdi (D-025; değerlendirme aşamasında kesinleşecek, D-028):
    - Ham E2h AUC'sinin şans çizgisi 0.5 değil: yalnız yaşı kodlayan bir model **0.70** alır.
    - Kuadratik bağlam modeliyle T1, ses yalnız bağlamı kodlarken bile **%22** yanlış pozitif verebilir; spline modelle %6.
    - Gerçek sinyal varken bile ΔAUC binde birler düzeyinde kalıyor.
    
    [FACT + DECISION]
+9. **Confounder ayrı bir araştırma başlığı (7. tur, D-028).** Ana plan (D-012) değişmeden sürüyor. Kayıt bağlamı değerlendirmesi model geliştirme bitince, kaydedilmiş tahminler üzerinde yapılacak. O zamana kadar her ses modeli AUC'si **üst sınır** olarak, "yalnız bağlam 0.93" ve "yalnız yaş 0.68" referanslarıyla birlikte raporlanır. [DECISION]
 
 ---
 
@@ -502,6 +503,8 @@ Yalnız öğleden sonra kayıtlarına bakmak da yetmiyor: orada saat 0.767, tari
 
 Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DESIGN.md`**. Kararlar: D-025 (test spesifikasyonu), D-026 (kontrol yığını), D-027 (fine-tuning protokolü), üçü de ÖNERİLDİ.
 
+> **7. tur (D-028):** Bu bölümdeki kontrol deneyleri (EXP-020, EXP-022) ve D-025–027 önerileri **değerlendirme aşamasına ertelendi**. Model geliştirme kabul edilmiş plana göre sürüyor; değerlendirme, geliştirme bitince kaydedilmiş tahminler üzerinde yapılacak.
+
 **Yöntemlerin rolü:**
 
 | Yöntem | Rolü |
@@ -545,7 +548,7 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 - Zorunlu zaman kontrolleri: zaman penceresi 155 (98/57) ve aynı gün tasarımı 12 gün (39/51) — Bölüm 6; günün saati için ek kontroller — Bölüm 6.7, D-022.
 
 **Split (D-009):**
-- Dış döngü: katılımcı düzeyinde, **etiket × kayıt dönemi (erken / geç) × sabah / öğleden sonra** ile tabakalı 5-fold (6. tur, D-026; yaş grubu yalnız her hücrede ≥ 5 kişi kalıyorsa eklenir) (her test fold'una zaman penceresinden orantılı katılımcı düşsün diye); ucuz modellerde 5 tekrar (25 fold), fine-tune'da ölçülen maliyete göre 1–3 tekrar.
+- Dış döngü: katılımcı düzeyinde, **etiket × kayıt dönemi (erken / geç / bilinmiyor; D-024 kayıt tarihiyle) × yaş grubu (≤40 / >40 / bilinmiyor)** ile tabakalı 5-fold (D-009; D-026'daki sabah/öğleden sonra eklemesi önerisi D-028 ile ertelendi) (her test fold'una zaman penceresinden orantılı katılımcı düşsün diye); ucuz modellerde 5 tekrar (25 fold), fine-tune'da ölçülen maliyete göre 1–3 tekrar.
 - Fold atamaları **bir kez** üretilir, `splits/` altında sha256 ile saklanır; **her deney aynı dosyayı okur** → modeller aynı katılımcılarda eşleştirilmiş olarak karşılaştırılabilir.
 - İç döngü: her dış train kümesinde tabakalı 80/20 katılımcı bölünmesi → yalnız early stopping ve eşik için. Lineer problarda düzenlileştirme (C) için iç 5-fold.
 - Hiperparametreler fine-tune için **önceden sabit** (Boll değerleri); değiştirmek ayrı, kayıtlı bir ablasyondur.
@@ -562,7 +565,9 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 **Model karşılaştırması (D-011):** aynı fold'larda eşleştirilmiş ΔAUC; Nadeau–Bengio düzeltilmiş tekrarlı-CV t-testi; tekrar başına havuzlanmış OOF'ta DeLong. Bir iyileşme ancak (i) ΔAUC CI'ı sıfırı dışlıyor ve (ii) yön zaman-örtüşen alt kohortta da korunuyorsa "destekleniyor" sayılır.
 
-**Her başlık sonucu için zorunlu kontroller:** lens seti L1–L8 (`docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 4): birincil artımlı test T1 (spline bağlam modeli, olabilirlik oranı testi + OR; D-025), Spisak tam / kısmi testleri, E2h koşullu lojistik regresyonu (ham E2h AUC'si referans çizgileriyle), karşıt-hücre tablosu, N1–N5, zincir duyarlılığı; E1/E1h/E2/E3 her zaman raporlanır; yaş-only ve yaş+cinsiyet+sigara baseline'ı; "yaşın ötesinde bilgi" (OOF ses skoru + yaş vs yalnız yaş, ikinci düzey CV); zaman-örtüşen alt kohort; dönem probu (yalnız hastalarda erken vs geç kayıt, ses gömmelerinden); kayıt-koşulu baseline'ı (gürültü tabanı, süre, sessizlik); alt gruplar (yaş grubu, cinsiyet, sigara; hastalarda SFT normal/anormal, GINA kontrol, basamak).
+**Model geliştirme sırasında her sonuçla birlikte:** üst sınır uyarısı ve iki referans satırı (yalnız bağlam 0.93, yalnız yaş 0.68); dış-test tahminleri katılımcı / kayıt / segment düzeyinde saklanır (D-028).
+
+**Değerlendirme aşamasında (D-028; model geliştirme bitince, kaydedilmiş tahminler üzerinde) başlık sonuçları için kontroller:** lens seti L1–L8 (`docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 4; ayrıntılar D-025 önerisi üzerinden kesinleşecek): birincil artımlı test T1 (spline bağlam modeli, olabilirlik oranı testi + OR; D-025), Spisak tam / kısmi testleri, E2h koşullu lojistik regresyonu (ham E2h AUC'si referans çizgileriyle), karşıt-hücre tablosu, N1–N5, zincir duyarlılığı; E1/E1h/E2/E3 her zaman raporlanır; yaş-only ve yaş+cinsiyet+sigara baseline'ı; "yaşın ötesinde bilgi" (OOF ses skoru + yaş vs yalnız yaş, ikinci düzey CV); zaman-örtüşen alt kohort; dönem probu (yalnız hastalarda erken vs geç kayıt, ses gömmelerinden); kayıt-koşulu baseline'ı (gürültü tabanı, süre, sessizlik); alt gruplar (yaş grubu, cinsiyet, sigara; hastalarda SFT normal/anormal, GINA kontrol, basamak).
 
 ---
 
@@ -600,7 +605,7 @@ Kod, eşleme doğrulandıktan sonra yazılacak (ses verisi olmadan test edilemez
 - **Google Drive:** `data_raw/` (salt okunur, sha256'lı), `data_derived/` (participants.csv, recording_map.csv, resample önbellekleri), `models/` (indirilmiş ağırlıklar), `experiments/EXP-XXX/` (config, log, checkpoint, OOF tahminleri).
 - **Colab:** repo her oturumda `/content`'e klonlanır (Drive içinde git kırılgan ve yavaştır); ses zip'i Drive'dan yerel diske kopyalanıp açılır (Drive üzerinden binlerce küçük dosya okumak yavaştır).
 - **Kayıt düzeni:** `results/registry.csv` tek doğruluk kaynağı (kod otomatik satır ekler); Google Sheets bunun **görünümü** (iki kaynak = tutarsızlık).
-- **Checkpoint kuralı (eğitim fazları için):** her epoch `latest.pt` (atomik yazım), en iyi val'de `best.pt`, epoch CSV logu her satırda flush, config + seed + git commit + `pip freeze` deney klasörüne; kaldığı yerden devam. Drive kotası (ücretsiz 15 GB) CNN14'te fold başına ~1 GB tam durum demek → biten fold'larda yalnız tahminler + fp16 en iyi ağırlık tutulur.
+- **Checkpoint kuralı (eğitim fazları için):** her epoch `latest.pt` (atomik yazım), en iyi val'de `best.pt`, epoch CSV logu her satırda flush, config + seed + git commit + `pip freeze` deney klasörüne; kaldığı yerden devam. Drive kotası (ücretsiz 15 GB) CNN14'te fold başına ~1 GB tam durum demek → biten fold'larda yalnız tahminler + fp16 en iyi ağırlık tutulur. Fine-tune'da hem en iyi val checkpoint'inin hem son epoch'un dış-test tahminleri saklanır (D-028).
 
 ---
 
@@ -608,7 +613,7 @@ Kod, eşleme doğrulandıktan sonra yazılacak (ses verisi olmadan test edilemez
 
 **Ses denetimiyle çözülecek [NEEDS VERIFICATION]:** tüm dosyalar `.m4a` ve 48 kHz mono mu, codec ve bitrate, etkin bant genişliği; **sağlıklıların gerçek kayıt günleri (dosya içi zaman damgası)**; 344 × 7 kaydın varlığı; 101345–101348'in sesi var mı; kopyalar; meta verinin (iOS sürümü, kodlayıcı) ve kayıt koşullarının döneme göre değişip değişmediği; dosya içi tarih ↔ CSV tarihi.
 
-**Dinleyerek teyit edilecek:** slot → görev eşlemesi (her slottan 3 kayıt); 101042 / 101050 aynı kişi mi.
+**Dinleyerek teyit edilecek:** ~~slot → görev eşlemesi; 101042 / 101050 aynı kişi mi~~ → ikisi de çözüldü: eşleme uyumlu, 101042 ve 101050 farklı kişiler (Bölüm 3).
 
 **Veri ekibine sorulacaklar:**
 1. ~~Slot 2 ve 3~~ → çözüldü: 2 = araba, 3 = ana.
@@ -630,37 +635,30 @@ Kod, eşleme doğrulandıktan sonra yazılacak (ses verisi olmadan test edilemez
 
 ---
 
-## 12. Faz 0 durum raporu (6. tur)
+## 12. Durum raporu (7. tur — Faz 1 başladı)
 
 - **Ne yaptık?**
-  - Kayıt bağlamı confounder'ına karşı önerilen yedi yöntemi bilimsel olarak değerlendirdik; ham ses + pretrained + fine-tuning için bir deney tasarımı yazdık (`docs/CONFOUND_CONTROL_DESIGN.md`).
-  - Tasarımı dayandırmak için dört ses-modelsiz kontrol çalıştırdık: EXP-004, EXP-004b, tasarım referans çizgileri, SIM-001.
+  - Confounder'ı ayrı bir araştırma başlığı olarak tanımladık; değerlendirme model geliştirme sonuna ertelendi (D-028).
+  - D-015 (ön işleme) ve D-016 (augmentation kapalı) kabul edildi.
+  - Split dosyaları üretildi (D-029):
+    - `scripts/make_splits.py` ve sahte veriyle testi `tests/test_make_splits.py` (9 kontrol);
+    - 5 tekrar × 5 dış fold, her dış train içinde 5 iç fold (iç fold 0 = doğrulama);
+    - manifest `reports/splits/` altında.
 - **Ne öğrendik?**
-  - Kaba bir "sabah / öğleden sonra odası" izi yok.
-  - Sabah ve öğleden sonra hastaları klinik olarak benzer.
-  - Ham E2h AUC'sinin şans çizgisi 0.5 değil (yaş 0.70).
-  - Kuadratik bağlam modeli T1'de yanlış pozitif üretiyor.
-  - ΔAUC tavanda karar istatistiği olamayacak kadar güçsüz.
-  - Bilgi yalnız örtüşme bölgesinde: tam kohort T1'in gücü ≈ E2h'nin gücü.
-  - %80 güç ancak aynı-bağlam AUC'si ≈ 0.69'da (α = 0.05), Holm düzeyinde ≈ 0.74'te; bu sayılar iyimser.
-  - Ölçülmemiş güne özgü bağlam T1'i şişirebilir; gün-kümeli SE bunu düzeltmiyor.
-- **Hangi kararları aldık?** Üçü de **önerildi, onay bekliyor**:
-  - **D-025:** T1 = spline bağlam + olabilirlik testi; E2h = koşullu lojistik regresyon; Spisak testleri; Holm'lu onaylayıcı aile.
-  - **D-026:** kanıt / hijyen / koşullu azaltma ayrımı; N5 bağlam-vekili kontrolü; split tabakalarına sabah / öğleden sonra eklendi.
-  - **D-027:** fine-tuning protokolü.
+  - Kohort 342 kişi: 283 astım / 59 sağlıklı.
+  - D-024 kayıt tarihiyle dönem dağılımı: astım 98 erken / 185 geç; sağlıklı 58 erken / 1 bilinmiyor.
+  - Her test fold'unda 11–12 sağlıklı, her iç doğrulamada 9–10 sağlıklı. → Early stopping ve eşik seçimi ~10 sağlıklıya dayanacak, yani gürültülü olacak (beklenen, D-009).
+  - Görev 4'te 1 katılımcı eksik; diğer görevlerde 342.
+- **Hangi kararları aldık?**
+  - D-028: confounder ayrı başlık; kayıt yükümlülükleri; "üst sınır" raporlama.
+  - D-029: split üretim ayrıntıları.
+  - D-015 ve D-016: KABUL.
+  - D-025–027: ÖNERİLDİ, değerlendirme aşamasına ertelendi.
 - **Hangi belirsizlikler kaldı?**
-  - S13: kayıt bronkodilatörden önce mi sonra mı? Bu prosedür yolunu hiçbir yöntem ayıramaz.
-  - S12: FFmpeg yolunun nedeni.
-  - `mlconfound`'un çok değişkenli C desteği.
-  - Fine-tune için sabit epoch sayısı ve blok sayıları (smoke test).
-  - Gerçek OOF skorlarıyla güç SIM-001'den düşük olacak.
-- **Bir sonraki minimum gerekli adım:** Faz 1, değişmedi; yalnız split tabakaları güncellendi:
-  1. `scripts/make_splits.py`:
-     - etiket × dönem (D-024 tarihiyle) × sabah / öğleden sonra tabakalı, katılımcı düzeyi tekrarlı 5-fold;
-     - ek olarak gün-gruplu varyant;
-     - kesişim = 0 assert'leri; sha256.
-  2. `scripts/build_audio_cache.py` — D-021 harmonizasyonu ve doğrulama ölçümleri.
-  3. `scripts/evaluate_context.py` — lens seti L1–L8; önce bağlam-only ve SIM-001 skorlarıyla birim testi.
-  4. MFCC baseline (EXP-010/011) — lens setinin ilk gerçek kullanıcısı.
+  - Split dosyalarının Colab'da aynı sha256 ile yeniden üretilmesi (kütüphane sürümü farkını yakalar).
+  - D-015'teki kenar kırpma eşiği → `build_audio_cache.py` tasarımında belirlenecek.
+  - Veri ekibi soruları S12 (FFmpeg yolu) ve S13 (bronkodilatör).
+- **Bir sonraki minimum gerekli adım:** `scripts/build_audio_cache.py`, önce tasarım sonra kod. Yapacakları: D-018 çözme, D-021 harmonizasyonu, D-015 kırpma / normalizasyon, 32 / 16 kHz önbellek, doğrulama ölçümleri. Ardından MFCC baseline (EXP-010/011).
 
+*Önceki (6. tur):* confounder kontrol yöntemlerinin değerlendirmesi (`docs/CONFOUND_CONTROL_DESIGN.md`), EXP-004/004b, tasarım referans çizgileri, SIM-001, D-025/026/027 önerildi.
 *Önceki (5. tur):* kayıt bağlamı analizi (EXP-003), D-021 kesimi 11.0 kHz, D-023, D-024.

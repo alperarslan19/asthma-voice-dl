@@ -1,6 +1,8 @@
 # Kayıt bağlamı confounder'ı: yöntemlerin değerlendirmesi ve deney tasarımı
 
 **Durum:** ÖNERİLDİ — onay bekliyor (D-025 test spesifikasyonu, D-026 kontrol yığını, D-027 fine-tuning protokolü) · **Tarih:** 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden yazıldı**
+
+> **7. tur — D-028 (KABUL):** Confounder ayrı bir araştırma başlığı. Bu belgedeki kontrol deneyleri (EXP-020, EXP-022), azaltma yöntemleri ve D-025–027 önerileri **model geliştirme sırasında uygulanmaz**. Model geliştirme bittiğinde, kaydedilmiş tahminler üzerinde yapılacak değerlendirmenin yol haritası olarak kullanılır. Geliştirme sırasında yalnız D-028'deki kayıt yükümlülükleri ve "üst sınır" raporlama kuralı geçerlidir.
 **İlgili:** D-017, D-020, D-021, D-022, D-023 · EXP-003, EXP-004, EXP-004b, SIM-001 · rapor Bölüm 6.9–6.10
 
 > Bu belge şu soruya cevap verir: *Yeni veri toplamadan, ham ses + pretrained model + fine-tuning ile "model gerçekten astım bilgisi mi öğreniyor, yoksa kayıt bağlamını mı?" sorusunu nasıl savunulabilir biçimde test ederiz?*

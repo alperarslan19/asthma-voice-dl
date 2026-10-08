@@ -136,7 +136,7 @@ DURUM: KABUL
 - **UYGULAMA:** `.gitignore`, `docs/COLAB_WORKFLOW.md` commit kontrol listesi.
 
 ## D-015 — Ön işleme (geçici): Boll'u izle, ses denetiminden sonra kesinleştir
-DURUM: ÖNERİLDİ (Faz 1'de kesinleşecek)
+DURUM: **KABUL** (2026-10-08, 7. tur — Alper onayladı; kırpma eşiği `build_audio_cache.py` tasarımında gürültü tabanına göre sabitlenecek) · Harmonizasyon ayrıntısı: D-021
 - **KARAR:** Mono → model SR'sine resample → enerji tabanlı kenar kırpma (tepeye göre) → tepe normalizasyonu → 4.0 s pencere / 2.0 s hop, kısa kayıtlar sıfırla doldurulur. Hepsi dosya başına deterministik (split'ten önce güvenli).
 - **NEDEN:** Referans makaleyle karşılaştırılabilirlik [FROM PAPER]; kırpma, baş/son sessizlikteki oda gürültüsünü (ortam confounder'ı) azaltır. [INFERENCE]
 - **ALTERNATİFLER:** Kırpmasız; tüm kaydı tek girdi olarak vermek (10 s, PANNs ön-eğitimiyle uyumlu); RMS normalizasyonu.
@@ -145,7 +145,7 @@ DURUM: ÖNERİLDİ (Faz 1'de kesinleşecek)
 - **UYGULAMA:** Faz 1.
 
 ## D-016 — Augmentation başlangıçta kapalı
-DURUM: ÖNERİLDİ
+DURUM: **KABUL** (2026-10-08, 7. tur — Alper onayladı)
 - **KARAR:** İlk deneylerde augmentation yok (PANNs'in model içi SpecAugment'i dahil, bilinçli olarak kapatılır). Augmentation sonradan tek değişkenli ablasyon olarak; pitch shift ve time stretch ayrı ayrı.
 - **NEDEN:** Pitch ve konuşma hızı hastalığa dair bilgi taşıyabilir. [HYPOTHESIS] Boll bunu ablasyonsuz uyguladı. [FROM PAPER]
 - **ALTERNATİFLER:** Boll'un tam augmentation paketi.
@@ -271,7 +271,7 @@ DURUM: KABUL · Tarih: 2026-10-08 (5. tur)
 - **UYGULAMA:** `scripts/analyze_recording_context.py` → `participant_context.csv` (`recording_date`, `recording_date_source`).
 
 ## D-025 — Birincil test spesifikasyonu revize edildi (T1, E2h, Spisak testleri)
-DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
+DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
 - **KARAR:**
   1. **T1 (birincil):** tek lojistik regresyon `y ~ spline(saat, 4 df) + spline(tarih, 4 df) + yaş + ŝ`.
      - ŝ = katılımcının dış-fold OOF ses logit'i (tekrarlar boyunca ortalama).
@@ -319,7 +319,7 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları gö
   - `requirements-colab.txt`'ye `statsmodels`, `patsy`, `mlconfound` eklenir.
 
 ## D-026 — Confounder kontrol yığını: hangi yöntem ne işe yarar
-DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 0, 3, 4, 7
+DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 0, 3, 4, 7
 - **KARAR:**
   1. **Kanıt yalnız değerlendirme katmanından gelir:** T1, Spisak, E2h-KLR, karşıt-hücre tablosu, N1–N5, zincir kontrolleri. Her model aynı lens setiyle (L1–L8) raporlanır.
   2. **Hijyen her zaman uygulanır**, ama "confounding kontrolü" diye raporlanmaz:
@@ -362,7 +362,7 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CO
 - **UYGULAMA:** EXP-020 (G1), EXP-021, EXP-022; `docs/CONFOUND_CONTROL_DESIGN.md`.
 
 ## D-027 — Confounding altında fine-tuning protokolü
-DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 6 (EXP-030)
+DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 6 (EXP-030)
 - **KARAR:**
   - **Backbone seçimi:** EXP-021'de **T1'e göre** ilk 1–2 backbone. E1'e göre seçilmez; eşitlikte düşük kapasiteli olan seçilir.
   - **Eğitim kapsamı:** kısmi fine-tune (son blok(lar) + baş). Blok sayısı mimari başına önceden yazılır.
@@ -394,3 +394,78 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CO
   - Beklenen olumsuz sonuç: fine-tuning E1'i artırırken T1'i artırmayabilir ve kısmi confounding'i artırabilir. [HYPOTHESIS]
 - **BİLİMSEL SONUÇ:** Fine-tuning'in katkısı "E1 arttı mı?" ile değil, **"bağlamdan bağımsız bilgi arttı mı?"** ile ölçülür. Olumsuz sonuç da raporlanır.
 - **UYGULAMA:** EXP-030, Faz 3 `scripts/train_finetune.py`.
+
+## D-028 — Kayıt bağlamı confounder'ı ayrı bir araştırma başlığıdır; değerlendirme model geliştirme bitince yapılır
+DURUM: KABUL · Tarih: 2026-10-08 (7. tur, Alper'in yönlendirmesi ve onayı) · D-023'ün birincil sorusunu değiştirmez; ne zaman ve nasıl uygulanacağını belirler
+- **KARAR:**
+  1. **Ana proje planı değişmez** (D-012 merdiveni: MFCC → dondurulmuş gömme + lineer prob → sıfırdan CNN10 → ham dalga formundan uçtan uca fine-tune). Geliştirme sırasında ek kontrol deneyi veya azaltma yöntemi uygulanmaz. Bunlar ertelenir:
+     - bağlam probları (EXP-020) ve azaltma denemeleri (EXP-022);
+     - yeniden ağırlıklandırma, adversarial eğitim, gün-gruplu CV;
+     - D-025/026/027 önerileri.
+  2. **Kayıt bağlamı değerlendirmesi** model geliştirme bitince, **kaydedilmiş tahminler üzerinde** yapılır; yeniden eğitim gerekmez:
+     - D-023'ün artımlı testi (T1);
+     - E1/E1h/E2/E3, denge tabloları ve referans çizgileriyle;
+     - ayarlı E2h;
+     - D-005 baseline'ları;
+     - negatif kontroller (D-017, D-020);
+     - codec zinciri duyarlılığı.
+     
+     Test ayrıntıları o aşamada D-025 önerisi üzerinden kesinleştirilir.
+  3. **Geliştirme sırasında zorunlu kayıtlar** (ek deney değil; sonradan değerlendirmeyi mümkün kılar). Her deney ve her (tekrar, fold) için şunlar Drive'a yazılır:
+     - **katılımcı, kayıt ve segment düzeyinde** dış-test tahminleri (kayıt düzeyi tahminler codec zinciri kontrolü için gerekli);
+     - fine-tune'da **hem en iyi doğrulama checkpoint'inin hem son epoch'un** tahminleri (`oof_predictions_best.csv`, `oof_predictions_last.csv`);
+     - dondurulmuş gömmeler (Faz 2'de bir kez çıkarılır);
+     - split dosyalarının sha256'sı ve config.
+  4. **Ara sonuçların raporlanması:** Değerlendirme yapılana kadar her ses modeli sonucu "kayıt bağlamından etkilenmiş olabilecek **üst sınır**" olarak raporlanır, astım tespit başarısı olarak değil. Her tabloda şu iki referans satırı bulunur:
+     - yalnız bağlam (tarih + saat): AUC 0.931 ± 0.032;
+     - yalnız yaş: 0.681 ± 0.076 (EXP-003).
+  5. **Fine-tune backbone seçim ölçütü** (D-012) Faz 2 sonunda, sonuçlar görülmeden önce yazılır. Ham AUC'ye göre seçmenin "bağlamı en çok kullanan modeli seçme" riski o kararda açıkça değerlendirilir.
+- **NEDEN:**
+  - Alper'in önceliği ana hedefe (ham ses tabanlı uçtan uca astım sınıflandırması) odaklanmak.
+  - Confounder bulguları zaten belgelendi: EXP-001–004, SIM-001, rapor 6.7–6.10, `docs/CONFOUND_CONTROL_DESIGN.md`.
+  - Değerlendirme analizlerinin çoğu yalnız kaydedilmiş tahminlere ihtiyaç duyar. Tahminler saklanırsa ertelemenin bilimsel bedeli düşüktür. [INFERENCE]
+- **ALTERNATİFLER:**
+  - Kontrol deneylerini geliştirmeyle eşzamanlı yürütmek (D-025–027): daha erken bilgi, ama ana projeyi yavaşlatır.
+  - Confounder'ı tamamen sona bırakıp kayıt tutmamak: sonradan analiz için yeniden eğitim gerekir.
+- **RİSK:**
+  - Bağlam bağımlılığı geliştirme sırasında fark edilmezse, mimari ve hiperparametre seçimleri bağlamı en iyi kullanan modele doğru kayabilir. Bu risk, sonradan değerlendirmede ölçülebilir ama geri alınamaz.
+  - Early stopping, confounded bir doğrulama metriği kullanır (D-009). Son epoch tahminlerinin de saklanması bu riski sonradan ölçülebilir kılar.
+  - Ölçülemeyen sınırlar değişmez: pozitiflik (sabah kaydedilmiş 12 sağlıklı; geç dönemde sağlıklı yok) ve S13 bronkodilatör yolu.
+- **BİLİMSEL SONUÇ:** Sonuçlar olduğundan güçlü gösterilmez. Ara AUC'ler üst sınırdır; "ses astım bilgisi taşıyor" iddiası yalnız değerlendirme aşamasından (D-023) çıkabilir.
+- **UYGULAMA:**
+  - `docs/COLAB_WORKFLOW.md` Bölüm 7: tahmin dosyaları.
+  - Faz 1–3 eğitim ve prob script'leri: kayıt yükümlülükleri.
+  - `docs/CONFOUND_CONTROL_DESIGN.md`: değerlendirme aşamasının yol haritası.
+
+## D-029 — Split dosyalarının üretim ayrıntıları
+DURUM: KABUL · Tarih: 2026-10-08 (7. tur) · D-003, D-009 ve D-024'ün uygulanışı; yeni bir tasarım kararı değil
+- **KARAR:**
+  1. **Kohort:** en az bir geçerli kaydı (`recording_map.csv`'de `status == OK`) olan herkes → 342 (283 astım / 59 sağlıklı). Tüm görevler için **tek** split kullanılır; bir görevde kaydı eksik olan katılımcı (101244, görev 4) o görevin analizinde yalnızca yer almaz.
+  2. **Tabakalar:** etiket × dönem × yaş grubu (D-009).
+     - Dönem: D-024 kayıt tarihiyle. Son sağlıklı kayıt gününe kadar "erken", sonrası "geç", tarih yoksa "bilinmiyor".
+     - Yaş grubu: ≤40 / >40 / bilinmiyor.
+     - **5 kişiden küçük tabaka**, aynı etiketin en kalabalık uyumlu tabakasına katılır: önce aynı etiket + dönem içinde, yoksa aynı etiket içinde. Hangi tabakanın nereye katıldığı manifeste yazılır.
+  3. **Dış döngü:** `StratifiedKFold(5, shuffle=True, random_state=r)`, r = 0…4 (5 tekrar). Ucuz modeller 5 tekrarın hepsini kullanır; fine-tune ilk 1–3 tekrarı.
+  4. **İç döngü:** Her (r, k) dış-train kümesi, aynı tabakalarla `StratifiedKFold(5, shuffle=True, random_state=1000 + 10r + k)` ile 5 iç fold'a bölünür.
+     - **İç fold 0 = doğrulama kümesi** (~%20; early stopping ve eşik, D-009).
+     - İç 5-fold'un tamamı = lineer problarda düzenlileştirme seçimi.
+     - Böylece iki ihtiyaç tek, sabit bir dosyadan karşılanır.
+  5. **Dosyalar:**
+     - `outer_r{r}.csv` (sütunlar: `participant_id, repeat, outer_fold, role, inner_fold, is_inner_val`) yalnız Drive'da (`data_derived/splits/`). Etiket veya klinik değer içermez.
+     - Repo'ya yalnız agrega manifest girer (`reports/splits/`): fold başına sayılar, girdi ve çıktı sha256'ları, kütüphane sürümleri.
+     - Colab'da yeniden üretilen dosyaların sha256'ı manifestteki ile aynı olmalı.
+- **NEDEN:**
+  - Her deneyin aynı katılımcılar üzerinde değerlendirilmesi, modeller arası eşleştirilmiş karşılaştırmanın (D-011) ön koşuludur.
+  - Tabakalama, küçük sağlıklı grubunun (59) ve dönem / yaş dağılımının fold'lar arasında dengeli kalmasını sağlar; fold'dan fold'a gereksiz varyansı azaltır.
+  - Seyrek tabaka yalnız 2 sağlıklı katılımcıyı etkiliyor (biri yaşı, biri tarihi ve yaşı bilinmiyor). [FACT]
+  - D-024 iki katılımcının dönemini değiştiriyor: biri erken → geç, biri bilinmiyor → erken. [FACT]
+- **ALTERNATİFLER:**
+  - Kayıt tablosunda `StratifiedGroupKFold`: eşdeğer, daha az şeffaf.
+  - Yalnız etikete göre tabakalama: dönem ve yaş fold'lar arasında rastgele dengesizleşir.
+  - Ayrı bir iç 80/20 bölmesi ve ayrı bir iç 5-fold: iki dosya, aynı amaç.
+  - Görev başına ayrı split: çok görevli füzyonda fold'lar uyuşmaz.
+- **RİSK:**
+  - Tabakalama dengeyi yalnız tabakalanan değişkenlerde sağlar. Saat gibi tabakalanmayan bağlam değişkenleri fold'lar arasında rastgele dağılır; manifestte betimsel olarak raporlanır (D-028).
+  - `scikit-learn` sürümü değişirse fold atamaları değişebilir → sha256 karşılaştırması bunu yakalar.
+- **BİLİMSEL SONUÇ:** Split, hiçbir model sonucuna bakılmadan, yalnız katılımcı tablosundan bir kez üretilir. Sonuca göre split seçimi (selection bias) yapısal olarak imkânsızdır.
+- **UYGULAMA:** `scripts/make_splits.py`, `tests/test_make_splits.py`, `reports/splits/splits_manifest.{json,md}`.
