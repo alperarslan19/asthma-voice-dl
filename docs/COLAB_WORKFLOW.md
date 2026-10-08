@@ -132,7 +132,8 @@ fold_r{r}_k{k}/
     train_log.csv      epoch, step, train_loss, val_loss, val_auc, val_balacc, lr, elapsed_s  (her satır flush)
     latest.pt          model + optimizer + scheduler + scaler + RNG durumları + epoch + en iyi skor
     best.pt            en iyi val skorundaki model ağırlıkları
-    oof_predictions.csv  katılımcı, kayıt, segment düzeyinde dış-test tahminleri
+    oof_predictions_best.csv  katılımcı, kayıt, segment düzeyinde dış-test tahminleri (en iyi val checkpoint'i)
+    oof_predictions_last.csv  aynısı, son epoch'un modeliyle (fine-tune ve sıfırdan eğitimde; D-028)
     DONE               fold bitince yazılan boş dosya
 ```
 
@@ -140,7 +141,7 @@ fold_r{r}_k{k}/
 1. `latest.pt` her epoch sonunda **atomik** yazılır: önce `latest.pt.tmp`, sonra yeniden adlandırma. Yazım sırasında oturum koparsa eski dosya sağlam kalır.
 2. Script başlarken `DONE` olan fold'ları atlar; `latest.pt` olan fold'u kaldığı yerden sürdürür. Yani "Run all" yeniden basmak güvenlidir.
 3. Log, epoch başına bir satır ve hemen `flush` — oturum koparsa kayıp en fazla bir epoch.
-4. **Drive kotası:** ücretsiz 15 GB. CNN14'ün tam durumu (ağırlık + Adam) ≈ 1 GB. Fold bittiğinde `latest.pt` silinir, `best.pt` fp16 olarak tutulur (~160 MB), tahminler her zaman tutulur. WavLM Large için daha da önemli. [INFERENCE — gerçek boyutlar smoke test'te ölçülecek]
+4. **Drive kotası:** ücretsiz 15 GB. CNN14'ün tam durumu (ağırlık + Adam) ≈ 1 GB. Fold bittiğinde `latest.pt` silinir, `best.pt` fp16 olarak tutulur (~160 MB), tahminler (best ve last) her zaman tutulur. Son epoch tahminleri, `latest.pt` silinmeden **önce** yazılır. WavLM Large için daha da önemli. [INFERENCE — gerçek boyutlar smoke test'te ölçülecek]
 5. **Smoke test olmadan tam eğitim yok:** checkpoint yükleme (`strict=True`), 1 batch ileri geçiş + şekil assert'leri, 1 eğitim adımı (kayıp sonlu mu?), 1 validation adımı, GPU bellek tepe değeri, kaydet → yeniden yükle → aynı çıktı.
 
 ---

@@ -193,8 +193,32 @@ Bunların hepsi D-025'e girdi.
 ---
 
 ## Planlanan deneyler (ID'ler başlarken verilecek)
+
+**Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**
+
 | Sıra | Deney | RQ | Ön koşul |
 |---|---|---|---|
+| 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
+| 1b | ~~EXP-003, EXP-004/004b, SIM-001~~ → tamamlandı (kayıt bağlamı belgelendi) | RQ7 | — |
+| 1c | ~~Split dosyaları~~ → üretildi (`make_splits.py`, D-029; manifest `reports/splits/`) | altyapı | — |
+| 1d | **Harmonize ses önbelleği** (`build_audio_cache.py`, D-015, D-018, D-021) — sıradaki adım | altyapı | 1c |
+| 2 | MFCC sadık yeniden üretim (EXP-010) | RQ1 | 1d |
+| 3 | MFCC, ortak protokol (EXP-011) | RQ1, RQ4, RQ5 | 1c, 1d |
+| 4 | Dondurulmuş gömme + lineer prob (6 backbone × 7 görev); gömmeler saklanır (D-028) | RQ3, RQ4, RQ5 | Ses önbelleği, smoke test |
+| 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
+| 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü Faz 2 sonunda yazılır | RQ2, RQ3 | 4 ve 5 tamam |
+| 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ8, RQ9 | OOF tahminleri |
+
+Model geliştirme sırasında her sonuç **üst sınır** olarak raporlanır. Her tabloda iki referans satırı bulunur: yalnız bağlam (tarih + saat) AUC 0.931, yalnız yaş 0.681 (D-028).
+
+**Kayıt bağlamı değerlendirmesi (D-023, D-028; model geliştirme bitince):**
+
+| Sıra | Analiz | RQ | Ön koşul |
+|---|---|---|---|
+| E-1 | Kaydedilmiş tahminler üzerinde artımlı test T1, E1/E1h/E2/E3 + denge tabloları ve referans çizgileri, ayarlı E2h, D-005 baseline'ları, negatif kontroller (N1–N4), codec zinciri duyarlılığı; test ayrıntıları D-025 önerisi üzerinden kesinleşir | RQ7 | 2–7'nin saklanmış tahminleri |
+| E-2 | Gerekirse: bağlam probları (EXP-020), azaltma denemeleri (EXP-022), gün-gruplu CV, fine-tune protokol varyantları (D-026, D-027) | RQ7 | E-1 sonuçları |
+
+---|---|---|---|
 | 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
 | 1b | ~~EXP-003~~ → tamamlandı; kesim 11.0 kHz | RQ7 | — |
 | 1b' | ~~EXP-004/004b, SIM-001~~ → tamamlandı; test spesifikasyonu D-025 | RQ7 | — |
