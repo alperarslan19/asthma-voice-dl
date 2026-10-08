@@ -471,7 +471,7 @@ DURUM: KABUL · Tarih: 2026-10-08 (7. tur) · D-003, D-009 ve D-024'ün uygulan�
 - **UYGULAMA:** `scripts/make_splits.py`, `tests/test_make_splits.py`, `reports/splits/splits_manifest.{json,md}`.
 
 ## D-030 — Ses önbelleğinin üretim ayrıntıları
-DURUM: KABUL (uygulama ayrıntısı; parametrelere Colab'da çalıştırmadan önce itiraz edilebilir) · Tarih: 2026-10-08 (8. tur) · D-008, D-015, D-018, D-021'in uygulanışı
+DURUM: KABUL (uygulama ayrıntısı; parametrelere Colab'da çalıştırmadan önce itiraz edilebilir) · Tarih: 2026-10-08 (8. tur) · D-008, D-015, D-018, D-021'in uygulanışı · **Colab'da üretildi ve doğrulandı** (9. tur): 2 393 kayıt; 32k 3.08 GB / 16k 1.54 GB; kalan süre medyan 10.26 s (en kısa 2.28 s; 17 kayıt < 4 s); bant genişliğinden zincir ayrımı AUC 0.865 → 0.486; dinleme kontrolü sorunsuz
 - **KARAR:**
   1. **Girdi ve veri sürümü:**
      - `recording_map.csv`'de `status == OK` olan 2 393 kayıt işlenir.
@@ -531,3 +531,62 @@ DURUM: KABUL (uygulama ayrıntısı; parametrelere Colab'da çalıştırmadan ö
   - ffmpeg sürümü değişirse çözülen örnekler bit düzeyinde değişebilir → önbellek bir kez üretilir ve sha256'ı saklanır.
 - **BİLİMSEL SONUÇ:** Bütün modeller aynı, doğrulanmış ve sabit girdiyi görür. Ön işleme farkı modeller arası karşılaştırmayı bozamaz.
 - **UYGULAMA:** `scripts/build_audio_cache.py`, `tests/test_build_audio_cache.py`, `notebooks/03_audio_cache.ipynb`, `reports/audio_cache/`.
+
+## D-031 — MFCC baseline'larının uygulanışı (EXP-010 sadık yeniden üretim, EXP-011 bizim protokol)
+DURUM: KABUL (uygulama ayrıntısı; Colab'da çalıştırmadan önce itiraz edilebilir) · Tarih: 2026-10-09 (9. tur) · Rapor Bölüm 8'deki planın uygulanışı
+- **KARAR:**
+  1. **Özellikler (iki deneyde aynı tarif)** [FROM PAPER]: 12 MFCC + Δ + ΔΔ (çerçeve 2048, adım 512, Hamming, 22.05 kHz), zaman ortalaması → 36; ZCR, spektral merkez, bant genişliği ve roll-off'un ortalaması ve SD'si → 8. Toplam 44.
+     
+     Makalede yazmayan noktalarda verilen kararlar [DECISION]:
+     - yalnız ortalama alınır (makale "36 descriptor" diyor);
+     - c0 dahildir (librosa varsayılanı);
+     - spektral özetlerde librosa varsayılanı Hann penceresi kullanılır.
+  2. **EXP-010 girdisi:**
+     - Orijinal `.m4a` ffmpeg ile çözülür, `soxr_hq` ile 22.05 kHz'e indirilir (librosa.load'un yaptığı).
+     - Kırpma: `librosa.effects.trim(top_db=60)`. Makale "enerji tabanlı VAD" diyor ama eşik vermiyor ve atıf ettiği Sohn 1999 istatistiksel model tabanlı (A5).
+  3. **EXP-010 değerlendirmesi** [FROM PAPER]:
+     - Görev başına `StratifiedKFold(5, shuffle=True, random_state=42)`, katılımcı düzeyinde.
+     - Fold içinde StandardScaler → SMOTE(42) → sınıflandırıcı.
+     - 14 model, varsayılan ayarlarla (random_state=42).
+     - Makalenin yazmadığı iki yerde [DECISION]:
+       - Voting / Stacking / Weighted Voting tabanı = GB + XGBoost + CatBoost + MLP;
+       - Weighted Voting ağırlıkları train içinde 3-fold OOF AUC'sinden (sızıntısız; A6).
+     - "En iyi" = en yüksek ortalama fold AUC'si (makalenin kuralı). Ayrıca 14 modelin hepsi ve medyanı raporlanır.
+  4. **EXP-011 girdisi:** Harmonize önbellek (D-030, 32 kHz) `resample_poly(441, 640)` ile 22.05 kHz'e indirilir. Önbellek zaten kırpılmış ve normalize; aynı 44 özellik çıkarılır. Neden: derin modeller bu girdiyi görecek, RQ1 karşılaştırması aynı girdiyle yapılmalı.
+  5. **EXP-011 değerlendirmesi:**
+     - Split dosyaları outer_r0–r4 (D-029).
+     - Modeller önceden sabit, hepsi raporlanır:
+       - **LR = birincil.** Neden: derin gömmelerdeki lineer probla aynı sınıflandırıcı; RQ1'de temsil farkı izole edilir.
+       - SVM-RBF ve GradientBoosting ikincil.
+     - Düzenlileştirme, split dosyasındaki iç 5-fold'da `neg_log_loss` ile sabit ızgaralardan seçilir:
+       - LR: C ∈ {0.001 … 100};
+       - SVM: C × gamma, 3 × 3;
+       - GB: n_estimators × max_depth, 2 × 2, lr 0.05.
+     - Dengesizlik: SMOTE yerine sınıf / örnek ağırlığı. Eşik 0.5; sınıf ağırlıklı modellerde doğal karar sınırı.
+     - Görev başına sonuçlar + **füzyon**: katılımcının 7 görev olasılığının ortalaması.
+     - Aynı fold'larda sesi kullanmayan referans çizgileri: yaş, bağlam (saat + saat² + tarih), yaş + bağlam (D-005, D-028).
+  6. **Raporlama:**
+     - Fold AUC ortalaması ± SD ve fold %2.5–97.5 aralığı.
+     - Tekrarlar boyunca ortalama OOF olasılığından havuzlanmış AUC + 2 000 katılımcı bootstrap'lı %95 CI.
+     - Dengeli doğruluk, duyarlılık / özgüllük.
+     - Bütün sonuçlar "üst sınır" uyarısıyla (D-028).
+     - OOF tahminleri Drive'da saklanır (D-028); registry'ye agrega satırlar yazılır.
+  7. **Kaldığı yerden devam:** Görev (EXP-010) ve tekrar (EXP-011) başına ara sonuçlar Drive'daki `partial/` klasörüne yazılır.
+- **NEDEN:**
+  - EXP-010, verinin ve özellik tarifinin makaleyle tutarlı olup olmadığını gösterir.
+  - EXP-011, makalenin iki iyimserlik kaynağını kaldırır: tek split ve 14 model arasından test sonucuna göre seçim (A2, A7).
+  - EXP-011 aynı zamanda derin modellerin karşılaştırılacağı adil tabandır.
+  - Sahte veriyle test (`tests/test_mfcc_pipeline.py`, 7 kontrol): yerleştirilmiş sinyal AUC 0.82, saf gürültü 0.52 (sızıntı yok), yaş referansı 0.86. [FACT]
+- **ALTERNATİFLER:**
+  - EXP-011'de orijinal dosyalardan özellik çıkarmak: derin modellerle girdi farklı olur.
+  - EXP-011'de makalenin 14 modelini aynen kullanmak: seçim iyimserliği geri gelir.
+  - Model seçimini iç döngüde yapmak (nested): mümkün ama birincil modeli önceden sabitlemek daha şeffaf.
+  - SMOTE'u EXP-011'de de kullanmak: sınıf ağırlığı daha basit ve deterministik; derin modellerle aynı.
+- **RİSK:**
+  - Kütüphane sürümleri makaleden farklı (Colab: Python 3.13; makale: scikit-learn 1.5.0, librosa 0.10.1). Küçük sayısal farklar beklenir.
+  - Makalenin kohortu 344 / 2 408 kayıt, bizimki 342 / 2 393.
+  - Kırpma eşiği ve fold atamaları makalenin bilinmeyen ayrıntılarından farklı → birebir aynı sayı beklenmez; hedef aralıktır.
+  - Δ ve ΔΔ'nin zaman ortalaması neredeyse sıfırdır (A4); 24 boyutun bilgi taşımaması olası.
+  - Süre: EXP-010 ~35 dk, EXP-011 ~60 dk (Colab CPU).
+- **BİLİMSEL SONUÇ:** Makalenin sayısı, aynı veri üzerinde yeniden üretilebilirlik ve seçim iyimserliği açısından sınanır. Derin modellerin geçmesi gereken taban, bağlamdan etkilenmiş üst sınır olduğu açıkça yazılarak sabitlenir.
+- **UYGULAMA:** `scripts/extract_mfcc_features.py`, `scripts/run_mfcc_baselines.py`, `tests/test_mfcc_pipeline.py`, `notebooks/10_mfcc_baseline.ipynb`, `reports/mfcc/`.

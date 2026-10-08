@@ -24,8 +24,8 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 0 | Confounder kontrol yöntemlerinin değerlendirmesi, EXP-004/004b, SIM-001, test spesifikasyonu (D-025/026/027 önerildi) | ✅ |
 | 0 | Confounder ayrı araştırma başlığı; değerlendirme geliştirme sonuna (D-028); ön işleme (D-015) ve augmentation (D-016) kabul | ✅ |
 | 1 | Split dosyaları (`make_splits.py`, D-029): 5 tekrar × 5 fold, manifest `reports/splits/` | ✅ Colab'da aynı sha256 ile teyit edildi |
-| 1 | **Harmonize ses önbelleği (`build_audio_cache.py`, D-030)**: kod + test hazır → Colab'da `notebooks/03_audio_cache.ipynb` | ⏳ **şu anki adım** |
-| 1 | MFCC baseline yeniden üretimi (EXP-010/011) | ⏸ ses önbelleğinden sonra |
+| 1 | Harmonize ses önbelleği (`build_audio_cache.py`, D-030): 2 393 kayıt, rapor `reports/audio_cache/` | ✅ Colab'da üretildi, doğrulandı, dinlendi |
+| 1 | **MFCC baseline'ları (EXP-010 sadık, EXP-011 bizim protokol; D-031)**: kod + test hazır → Colab'da `notebooks/10_mfcc_baseline.ipynb` | ⏳ **şu anki adım** |
 | 2 | Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone) | ⏸ |
 | 3 | Sıfırdan CNN10, ham dalga formundan uçtan uca fine-tune, füzyon, alt gruplar | ⏸ |
 | 4 | **Kayıt bağlamı değerlendirmesi** (D-023, D-028): kaydedilmiş tahminler üzerinde T1, E-tasarımları, negatif kontroller | ⏸ model geliştirme bitince |
@@ -40,7 +40,7 @@ scripts/              tüm mantık (notebook'lar bunları çağırır)
 notebooks/            ince orkestrasyon notebook'ları (Colab)
 configs/              model girdi sözleşmeleri, slot→görev eşlemesi
 reports/              yalnız agrega denetim çıktıları
-tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py, tests/test_make_splits.py, tests/test_build_audio_cache.py
+tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py, tests/test_make_splits.py, tests/test_build_audio_cache.py, tests/test_mfcc_pipeline.py
 ```
 
 ## Değişmez kurallar

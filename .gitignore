@@ -70,3 +70,6 @@ __pycache__/
 # NOT: notebooks/ izleniyor; commit'ten önce çıktıları temizle (Edit → Clear all outputs).
 participant_context.csv
 participant_session_times.csv
+
+# CatBoost eğitim günlükleri
+catboost_info/

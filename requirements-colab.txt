@@ -5,5 +5,9 @@ openpyxl
 tabulate
 statsmodels>=0.14   # T1 (lojistik regresyon, koşullu lojistik regresyon), SIM-001
 patsy>=0.5          # spline bağlam modeli
-# Faz 1'de eklenecek: librosa, imbalanced-learn, xgboost, catboost, mlconfound (Spisak testleri; sürüm Faz 1'de sabitlenecek)
+librosa             # MFCC (EXP-010/011); makale 0.10.1 kullandı — Colab sürümü kaydedilir
+imbalanced-learn    # SMOTE (EXP-010, makale protokolü)
+xgboost
+catboost
+# Değerlendirme aşamasında (D-028): mlconfound (Spisak testleri)
 # Faz 2'de eklenecek: torchlibrosa, transformers (+ third_party/panns, third_party/beats resmi kod kopyaları)
