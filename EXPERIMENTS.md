@@ -200,8 +200,8 @@ Bunların hepsi D-025'e girdi.
 |---|---|---|---|
 | 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
 | 1b | ~~EXP-003, EXP-004/004b, SIM-001~~ → tamamlandı (kayıt bağlamı belgelendi) | RQ7 | — |
-| 1c | ~~Split dosyaları~~ → üretildi (`make_splits.py`, D-029; manifest `reports/splits/`) | altyapı | — |
-| 1d | **Harmonize ses önbelleği** (`build_audio_cache.py`, D-015, D-018, D-021) — sıradaki adım | altyapı | 1c |
+| 1c | ~~Split dosyaları~~ → üretildi ve Colab'da aynı sha256 ile teyit edildi (`make_splits.py`, D-029; manifest `reports/splits/`) | altyapı | — |
+| 1d | **Harmonize ses önbelleği** (`build_audio_cache.py`, D-015, D-018, D-021, D-030) — kod ve test hazır; Colab'da `03_audio_cache.ipynb` ile üretilecek | altyapı | 1c |
 | 2 | MFCC sadık yeniden üretim (EXP-010) | RQ1 | 1d |
 | 3 | MFCC, ortak protokol (EXP-011) | RQ1, RQ4, RQ5 | 1c, 1d |
 | 4 | Dondurulmuş gömme + lineer prob (6 backbone × 7 görev); gömmeler saklanır (D-028) | RQ3, RQ4, RQ5 | Ses önbelleği, smoke test |
@@ -217,20 +217,6 @@ Model geliştirme sırasında her sonuç **üst sınır** olarak raporlanır. He
 |---|---|---|---|
 | E-1 | Kaydedilmiş tahminler üzerinde artımlı test T1, E1/E1h/E2/E3 + denge tabloları ve referans çizgileri, ayarlı E2h, D-005 baseline'ları, negatif kontroller (N1–N4), codec zinciri duyarlılığı; test ayrıntıları D-025 önerisi üzerinden kesinleşir | RQ7 | 2–7'nin saklanmış tahminleri |
 | E-2 | Gerekirse: bağlam probları (EXP-020), azaltma denemeleri (EXP-022), gün-gruplu CV, fine-tune protokol varyantları (D-026, D-027) | RQ7 | E-1 sonuçları |
-
----|---|---|---|
-| 1 | ~~Ses denetimi~~ → AUD-001 tamamlandı | RQ7 | — |
-| 1b | ~~EXP-003~~ → tamamlandı; kesim 11.0 kHz | RQ7 | — |
-| 1b' | ~~EXP-004/004b, SIM-001~~ → tamamlandı; test spesifikasyonu D-025 | RQ7 | — |
-| 1c | Split dosyaları (`make_splits.py`) + harmonize ses önbelleği (`build_audio_cache.py`, D-021) | altyapı | D-024 ile yeniden hesaplanan dönem |
-| 2 | MFCC sadık yeniden üretim | RQ1 | Eşleme doğrulandı |
-| 3 | MFCC, ortak protokol + kontroller | RQ1, RQ4, RQ5, RQ7 | Split dosyaları |
-| 4a | **EXP-020** dondurulmuş gömmelerde bağlam probları (etiket içi saat, dönem, zincir) → karar kapısı **G1** | RQ7 | Ses önbelleği, smoke test |
-| 4b | **EXP-021** dondurulmuş gömme + lineer prob (6 backbone; katılımcı düzeyi = onaylayıcı aile, görev bazlı = keşifsel), lens seti L1–L8 (D-025, D-026), gün-gruplu duyarlılık | RQ3, RQ4, RQ5, RQ7 | 4a |
-| 4c | **EXP-022** koşullu azaltma (hasta-içi residualization, bağlam-dengeli ağırlık) | RQ7 | G1 pozitif |
-| 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
-| 6 | **EXP-030** fine-tune (D-027): T1'e göre seçilmiş 1–2 backbone, kısmi FT, sabit epoch, kol A (+ koşullu kol B) | RQ2, RQ3, RQ7 | 4 ve 5 tamam |
-| 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ7, RQ8, RQ9 | OOF tahminleri |
 
 ---
 

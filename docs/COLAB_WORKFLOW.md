@@ -38,7 +38,9 @@ KOD ve KARARLAR                  VERİ ve ÇIKTILAR                     ÇALIŞT
 ```
 data_raw/          soundData.zip, clinical_data.csv, astim-tarama_Data Report_20260314.xlsx
                    → yükledikten sonra BİR DAHA DEĞİŞTİRME (yeni dışa aktarım gelirse yeni klasör: data_raw_v2/)
-data_derived/      participants.csv, audio_inventory.csv, recording_map.csv, önbellekler
+data_derived/      participants.csv, audio_inventory.csv, recording_map.csv, participant_context.csv,
+                   splits/ (outer_r0…4.csv), audio_cache_v1/ (audio_32k.f32, audio_16k.f32, index.csv, cache_info.json)
+                   → önbellek bir kez üretilir; eğitim oturumlarında Drive'dan YEREL diske kopyalanıp np.memmap ile okunur
 models/            indirilen pretrained ağırlıklar (+ sha256)
 experiments/       EXP-XXX/ klasörleri
 ```

@@ -6,7 +6,7 @@
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
-| Son güncelleme | 2026-10-08 (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-08 (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -635,30 +635,28 @@ Kod, eşleme doğrulandıktan sonra yazılacak (ses verisi olmadan test edilemez
 
 ---
 
-## 12. Durum raporu (7. tur — Faz 1 başladı)
+## 12. Durum raporu (8. tur — Faz 1)
 
 - **Ne yaptık?**
-  - Confounder'ı ayrı bir araştırma başlığı olarak tanımladık; değerlendirme model geliştirme sonuna ertelendi (D-028).
-  - D-015 (ön işleme) ve D-016 (augmentation kapalı) kabul edildi.
-  - Split dosyaları üretildi (D-029):
-    - `scripts/make_splits.py` ve sahte veriyle testi `tests/test_make_splits.py` (9 kontrol);
-    - 5 tekrar × 5 dış fold, her dış train içinde 5 iç fold (iç fold 0 = doğrulama);
-    - manifest `reports/splits/` altında.
+  - Split dosyaları Colab'da yeniden üretildi; 5 dosyanın sha256'ı manifestle aynı (D-029 teyit).
+  - Ses önbelleği tasarlandı ve yazıldı (D-030):
+    - `scripts/build_audio_cache.py`;
+    - sahte kayıtlarla test `tests/test_build_audio_cache.py` (9 kontrol geçti);
+    - Colab notebook'u `notebooks/03_audio_cache.ipynb`.
 - **Ne öğrendik?**
-  - Kohort 342 kişi: 283 astım / 59 sağlıklı.
-  - D-024 kayıt tarihiyle dönem dağılımı: astım 98 erken / 185 geç; sağlıklı 58 erken / 1 bilinmiyor.
-  - Her test fold'unda 11–12 sağlıklı, her iç doğrulamada 9–10 sağlıklı. → Early stopping ve eşik seçimi ~10 sağlıklıya dayanacak, yani gürültülü olacak (beklenen, D-009).
-  - Görev 4'te 1 katılımcı eksik; diğer görevlerde 342.
-- **Hangi kararları aldık?**
-  - D-028: confounder ayrı başlık; kayıt yükümlülükleri; "üst sınır" raporlama.
-  - D-029: split üretim ayrıntıları.
-  - D-015 ve D-016: KABUL.
-  - D-025–027: ÖNERİLDİ, değerlendirme aşamasına ertelendi.
+  - Split'ler farklı kütüphane sürümleriyle (scikit-learn 1.6.1 / 1.9.1) birebir aynı çıkıyor.
+  - Denetim envanterinden tahmin, kırpma sonrası kayıtlar için:
+    - kalan süre medyan 10.3 s, en kısa 2.3 s;
+    - 17 kayıt 4 s'den kısa;
+    - önbellek ≈ 4.6 GB.
+  - Baştaki sessizliğin süresi etiketle ilişkili (AUC 0.369). Kırpma bu sesle ilgisiz ipucunu girdiden çıkarıyor.
+- **Hangi kararları aldık?** D-030, uygulama ayrıntısı: kırpma payı 0.10 s, −1 dBFS, 511 taplık FIR, float32 tek dosya + memmap.
 - **Hangi belirsizlikler kaldı?**
-  - Split dosyalarının Colab'da aynı sha256 ile yeniden üretilmesi (kütüphane sürümü farkını yakalar).
-  - D-015'teki kenar kırpma eşiği → `build_audio_cache.py` tasarımında belirlenecek.
-  - Veri ekibi soruları S12 (FFmpeg yolu) ve S13 (bronkodilatör).
-- **Bir sonraki minimum gerekli adım:** `scripts/build_audio_cache.py`, önce tasarım sonra kod. Yapacakları: D-018 çözme, D-021 harmonizasyonu, D-015 kırpma / normalizasyon, 32 / 16 kHz önbellek, doğrulama ölçümleri. Ardından MFCC baseline (EXP-010/011).
+  - Drive'da ~5 GB boş alan olup olmadığı.
+  - Dinleme kontrolü: kırpma konuşmayı kesiyor mu?
+  - Bant genişliğinden zincir ayrımının filtreden sonra ne kadar kaldığı (rapor gösterecek).
+- **Bir sonraki minimum gerekli adım:** Colab'da `03_audio_cache.ipynb` (CPU) → rapor PR'ı → dinleme kontrolü. Ardından MFCC baseline tasarımı (EXP-010 sadık yeniden üretim, EXP-011 ortak protokol).
 
-*Önceki (6. tur):* confounder kontrol yöntemlerinin değerlendirmesi (`docs/CONFOUND_CONTROL_DESIGN.md`), EXP-004/004b, tasarım referans çizgileri, SIM-001, D-025/026/027 önerildi.
+*Önceki (7. tur):* confounder ayrı başlık (D-028), D-015/D-016 kabul, split dosyaları (D-029).
+*Daha önce (6. tur):* confounder kontrol yöntemlerinin değerlendirmesi (`docs/CONFOUND_CONTROL_DESIGN.md`), EXP-004/004b, tasarım referans çizgileri, SIM-001, D-025/026/027 önerildi.
 *Önceki (5. tur):* kayıt bağlamı analizi (EXP-003), D-021 kesimi 11.0 kHz, D-023, D-024.
