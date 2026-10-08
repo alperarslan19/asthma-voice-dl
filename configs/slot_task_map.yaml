@@ -1,8 +1,9 @@
-# Slot (dosya adındaki _N ve CSV'deki "Gönüllünün N. ses kaydı") -> görev eşlemesi
-# Kaynak: veri ekibi, düzeltilmiş bildirim (2026-10-08). Dosya adı: <katılımcı ID>_<slot>.m4a, ör. 101001_2.m4a = araba
-# Dinleme teyidi (her slottan 3 kayıt) notebooks/01_data_audit.ipynb Bölüm 3'te yapılır ve 'status' alanını günceller (D-019).
-status: FROM_DATA_TEAM_PENDING_LISTENING_CHECK
-source: veri ekibi, düzeltilmiş bildirim (2026-10-08)
+status: confirmed_by_listening
+source: veri ekibi, düzeltilmiş bildirim (2026-10-08) + dinleme teyidi
+listened_per_slot: 3
+sample_seed: slot numarası
+notes: Tüm slotlardan seçilen 3 kayıt dinlendi; 21 kaydın tamamı beklenen görevlerle
+  uyumlu bulundu.
 slot_to_task:
   1: aaa
   2: araba

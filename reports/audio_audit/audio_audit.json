@@ -1,0 +1,484 @@
+{
+  "audio_root": "/content/audio",
+  "settings": {
+    "silence_db": 35.0,
+    "near_dup_threshold": 0.9
+  },
+  "n_files_total": 2393,
+  "n_audio_files": 2393,
+  "non_audio_files": [],
+  "formats": {
+    "ext": {
+      ".m4a": 2393
+    },
+    "container": {
+      "mov,mp4,m4a,3gp,3g2,mj2": 2393
+    },
+    "codec": {
+      "aac": 2393
+    },
+    "codec_profile": {
+      "LC": 2393
+    },
+    "sr": {
+      "48000": 2392,
+      "44100": 1
+    },
+    "channels": {
+      "1": 2393
+    },
+    "n_video_streams": {
+      "0": 2393
+    },
+    "tag_major_brand": {
+      "iso5": 1759,
+      "M4A ": 634
+    },
+    "tag_encoder": {
+      "None": 1759,
+      "Lavf59.16.100": 634
+    },
+    "tag_apple_model": {
+      "None": 2393
+    },
+    "tag_apple_software": {
+      "None": 2393
+    },
+    "has_location_tag": {
+      "False": 2393
+    },
+    "n_probe_errors": 0,
+    "n_decode_errors": 0,
+    "n_fake_stereo": 0
+  },
+  "audio_bit_rate": {
+    "count": 2393.0,
+    "mean": 178213.0,
+    "std": 12005.0,
+    "min": 141185.0,
+    "25%": 174145.0,
+    "50%": 184001.0,
+    "75%": 185500.0,
+    "max": 196166.0
+  },
+  "bandwidth_khz": {
+    "count": 2393.0,
+    "mean": 17.18,
+    "std": 5.29,
+    "min": 11.27,
+    "1%": 11.68,
+    "5%": 12.08,
+    "50%": 13.54,
+    "95%": 24.0,
+    "99%": 24.0,
+    "max": 24.0
+  },
+  "duration_s": {
+    "count": 2393.0,
+    "mean": 10.37,
+    "std": 0.534,
+    "min": 4.352,
+    "1%": 8.425,
+    "5%": 9.472,
+    "50%": 10.475,
+    "95%": 10.88,
+    "99%": 11.328,
+    "max": 13.611
+  },
+  "naming": {
+    "frac_matching_ID_slot_pattern": 1.0,
+    "n_pid_dir_conflict": 0,
+    "n_slot_out_of_range": 0,
+    "n_pid_not_in_clinical": 0
+  },
+  "mapping": {
+    "status_counts": {
+      "OK": 2393,
+      "MISSING": 43
+    },
+    "participants_with_all_7_ok": 341,
+    "participants_with_zero_files": [
+      101043,
+      101149,
+      101345,
+      101346,
+      101347,
+      101348
+    ],
+    "participants_partial": [
+      101244
+    ],
+    "paper_cohort_all_7_ok": 341,
+    "paper_cohort_size": 344,
+    "missing_by_slot": {
+      "1": 6,
+      "2": 6,
+      "3": 6,
+      "4": 7,
+      "5": 6,
+      "6": 6,
+      "7": 6
+    },
+    "multiple_examples": [],
+    "n_unmatched_audio_files": 0,
+    "unmatched_examples": [],
+    "same_file_in_two_slots_within_participant": 0
+  },
+  "exact_duplicates": {
+    "file_sha256": {
+      "n_groups": 0,
+      "n_groups_across_participants": 0
+    },
+    "pcm_md5": {
+      "n_groups": 0,
+      "n_groups_across_participants": 0
+    }
+  },
+  "near_duplicates": {
+    "n_cross_participant_pairs_above_threshold": 0,
+    "cross_participant_corr_p99": 0.13766491413116455,
+    "max_corr": 0.5116568207740784
+  },
+  "creation_time_vs_csv_date": {
+    "n_files_with_creation_time": 1759,
+    "n_compared": 1754,
+    "frac_same_day": 0.9874572405929305,
+    "frac_within_1_day": 0.9908779931584949,
+    "delta_days_quantiles": {
+      "0.0": -30.0,
+      "0.05": 0.0,
+      "0.5": 0.0,
+      "0.95": 0.0,
+      "1.0": 182.0
+    },
+    "n_participants_csv_date_missing_but_file_has_date": 1,
+    "n_distinct_creation_dates": 65
+  },
+  "metadata_vs_label_and_period": {
+    "ext": {
+      "uniform": true,
+      "value": ".m4a"
+    },
+    "container": {
+      "uniform": true,
+      "value": "mov,mp4,m4a,3gp,3g2,mj2"
+    },
+    "codec": {
+      "uniform": true,
+      "value": "aac"
+    },
+    "codec_profile": {
+      "uniform": true,
+      "value": "LC"
+    },
+    "sr": {
+      "uniform": false,
+      "by_label": {
+        "44100.0": {
+          "healthy": 0,
+          "asthma": 1
+        },
+        "48000.0": {
+          "healthy": 413,
+          "asthma": 1979
+        }
+      },
+      "label_chi2_p": 1.0,
+      "patients_by_period": {
+        "44100.0": {
+          "early": 0,
+          "late": 1
+        },
+        "48000.0": {
+          "early": 693,
+          "late": 1286
+        }
+      },
+      "period_chi2_p": 1.0
+    },
+    "channels": {
+      "uniform": true,
+      "value": "1.0"
+    },
+    "n_video_streams": {
+      "uniform": true,
+      "value": "0.0"
+    },
+    "tag_major_brand": {
+      "uniform": false,
+      "by_label": {
+        "M4A ": {
+          "healthy": 120,
+          "asthma": 514
+        },
+        "iso5": {
+          "healthy": 293,
+          "asthma": 1466
+        }
+      },
+      "label_chi2_p": 0.21659396264414515,
+      "patients_by_period": {
+        "M4A ": {
+          "early": 238,
+          "late": 276
+        },
+        "iso5": {
+          "early": 455,
+          "late": 1011
+        }
+      },
+      "period_chi2_p": 6.002735627651808e-10
+    },
+    "tag_encoder": {
+      "uniform": false,
+      "by_label": {
+        "Lavf59.16.100": {
+          "healthy": 120,
+          "asthma": 514
+        },
+        "None": {
+          "healthy": 293,
+          "asthma": 1466
+        }
+      },
+      "label_chi2_p": 0.21659396264414515,
+      "patients_by_period": {
+        "Lavf59.16.100": {
+          "early": 238,
+          "late": 276
+        },
+        "None": {
+          "early": 455,
+          "late": 1011
+        }
+      },
+      "period_chi2_p": 6.002735627651808e-10
+    },
+    "tag_apple_make": {
+      "uniform": true,
+      "value": "None"
+    },
+    "tag_apple_model": {
+      "uniform": true,
+      "value": "None"
+    },
+    "tag_apple_software": {
+      "uniform": true,
+      "value": "None"
+    },
+    "audio_handler": {
+      "uniform": false,
+      "by_label": {
+        "Core Media Audio": {
+          "healthy": 293,
+          "asthma": 1466
+        },
+        "SoundHandler": {
+          "healthy": 120,
+          "asthma": 514
+        }
+      },
+      "label_chi2_p": 0.2165939626441452,
+      "patients_by_period": {
+        "Core Media Audio": {
+          "early": 455,
+          "late": 1011
+        },
+        "SoundHandler": {
+          "early": 238,
+          "late": 276
+        }
+      },
+      "period_chi2_p": 6.002735627651808e-10
+    },
+    "has_location_tag": {
+      "uniform": true,
+      "value": "False"
+    }
+  },
+  "nuisance_top_label": [
+    {
+      "slot": 5,
+      "feature": "creation_hour_local",
+      "n": 233,
+      "auc_label": 0.131
+    },
+    {
+      "slot": 7,
+      "feature": "creation_hour_local",
+      "n": 256,
+      "auc_label": 0.132
+    },
+    {
+      "slot": 3,
+      "feature": "creation_hour_local",
+      "n": 276,
+      "auc_label": 0.157
+    },
+    {
+      "slot": 6,
+      "feature": "creation_hour_local",
+      "n": 237,
+      "auc_label": 0.16
+    },
+    {
+      "slot": 2,
+      "feature": "creation_hour_local",
+      "n": 237,
+      "auc_label": 0.162
+    },
+    {
+      "slot": 1,
+      "feature": "creation_hour_local",
+      "n": 281,
+      "auc_label": 0.168
+    },
+    {
+      "slot": 4,
+      "feature": "creation_hour_local",
+      "n": 239,
+      "auc_label": 0.174
+    },
+    {
+      "slot": 4,
+      "feature": "duration_s",
+      "n": 341,
+      "auc_label": 0.344
+    },
+    {
+      "slot": 6,
+      "feature": "duration_s",
+      "n": 342,
+      "auc_label": 0.367
+    },
+    {
+      "slot": 1,
+      "feature": "speech_level_db",
+      "n": 342,
+      "auc_label": 0.627
+    },
+    {
+      "slot": 1,
+      "feature": "rms_dbfs",
+      "n": 342,
+      "auc_label": 0.624
+    },
+    {
+      "slot": 6,
+      "feature": "lead_silence_s",
+      "n": 342,
+      "auc_label": 0.378
+    },
+    {
+      "slot": 3,
+      "feature": "duration_s",
+      "n": 342,
+      "auc_label": 0.384
+    },
+    {
+      "slot": 5,
+      "feature": "lead_silence_s",
+      "n": 342,
+      "auc_label": 0.394
+    },
+    {
+      "slot": 7,
+      "feature": "duration_s",
+      "n": 342,
+      "auc_label": 0.395
+    }
+  ],
+  "nuisance_top_period": [
+    {
+      "slot": 7,
+      "feature": "duration_s",
+      "n": 342,
+      "auc_period_within_patients": 0.351
+    },
+    {
+      "slot": 5,
+      "feature": "lead_silence_s",
+      "n": 342,
+      "auc_period_within_patients": 0.361
+    },
+    {
+      "slot": 3,
+      "feature": "creation_hour_local",
+      "n": 276,
+      "auc_period_within_patients": 0.637
+    },
+    {
+      "slot": 6,
+      "feature": "creation_hour_local",
+      "n": 237,
+      "auc_period_within_patients": 0.635
+    },
+    {
+      "slot": 4,
+      "feature": "trail_silence_s",
+      "n": 341,
+      "auc_period_within_patients": 0.628
+    },
+    {
+      "slot": 3,
+      "feature": "noise_floor_db",
+      "n": 342,
+      "auc_period_within_patients": 0.373
+    },
+    {
+      "slot": 4,
+      "feature": "duration_s",
+      "n": 341,
+      "auc_period_within_patients": 0.377
+    },
+    {
+      "slot": 3,
+      "feature": "snr_proxy_db",
+      "n": 342,
+      "auc_period_within_patients": 0.62
+    },
+    {
+      "slot": 1,
+      "feature": "rms_dbfs",
+      "n": 342,
+      "auc_period_within_patients": 0.615
+    },
+    {
+      "slot": 6,
+      "feature": "noise_floor_db",
+      "n": 342,
+      "auc_period_within_patients": 0.387
+    },
+    {
+      "slot": 2,
+      "feature": "creation_hour_local",
+      "n": 237,
+      "auc_period_within_patients": 0.609
+    },
+    {
+      "slot": 1,
+      "feature": "bandwidth_khz",
+      "n": 342,
+      "auc_period_within_patients": 0.392
+    },
+    {
+      "slot": 4,
+      "feature": "lead_silence_s",
+      "n": 341,
+      "auc_period_within_patients": 0.394
+    },
+    {
+      "slot": 6,
+      "feature": "audio_bit_rate",
+      "n": 342,
+      "auc_period_within_patients": 0.603
+    },
+    {
+      "slot": 3,
+      "feature": "duration_s",
+      "n": 342,
+      "auc_period_within_patients": 0.4
+    }
+  ],
+  "nuisance_note": "AUC 0.5 = ilişki yok. 'period' tablosu YALNIZ hastalarda: etiket sabitken ölçüm kayıt dönemini ayırıyorsa kayıt koşulları (ya da hasta profili) zamanla değişmiştir. Çoklu karşılaştırma: hipotez üretir, tek başına sonuç değildir."
+}
