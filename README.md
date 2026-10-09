@@ -26,7 +26,7 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 1 | Split dosyaları (`make_splits.py`, D-029): 5 tekrar × 5 fold, manifest `reports/splits/` | ✅ Colab'da aynı sha256 ile teyit edildi |
 | 1 | Harmonize ses önbelleği (`build_audio_cache.py`, D-030): 2 393 kayıt, rapor `reports/audio_cache/` | ✅ Colab'da üretildi, doğrulandı, dinlendi |
 | 1 | MFCC baseline'ları (EXP-010 sadık yeniden üretim, EXP-011 bizim protokol, EXP-012 keşifsel ayrıştırma) | ✅ makale aralığı yeniden üretildi (en iyi ort. 0.702 vs 0.709); dürüst taban: LR füzyon 0.771 [0.713–0.836], tek görev ≈ yaş (0.68), bağlam 0.93 |
-| 1 | EXP-013: güçlü ikinci MFCC tabanı (MLP) + iç doğrulama eşiği (D-032, önerildi) | ⏸ onay bekliyor |
+| 1 | Metodoloji soruları (`docs/IMBALANCE_AND_SELECTION.md`): EXP-013 dengesizlik (SMOTE ≈ ağırlık ≈ hiçbiri; düzeltmeler kalibrasyonu bozuyor), EXP-014 bağlam dengeleme (işe yaramıyor; pozitiflik), EXP-015 iç içe CV (makale prosedürü dürüstçe 0.654) | ✅ keşifsel; D-032, D-033 önerildi |
 | 2 | **Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone)** | ⏳ sıradaki faz (tasarım) |
 | 3 | Sıfırdan CNN10, ham dalga formundan uçtan uca fine-tune, füzyon, alt gruplar | ⏸ |
 | 4 | **Kayıt bağlamı değerlendirmesi** (D-023, D-028): kaydedilmiş tahminler üzerinde T1, E-tasarımları, negatif kontroller | ⏸ model geliştirme bitince |

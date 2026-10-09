@@ -316,6 +316,85 @@ Bunların hepsi D-025'e girdi.
 
 ---
 
+## EXP-013 — Etiket dengesizliği yöntemleri: hiçbiri / sınıf ağırlığı / SMOTE / rastgele aşırı örnekleme (keşifsel)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 |
+| DURUM | Tamamlandı — **keşifsel** (Alper'in 11. tur sorusu üzerine, sonuçlar görüldükten sonra) |
+| Soru | SMOTE'u kullanmak ya da kullanmamak ayırmayı (AUC), kalibrasyonu ve eşik metriklerini nasıl değiştirir? |
+| Veri / split | Önbellek özellikleri (EXP-011 ile aynı), split dosyaları 5×5 |
+| Model | LR (C iç CV'de) ve MLP (varsayılan) × 4 yöntem; eşik iç 5-fold OOF'tan |
+| Sonuç | `reports/mfcc/EXP-013_imbalance.md`, `docs/IMBALANCE_AND_SELECTION.md` Bölüm 3 |
+
+**Sonuçlar** (füzyon, havuzlanmış AUC [%95 CI]):
+- LR hiçbiri 0.776 [0.713–0.835], sınıf ağırlığı 0.778, SMOTE 0.768, rastgele aşırı örnekleme 0.778.
+- MLP: 0.786–0.790.
+- Eşleştirilmiş farklar ≤ 0.01; hepsinin CI'ı 0'ı içeriyor.
+- Kalibrasyon (LR): düzeltme yokken ortalama tahmin − gerçek oran 0.000, Brier 0.134. SMOTE / ağırlık / aşırı örneklemede −0.24 ile −0.25, Brier 0.185–0.189.
+- Dengeli doğruluk: 0.5 eşiğinde "hiçbiri" 0.500. İç-CV eşiğinde 0.698, yani düzeltmelerle aynı.
+
+**Yorum.**
+- SMOTE ve diğer düzeltmeler ayırmayı değiştirmiyor, kalibrasyonu bozuyor. Eşik metriklerindeki "kazanç" yalnızca eşik kaymasından geliyor (van den Goorbergh ve ark. 2022 ile tutarlı).
+- Makaleyle bizim aramızdaki duyarlılık / özgüllük farkları çalışma noktası farkıdır.
+- MLP füzyonu LR füzyonundan anlamlı biçimde iyi değil (D-032'nin "güçlü ikinci taban" gerekçesi zayıfladı).
+- Karar önerisi: D-033.
+
+---
+
+## EXP-014 — Kayıt bağlamı dengesizliği SMOTE / ağırlıkla düzeltilebilir mi? (keşifsel)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 |
+| DURUM | Tamamlandı — **keşifsel** (Alper'in 11. tur sorusu üzerine) |
+| Soru | Etiket × bağlam hücrelerinde dengeleme (SMOTE ya da ağırlık) daha iyi ya da bağlamdan daha az etkilenen bir taban üretir mi? |
+| Veri / split | Önbellek özellikleri, split dosyaları 5×5; hücre = dönem (D-024) × sabah/öğleden sonra |
+| Model | LR, füzyon. V0 sınıf ağırlığı (= EXP-011 LR); V2/V3 tüm veride hücre-içi SMOTE / hücre ağırlığı; V4/V5 yalnız erken dönem + hücre ağırlığı / hücre-içi SMOTE |
+| Sonuç | `reports/mfcc/EXP-014_context_balancing.md`, `docs/IMBALANCE_AND_SELECTION.md` Bölüm 4 |
+
+**Sonuçlar** (füzyon):
+
+| | tüm test | yalnız erken dönem | hücre-içi | hastalarda skor: geç vs erken |
+|---|---|---|---|---|
+| V0 | 0.777 | 0.739 | 0.706 | 0.556 |
+| V2 / V3 | 0.769 / 0.760 | 0.723 / 0.721 | 0.709 / 0.718 | 0.587 / 0.562 |
+| V4 / V5 | 0.707 / 0.713 | 0.673 / 0.679 | 0.649 / 0.650 | 0.548 / 0.555 |
+| ref: yaş / bağlam | 0.678 / 0.930 | 0.666 / 0.813 | 0.649 / 0.578 | — |
+
+**Yorum.**
+- **Olumsuz sonuç.** Bağlam dengeleme daha iyi bir taban üretmedi:
+  - tüm veride fark yok (V2: −0.008 [−0.035, +0.018]);
+  - yalnız örtüşmede eğitim AUC'yi düşürdü (V4: −0.070 [−0.118, −0.025]), çünkü verinin ~%54'ü atılıyor;
+  - bağlam bağımlılığı göstergeleri değişmedi.
+- Geç dönemde sağlıklı yok; SMOTE orada dengeleme yapamaz (pozitiflik).
+- MFCC + LR bağlama zaten zayıf bağımlı (hastalar içinde geç / erken 0.556, sabah / öğleden sonra 0.524).
+- Kaba bağlam sabitken füzyon 0.706 (yaş 0.649, bağlam 0.578). Bu, değerlendirme aşaması için bir **hipotez**: yaş ve ince bağlam ayarlanmadı; erken–sabah hücresinde yalnız 12 sağlıklı var.
+
+---
+
+## EXP-015 — Makalenin model seçim prosedürü için iç içe CV (keşifsel)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 |
+| DURUM | Tamamlandı — **keşifsel** (Alper'in 11. tur sorusu üzerine) |
+| Soru | "14 model arasından en iyisini seç" prosedürü, seçim dış testten tamamen ayrıldığında ne verir? Seçim kararlı mı? |
+| Veri / split | Makale özellikleri; makale pipeline'ı (StandardScaler → SMOTE → model); dış = split dosyaları 5×5, iç = 5-fold |
+| Model | 10 model (CatBoost ve 3 ensemble hesap maliyeti nedeniyle dışarıda) |
+| Sonuç | `reports/mfcc/EXP-015_nested_cv.md`, `docs/IMBALANCE_AND_SELECTION.md` Bölüm 2 |
+
+**Sonuçlar** (görev başına AUC, 25 fold; 7 görev ortalaması):
+- **İç içe CV, yani prosedürün dürüst performansı: 0.654.** Görev başına: aaa 0.693, araba 0.598, ana 0.630, ordu 0.644, gelecek 0.681, titiz 0.667, ünlem 0.664.
+- Karşılaştırma: makale 0.709; EXP-010 en iyi 0.702; sonradan bakarak en iyi sabit model 0.683; 10 modelin medyanı 0.642; EXP-011 LR 0.660.
+- Seçim kararsız: 7 görevin 6'sında 25 fold boyunca 5–8 farklı model seçildi.
+- Füzyon (iç CV'nin seçtiği modellerle): 0.734 ± 0.087, havuzlanmış 0.759 [0.690–0.822].
+
+**Yorum.**
+- Makalenin "en iyi" sayıları ortalama ~0.05 (görev başına 0.03–0.09) iyimser.
+- 14 model arasından seçim, önceden seçilmiş LR'ye göre bir şey kazandırmıyor.
+- Seçim iyimserliği çıkarılınca bulgularımız makaleyle uyumlu.
+- Faz 2'deki backbone / görev seçimi için aynı ders geçerli (D-033).
+
+---
+
 ## Planlanan deneyler (ID'ler başlarken verilecek)
 
 **Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**
