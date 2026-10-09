@@ -1,6 +1,9 @@
-# Model girdi sözleşmeleri — resmi kaynaklardan doğrulandı (2026-10-08)
-# Bu dosya veridir: Faz 2 kodu buradan okur ve smoke test'te her alanı assert eder.
+# Model girdi sözleşmeleri — resmi kaynaklardan doğrulandı (2026-10-08; 12. turda resmi kodla yeniden kontrol edildi)
+# Bu dosya veridir: scripts/backbones.py buradan okur ve smoke test'te (SMK-001) her alanı assert eder.
 # status: verified = resmi kod/dokümandan okundu; needs_verification = smoke test'te ölçülecek
+# Makinece okunan alanlar her modelde: family, class, constructor (varsa), checkpoint_file, sample_rate,
+#   n_layers (PANNs: 1 = fc1 gömmesi; SSL: transformer blok sayısı), embedding_dim, expect (çalışma anı assert'leri)
+# Resmi kod kopyaları: third_party/ (commit hash'leri third_party/README.md)
 
 source_audio:   # bizim kayıtlarımız (D-018)
   reported_by_data_team: {device: "iPhone 14", distance_cm: 10, location: "hep aynı yer", channels: 1,
@@ -16,6 +19,10 @@ source_audio:   # bizim kayıtlarımız (D-018)
   cache_dtype: float32                        # int16 değil: AAC çözümü ±1'i aşabilir
 
 panns_cnn10:
+  family: panns
+  class: Cnn10                    # verified: third_party/panns/models.py
+  constructor: {sample_rate: 32000, window_size: 1024, hop_size: 320, mel_bins: 64, fmin: 50, fmax: 14000, classes_num: 527}
+  checkpoint_file: "Cnn10_mAP=0.380.pth"
   checkpoint: "Cnn10_mAP=0.380.pth"
   source: "https://zenodo.org/records/3987831 (CC BY 4.0); code: github.com/qiuqiangkong/audioset_tagging_cnn pytorch/models.py (MIT)"
   api_input: "waveform float32 (batch, samples), mono"
@@ -24,11 +31,18 @@ panns_cnn10:
              mel_bins: 64, fmin: 50, fmax: 14000, log_ref: 1.0, amin: 1.0e-10, top_db: null}
   input_norm: "bn0 = BatchNorm2d(64) mel bantları üzerinde (öğrenilmiş)"
   in_model_augmentation: "SpecAugment(time_drop_width=64, time_stripes_num=2, freq_drop_width=8, freq_stripes_num=2) yalnız model.training iken"
+  embedding_output: "forward() → dict['embedding'] = dropout(relu(fc1(x)), 0.5, training) → eval'de relu(fc1)"   # verified
+  n_layers: 1
   embedding_dim: 512             # verified (fc1)
-  params_approx: "5-6M"          # needs_verification (checkpoint boyutundan çıkarım)
+  params_approx: "5-6M"          # needs_verification (checkpoint boyutundan çıkarım) → SMK-001 S4
   pretraining: "AudioSet, supervised tagging"
+  note_lowpass: "32k önbellek yolu 11.0 kHz'e kesildi (D-021): 64 mel bandından merkezi >11 kHz olan 4 bant neredeyse boş [INFERENCE, librosa mel hesabı]"
 
 panns_cnn14:
+  family: panns
+  class: Cnn14
+  constructor: {sample_rate: 32000, window_size: 1024, hop_size: 320, mel_bins: 64, fmin: 50, fmax: 14000, classes_num: 527}
+  checkpoint_file: "Cnn14_mAP=0.431.pth"
   checkpoint: "Cnn14_mAP=0.431.pth"
   source: "zenodo 3987831"
   api_input: "waveform float32 (batch, samples), mono"
@@ -37,47 +51,81 @@ panns_cnn14:
              mel_bins: 64, fmin: 50, fmax: 14000, log_ref: 1.0, amin: 1.0e-10, top_db: null}
   input_norm: "bn0 (öğrenilmiş)"
   in_model_augmentation: "SpecAugment, CNN10 ile aynı"
+  embedding_output: "dict['embedding'] (fc1 + ReLU)"
+  n_layers: 1
   embedding_dim: 2048
-  params_approx: "~80M"          # needs_verification
+  params_approx: "~80M"          # needs_verification → SMK-001 S4
   pretraining: "AudioSet, supervised tagging"
 
 panns_cnn14_16k:
+  family: panns
+  class: Cnn14_16k               # verified (12. tur): resmi kodda AYRI sınıf; __init__ içinde sr=16000, window=512, hop=160,
+                                 #   mel=64, fmin=50, fmax=8000 assert ediliyor. Önceki not ("Cnn14 sınıfı bu parametrelerle") YANLIŞTI.
+  constructor: {sample_rate: 16000, window_size: 512, hop_size: 160, mel_bins: 64, fmin: 50, fmax: 8000, classes_num: 527}
+  checkpoint_file: "Cnn14_16k_mAP=0.438.pth"
   checkpoint: "Cnn14_16k_mAP=0.438.pth"
-  source: "zenodo 3987831; README inference flags"
+  source: "zenodo 3987831; README inference flags; pytorch/models.py class Cnn14_16k"
   api_input: "waveform float32 (batch, samples), mono"
   sample_rate: 16000
-  frontend: {stft_n_fft: 512, hop: 160, mel_bins: 64, fmin: 50, fmax: 8000}
-  note: "Cnn14 sınıfı bu parametrelerle örneklenip strict=True yüklenir; STFT/mel buffer boyutları uymazsa yükleme hata verir (= otomatik format kontrolü)"  # needs_verification
+  frontend: {stft_n_fft: 512, hop: 160, window: hann, center: true, pad_mode: reflect,
+             mel_bins: 64, fmin: 50, fmax: 8000, log_ref: 1.0, amin: 1.0e-10, top_db: null}
+  note: "strict=True yükleme STFT/mel tampon boyutlarını da doğrular (yanlış sınıf/parametre → hata)"
+  embedding_output: "dict['embedding'] (fc1 + ReLU)"
+  n_layers: 1
   embedding_dim: 2048
-  purpose: "CNN14 32k vs 16k bant genişliği ablasyonu (D-008)"
+  purpose: "CNN14 32k vs 16k bant genişliği ablasyonu (D-008). Not: 32k yolu 11 kHz'e kesildiği için karşılaştırma fiilen 11 kHz vs 8 kHz"
 
 beats:
+  family: beats
+  class: BEATs                   # third_party/beats/BEATs.py; BEATsConfig(checkpoint['cfg'])
+  checkpoint_file: "BEATs_iter3_plus_AS2M.pt"
   checkpoint: "BEATs_iter3+ (AS2M) — pretrained, not fine-tuned"
-  source: "github.com/microsoft/unilm/tree/master/beats (README, BEATs.py); weights via OneDrive"
-  api_input: "waveform (batch, samples) + boolean padding_mask (batch, samples)"
+  source: "github.com/microsoft/unilm/tree/master/beats (README, BEATs.py); weights via OneDrive (README tablosu, 'BEATs_iter3+ (AS2M)' sütun 3)"
+  api_input: "waveform (batch, samples); padding_mask None (dolgu yok, D-034)"
   sample_rate: 16000
-  frontend: "waveform * 2**15 -> torchaudio.compliance.kaldi.fbank(num_mel_bins=128, frame_length=25ms, frame_shift=10ms)"
+  frontend: "waveform * 2**15 -> torchaudio.compliance.kaldi.fbank(num_mel_bins=128, frame_length=25ms, frame_shift=10ms; dither varsayılanı 0.0)"
   input_norm: "(fbank - 15.41663) / (2 * 6.55582)  # koda gömülü sabitler"
+  patch: "Conv2d(1, 512, kernel=16, stride=16) → (zaman/16 × 8) yama, zaman-öncelikli sıralı"
   encoder: {layers: 12, embed_dim: 768}
-  output: "(batch, n_patches, 768) -> havuzlama bizim seçimimiz (padding dışı ortalama)"
-  download_note: "OneDrive -> bir kez indir, Drive/models/ altına koy, sha256 kaydet"  # needs_verification
+  n_layers: 12
+  embedding_dim: 768
+  expect: {encoder_layers: 12, encoder_embed_dim: 768, input_patch_size: 16, finetuned_model: false}
+  layer_capture: "encoder.layers[i] forward hook → çıktı[0] (T×B×C); katman 0 = layers[0] girdisi (pre-hook). Resmi API ara katmanları yalnız tgt_layer verilince döndürür."   # verified
+  output: "(batch, n_patches, 768) -> yama ortalaması (dolgu yok)"
+  supervision_note: "iter3+ tokenizer'ı gözetimli (AudioSet etiketli) bir öğretmenden damıtılmış olabilir"   # needs_verification
+  download_note: "OneDrive -> bir kez indir, Drive/models/BEATs_iter3_plus_AS2M.pt, sha256 SMK-001'de kaydedilir"
+  torchaudio_note: "torchaudio.compliance.kaldi gerekir; yerelde torchaudio 2.11 ile çalıştı (12. tur). Colab sürümünde SMK-001 import'u doğrular"   # needs_verification (Colab)
 
 wavlm_base_plus:
+  family: wavlm
+  class: WavLMModel              # transformers
+  checkpoint_file: "wavlm-base-plus"      # Drive models/ altında save_pretrained klasörü
   checkpoint: "microsoft/wavlm-base-plus (HuggingFace)"
-  api_input: "waveform float32 (batch, samples), mono"
+  api_input: "waveform float32 (batch, samples), mono; resmi Wav2Vec2FeatureExtractor'dan geçirilir"
   sample_rate: 16000
   do_normalize: false            # verified preprocessor_config.json
   feature_encoder_stride_samples: 320   # conv_stride [5,2,2,2,2,2,2] -> 20 ms
   hidden: {size: 768, layers: 12}
-  training_time_config: {mask_time_prob: 0.05, layerdrop: 0.05}   # needs_verification: fine-tune'da etkin mi
+  n_layers: 12
+  embedding_dim: 768
+  expect: {hidden_size: 768, num_hidden_layers: 12, do_normalize: false, sampling_rate: 16000}
+  layer_capture: "encoder.layers[i] forward hook → çıktı[0] (B×T×C); katman 0 = layers[0] girdisi. transformers sürümleri arasında hidden_states anlamı değişebildiği için (v5 kayıt kancaları) kendi kancalarımız kullanılır"
+  training_time_config: {mask_time_prob: 0.05, layerdrop: 0.05}   # needs_verification: SMK-001 config'ten okur; Faz 3'te apply_spec_augment=False (D-016)
   pretraining: "94k h English speech (Libri-Light, GigaSpeech, VoxPopuli), self-supervised"
-  representation_plan: "tüm gizli durumların öğrenilmiş ağırlıklı toplamı (SUPERB tarzı)"
+  representation_plan: "Faz 2: katman 1..L'nin z-skorlu eşit ortalaması (D-034); Faz 3: öğrenilmiş ağırlıklı toplam düşünülebilir"
 
 wavlm_large:
+  family: wavlm
+  class: WavLMModel
+  checkpoint_file: "wavlm-large"
   checkpoint: "microsoft/wavlm-large (HuggingFace)"
-  api_input: "waveform float32 (batch, samples), mono"
+  api_input: "waveform float32 (batch, samples), mono; resmi Wav2Vec2FeatureExtractor'dan geçirilir (normalize eder)"
   sample_rate: 16000
   do_normalize: true             # verified — Base+ ile FARKLI
-  hidden: {size: 1024, layers: 24}   # needs_verification
+  hidden: {size: 1024, layers: 24}   # needs_verification → SMK-001 S2 config'ten assert eder
+  n_layers: 24
+  embedding_dim: 1024
+  expect: {hidden_size: 1024, num_hidden_layers: 24, do_normalize: true, sampling_rate: 16000}
+  stable_layer_norm_note: "do_stable_layer_norm=True ise kodlayıcı çıkışına son bir LayerNorm uygulanır; bizim katman 24 kancası bu LayerNorm'dan ÖNCEKİ değerdir (SMK-001 S8 bunu doğrular)"
   params_approx: "~316M"
-  t4_note: "tam fine-tune için fp16 + gradient checkpointing gerekebilir"  # needs_verification
+  t4_note: "tam fine-tune için fp16 + gradient checkpointing gerekebilir"  # needs_verification → SMK-001 S12

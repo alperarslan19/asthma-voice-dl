@@ -592,7 +592,7 @@ DURUM: KABUL (uygulama ayrıntısı; Colab'da çalıştırmadan önce itiraz edi
 - **UYGULAMA:** `scripts/extract_mfcc_features.py`, `scripts/run_mfcc_baselines.py`, `tests/test_mfcc_pipeline.py`, `notebooks/10_mfcc_baseline.ipynb`, `reports/mfcc/`.
 
 ## D-032 — MFCC sonuçlarından çıkan üç düzeltme: güçlü ikinci taban, eşik seçimi, birincil birim = füzyon
-DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçlarına dayanır (sonuçlar görüldükten sonra; gerekçeler aşağıda)
+DURUM: **KABUL** (2026-10-09, 12. tur — Alper onayladı) · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçlarına dayanır (sonuçlar görüldükten sonra; gerekçeler aşağıda)
 - **KARAR:**
   1. **RQ1 için iki MFCC tabanı.**
      - Birincil taban değişmiyor: EXP-011 LR.
@@ -622,7 +622,7 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçla
 - **UYGULAMA:** EXP-013'teki MLP sonuçları (`scripts/analyze_imbalance_selection.py`); eşik seçimi D-033'teki iç 5-fold OOF yöntemiyle; Faz 2 prob kodu aynı değerlendirme fonksiyonlarını kullanır.
 
 ## D-033 — Dengesizlik ve seçim politikası: SMOTE yok, eşik iç CV'den, kalibrasyon raporlanır, bağlam dengeleme eğitimde yok, seçim önceden ya da iç içe
-DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (11. tur) · Ayrıntı: `docs/IMBALANCE_AND_SELECTION.md` · Kanıt: EXP-013, EXP-014, EXP-015 (keşifsel) · D-032'nin 2. maddesini iyileştirir
+DURUM: **KABUL** (2026-10-09, 12. tur — Alper onayladı) · Tarih: 2026-10-09 (11. tur) · Ayrıntı: `docs/IMBALANCE_AND_SELECTION.md` · Kanıt: EXP-013, EXP-014, EXP-015 (keşifsel) · D-032'nin 2. maddesini iyileştirir
 - **KARAR:**
   1. **Etiket dengesizliği.** SMOTE kullanılmaz; tek istisna EXP-010'daki makale taklidi. Klasik modellerde sınıf ağırlığı, derin modellerde ağırlıklı BCE kullanılır. Focal / LDAM / logit ayarlaması gerekmiyor.
   2. **Eşik.** Her dış fold'da, eğitim katılımcılarının **iç 5-fold OOF** tahminlerinde dengeli doğruluğu en yükselten eşik seçilir ve teste uygulanır. Bu, D-032'deki "yalnız iç doğrulama kümesi"nden (~9 sağlıklı) daha az gürültülüdür.
@@ -643,3 +643,46 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (11. tur) · Ayrıntı: `docs/IMBALANCE_
   - EXP-013/014/015 keşifseldir; MFCC özelliklerinde geçerli olan sonuç derin gömmelerde farklı olabilir. [HYPOTHESIS]
 - **BİLİMSEL SONUÇ:** Dengesizlik düzeltmesi ayırma iddiası gibi sunulmaz. Seçim iyimserliği ve split şansı bütün aşamalarda kontrol altında tutulur.
 - **UYGULAMA:** Faz 2 prob kodu ve Faz 3 eğitim döngüsü; `scripts/analyze_imbalance_selection.py` (referans uygulama).
+
+## D-034 — Faz 2 protokolü: dondurulmuş gömme + lineer prob
+DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (12. tur) · **Faz 2 sonuçları görülmeden** · Ayrıntı: `docs/PHASE2_DESIGN.md` Bölüm 5 · D-012 basamak 2'nin uygulanışı; **D-015'ten bir sapma içerir (madde 1)**
+- **KARAR:**
+  1. **Girdi.** Harmonize önbellek (D-030), modelin resmi SR'si. 4.0 s pencere / 2.0 s adım; **son pencere kaydın sonuna hizalı**. **4 s'den kısa kayıtlar (17) dolgusuz, olduğu uzunlukta tek pencere** (D-015'teki "sıfırla doldur" yerine). Keşifsel ek görünüm: tüm kayıt tek girdi (EXP-018).
+  2. **Gömme.** PANNs: resmi `embedding` (fc1). BEATs / WavLM: forward hook ile her transformer bloğunun çıkışı (katman 0 = ilk bloğun girdisi); zaman (BEATs'te yama) ortalaması; bütün katmanlar saklanır. Kayıt gömmesi = pencere gömmelerinin ortalaması. fp32, deterministik ayarlar.
+  3. **Birincil temsil (önceden sabit).** PANNs: fc1. SSL: katman 1..L'nin eşit ağırlıklı ortalaması; her katman eğitim fold'unda z-skoruna çevrildikten sonra (Pipeline içinde). Katman katman sonuçlar yalnız keşifsel (EXP-017, tekrar 0).
+  4. **Prob.** EXP-011 LR protokolü: StandardScaler → LR(class_weight=balanced); C iç 5-fold `neg_log_loss` ile, ızgara 10⁻⁵…10² (8 değer, MFCC dahil bütün temsillerde aynı); görev başına model; füzyon = 7 görev olasılığının ortalaması (D-032); eşik iç 5-fold OOF'tan, kalibrasyon raporlanır (D-033).
+  5. **MFCC kolları aynı kodla:** mfcc_lr (EXP-011 LR, yeni ızgara) ve mfcc_mlp (D-032: StandardScaler → SMOTE → MLP). mfcc_lr füzyonu EXP-011'i ±0.01 içinde yeniden üretmeli (regresyon testi).
+  6. **Onaylayıcı aile (RQ1):** 6 backbone × füzyon. "b MFCC'den iyi" ⇔ hem mfcc_lr hem mfcc_mlp geçilir (kesişim-birleşim: p = max). Nadeau–Bengio düzeltilmiş t (25 fold), **tek yönlü** (H1: Δ > 0; iddia yönlü), Holm (6), eşik 0.025 (iki yönlü 0.05'in pozitif yarısı). Neden tek yönlü: iki yönlü p'de MFCC'den anlamlı biçimde *kötü* bir backbone Holm sırasının başına geçip diğerlerinin düzeltmesini gevşetirdi. Destek: katılımcı bootstrap ΔAUC CI ve tekrar başına DeLong. "Destekleniyor (üst sınır, geçici)" ⇔ Holm p < 0.025 ve iki CI de 0'ı dışlıyor. İki yönlü p'ler de raporlanır. D-011'in zaman-örtüşme koşulu D-028 ile değerlendirme aşamasında.
+  7. **Keşifsel (önceden listeli; her aile içinde Holm, yorum keşifsel):** 15 backbone çifti (RQ3; cnn14 − cnn14_16k (D-008) ve Large − Base+ dahil), görev başına Δ vs mfcc_lr (42; RQ4), ünlü − kelimeler (RQ5), EXP-017 katman eğrileri, EXP-018 tüm kayıt − 4 s. İç içe seçim tahmini (6 backbone ve D-035'in 3 adayı).
+  8. **Bağlam izleme (D-028; yalnız raporlanır, hiçbir seçimde kullanılmaz):** EXP-014'teki üç bağlam bağımlılığı AUC'si + iki referans çizgisi (bağlam, yaş) aynı fold'larda.
+  9. **Saklama:** Drive `data_derived/embeddings_v1/<backbone>/` (kayıt düzeyi gömmeler, isteğe bağlı pencere gömmeleri fp16, info.json, sha256 manifesti); OOF + iç OOF tahminleri `experiments/EXP-016_frozen-probe/`. Git'e yalnız agrega raporlar.
+  10. **Smoke test (SMK-001) geçmeden çıkarım yok:** sha256, sözleşme, strict yükleme, şekil/dtype/sonluluk, eval determinizmi, batch-değişmezlik, kanca = resmi çıktı, PANNs "Speech" kontrolü, aynı-kişi benzerliği, kaydet-yükle, Faz 3 bellek/hız.
+- **NEDEN:**
+  - Temsil farkını izole eder; MFCC ile tek değişken temsil (D-012).
+  - Dolgusuz kısa kayıt: sıfır dolgusu yapay sessizlik ve kayıt süresi ipucu yaratır; Faz 2'de batch zorunluluğu yok. [INFERENCE]
+  - Katman ortalaması: SSL modellerinde bilgi orta katmanlarda yoğunlaşabilir [FROM PAPER: Pasad ve ark. 2021; Chen ve ark. 2022]; seçim yapmadan bütün katmanları kullanır (D-033 madde 5). Z-skoru, WavLM Large'ın katmanlar arası ölçek farkı için gerekli.
+  - Genişletilmiş C ızgarası: p ≫ n (2048 boyut, ~220 örnek) durumunda en iyi C 0.001'in altında olabilir.
+  - İki MFCC tabanı ve kesişim-birleşim: D-032.
+- **ALTERNATİFLER:** D-015'e aynen uymak (sıfır dolgusu); yalnız son katman; en iyi katmanı seçmek (dış ya da iç CV); katmanları uç uca eklemek; MLP prob; PCA + LR; görevleri birleştiren tek prob. Karşılaştırma: `docs/PHASE2_DESIGN.md` Bölüm 5.2–5.4.
+- **RİSK:**
+  - Güç sınırlı: %80 güçle saptanabilir füzyon farkı ≈ 0.08–0.10 (Holm ile). 0.02–0.05'lik farklar çözülemez. [INFERENCE]
+  - LR doğrusal olmayan bilgiyi kaçırabilir → gömmeler aleyhine, muhafazakâr.
+  - Gömmeler MFCC'den fazla bağlam taşıyabilir → her AUC üst sınır; izleme göstergeleri. [HYPOTHESIS]
+  - 32k yolundaki 11 kHz kesimi, PANNs'in en üst ~4 mel bandını boşaltır. [INFERENCE]
+  - BEATs iter3+'ın "öz-gözetimli" sayılıp sayılmayacağı belirsiz (tokenizer öğretmeni). [NEEDS VERIFICATION]
+- **BİLİMSEL SONUÇ:** Altı backbone ve iki MFCC tabanı, seçim iyimserliği olmadan, aynı fold'larda, önceden yazılmış bir karşılaştırma ailesiyle değerlendirilir.
+- **UYGULAMA:** `scripts/backbones.py`, `scripts/smoke_test_backbones.py`, `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `tests/test_phase2.py`, `notebooks/20_smoke_tests.ipynb`, `notebooks/21_frozen_embeddings.ipynb`.
+
+## D-035 — Faz 3 backbone seçim kuralı (Faz 2 sonuçlarından önce yazıldı)
+DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (12. tur) · **Faz 2 sonuçları görülmeden** · Ayrıntı: `docs/PHASE2_DESIGN.md` Bölüm 5.10 · D-012 basamak 4'ün ve EXPERIMENTS.md'deki "seçim ölçütü Faz 2 sonunda yazılır" notunun yerine geçer (ölçüt şimdi, sonuçlardan önce yazılıyor)
+- **KARAR:**
+  1. Sabit: PANNs CNN10 pretrained (RQ2: sıfırdan CNN10'un eşi) ve PANNs CNN14 32k (Boll karşılaştırması).
+  2. Kurala bağlı: BEATs, WavLM Base+, WavLM Large arasından bir tane. Ölçüt: 25 dış fold'da, eğitim katılımcılarının iç 5-fold OOF füzyon AUC'sinin ortalaması (dış test tahminleri ölçüte girmez). En yükseğe 0.01'den yakın olanlar arasından en az parametreli.
+  3. Bağlam izleme göstergeleri ölçüt değildir; raporlanır.
+  4. Faz 3, Faz 2 sonucundan bağımsız yapılır.
+  5. Bütçe yetmezse ilk çıkarılan CNN14.
+- **NEDEN:** Seçimi sonuçlardan önce sabitlemek (D-033 madde 5). İç doğrulama ölçütü dış test fold'larını seçime katmaz; kalan iyimserlik iç içe seçim tahminiyle ölçülür. RQ2 için aynı mimarinin pretrained ve sıfırdan hâlleri gerekir.
+- **ALTERNATİFLER:** Dış havuzlanmış AUC ile seçim; **CONFOUND belgesindeki T1'e göre seçim (D-026, ertelendi)**: bağlam kestirmesini seçmemek açısından daha güçlü, ama D-028'in ertelediği testi öne çeker; her fold'da ayrı seçim (tam iç içe); bütün backbone'ları fine-tune etmek.
+- **RİSK:** E1 temelli ölçüt bağlamı en iyi öğreneni seçebilir. Azaltma: PANNs iki model sabit; altı backbone'un hepsinin tahminleri saklanıp değerlendirme aşamasında lens setinden geçer; izleme göstergeleri. Seçilen backbone'un dondurulmuş skoru seçim nedeniyle şişkin olabilir → Faz 3'te "fine-tune − dondurulmuş" farkı küçülür (muhafazakâr). İç OOF tahminleri, C'nin seçildiği aynı iç fold'lardan gelir → doğrulama skorunda hafif iyimserlik; bu iyimserlik boyut (768 / 1024) ve katman sayısıyla kollar arasında biraz farklı olabilir. [INFERENCE]
+- **BİLİMSEL SONUÇ:** Faz 3'e geçiş, önceden yazılmış ve seçim iyimserliği ölçülen bir kurala bağlı.
+- **UYGULAMA:** `run_probes.py` EXP-016 raporunda doğrulama skorları ve kuralın sonucu; karar Alper'e sunulur.
