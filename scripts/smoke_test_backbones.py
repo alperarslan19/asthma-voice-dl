@@ -50,6 +50,19 @@ from sklearn.metrics import roc_auc_score
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import backbones as B  # noqa: E402
 
+REPO = Path(__file__).resolve().parents[1]
+# SMK-001'in doğruladığı kod: yükleyiciler/sarmalayıcılar (third_party sha256 listesi de bu dosyada) ve girdi sözleşmesi
+CODE_FILES = ["scripts/backbones.py", "configs/model_input_contracts.yaml"]
+
+
+def git_commit() -> str:
+    try:
+        import subprocess
+        return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
+                              cwd=REPO).stdout.strip()
+    except Exception:
+        return ""
+
 WIN_S, HOP_S = 4.0, 2.0
 SPEECH_IDX = 0          # AudioSet class_labels_indices.csv: 0 = "Speech"
 
@@ -69,7 +82,7 @@ class Cache:
             self._mm[k] = np.memmap(self.dir / f"audio_{k}.f32", dtype="<f4", mode="r")
         r = self.idx.iloc[row]
         o, n = int(r[f"offset_{k}"]), int(r[f"n_{k}"])
-        x = np.asarray(self._mm[k][o:o + n], dtype=np.float32)
+        x = np.array(self._mm[k][o:o + n], dtype=np.float32)    # kopya: salt-okunur memmap görünümü torch'a verilmez
         assert len(x) == n and np.isfinite(x).all()
         return x
 
@@ -365,7 +378,11 @@ def main() -> None:
            "random_init": args.random_init,
            "env": {"python": platform.python_version(), "torch": torch.__version__, "torchaudio": torchaudio.__version__,
                    "transformers": transformers.__version__, "numpy": np.__version__},
-           "cache_index_sha256": B.sha256_file(args.cache_dir / "index.csv"), "results": results}
+           "cache_index_sha256": B.sha256_file(args.cache_dir / "index.csv"),
+           # 21 numaralı notebook bu özetleri yeniden hesaplar: SMK-001'den sonra backbone kodu / sözleşme değiştiyse
+           # gömme çıkarımı başlamaz (SMK-001 başka bir kodu doğrulamış olurdu)
+           "code_sha256": {p: B.sha256_file(REPO / p) for p in CODE_FILES}, "git_commit": git_commit(),
+           "results": results}
     args.report_dir.mkdir(parents=True, exist_ok=True)
     (args.report_dir / f"{tag}_smoke.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False, default=str))
     md = to_md(rep)

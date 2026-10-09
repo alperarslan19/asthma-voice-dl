@@ -59,8 +59,8 @@ Ayrıntı ve yorum sınırı: Bölüm 9.6. **Faz 2, ön-eğitim yöntemlerinin (
 | Rapor adı | `UNITTEST_random_init_smoke.*` (geçici klasörde; repoya girmez) | `reports/phase2/SMK-001_smoke.*` |
 
 - Birim testlerinin hepsi geçti (P1–P9, P7b, P7c). Bu, **SMK-001'in geçtiği anlamına gelmez**.
-- Notebook 21, gömme çıkarımından önce `SMK-001_smoke.json`'ı okur; `random_init` ise ya da herhangi bir backbone PASS değilse durur.
-- WavLM işlemcilerinin `return_attention_mask` değerleri (Base+ false, Large true) sözleşmede `expect` alanında; SMK-001 gerçek dosyalarla assert eder. [NEEDS VERIFICATION]
+- Notebook 21, gömme çıkarımından önce `SMK-001_smoke.json`'ı okur ve şu durumlarda durur: rapor main dalında (git'te izlenen dosya olarak) yok; `random_init`; herhangi bir backbone PASS değil; SMK-001'in doğruladığı kodun özeti (`code_sha256`: `scripts/backbones.py`, `configs/model_input_contracts.yaml`) şimdiki dosyalarla uyuşmuyor (SMK-001'den sonra backbone kodu değişmiş → SMK-001 yeniden). Çıkarımdan sonra her backbone'un `checkpoint_sha256`'sı SMK-001 S1'deki değerle karşılaştırılır.
+- WavLM işlemcilerinin `return_attention_mask` değerleri sözleşmede `expect` alanında: ikisi de `true`. SMK-001 1. denemesi gerçek dosyalarla doğruladı (Base+ beklentisi `false` yazılmıştı, yanlıştı ve düzeltildi; Large `true` S2'den geçti).
 
 ### 1.1 SMK-001 başarısız olursa (önceden yazılmış protokol)
 
@@ -452,6 +452,7 @@ Kalan küçük iyimserlik: iç OOF tahminleri, C'nin seçildiği aynı iç fold'
 - CNN10, CNN14, CNN14_16k, BEATs: S12 FAIL — fp16 autocast altında ilk adımdan itibaren kayıp sonlu değil. Neden: ön işleme fp16'da taşıyor / alt taşıyor (PANNs log-Mel: `amin=1e-10` fp16'da 0'a yuvarlanır → log10(0) = −∞; güç spektrumu fp16 sınırına yakın. BEATs: dalga × 2¹⁵ → fbank güç spektrumu ≫ 65 504). CPU fp16 autocast ile yeniden üretildi. Düzeltme: ön işleme autocast altında da fp32 (`backbones._fp32_forward`; state_dict değişmez; fp32 gömme çıkarımına etkisi yok). S12 artık her adımı ayrı kaydeder (kayıp, gradyan, ölçek, atlanan adım).
 - Diğer bütün kontroller (S3, S5–S11, S14) beş modelde PASS; S9: PANNs'te "Speech" 1. sırada.
 - Eşik gevşetilmedi; SMK-001 baştan çalıştırılacak.
+- Notebook düzeltmeleri (1. denemeden sonra; tasarım değişikliği değil): rapor her seferinde zaman damgalı yeni bir dala gönderilir (`phase2-smoke-results-YYYYMMDD-HHMMSS`; aynı adlı dala ikinci gönderim reddedilirdi) ve repo ardından `main`'e döner; SMK-001 raporu `code_sha256` ve `git_commit` alanlarını içerir.
 
 
 S1 sha256 (Zenodo md5'i indirmede) · S2 sözleşme · S3 strict yükleme · S4 parametre sayısı · S5 şekil / dtype / cihaz / sonluluk · S6 eval determinizmi · S7 batch-değişmezlik (başka katılımcılarla) · S8 son kanca = resmi çıktı · S9 PANNs "Speech" ilk 3'te · S10 aynı-kişi benzerliği · S11 kaydet-yükle · S12 Faz 3 eğitim adımı (bellek, süre) · S13 hız · **S14 dolgu yolu** (tam uzunlukta `lengths` sonucu değiştirmez = PASS ölçütü; kısa parça zeropad vs nopad benzerliği INFO).
