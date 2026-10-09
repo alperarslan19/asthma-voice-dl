@@ -399,10 +399,10 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (tasarım) |
-| DURUM | Planlandı — kod ve yerel test hazır (`tests/test_phase2.py`, ağırlıksız küçük modellerle) |
+| DURUM | Planlandı — kod hazır. **Yerel birim testleri (`tests/test_phase2.py`, rastgele küçük modeller) SMK-001 DEĞİLDİR**; SMK-001 gerçek checkpoint'lerle Colab GPU'da yapılacak |
 | Soru | Her backbone resmi ağırlığı eksiksiz yüklüyor, resmi girdi biçimini alıyor, eval'de deterministik ve batch'ten bağımsız mı? Faz 3'te bir eğitim adımı ne kadar bellek / süre ister? |
 | Beklenti (önceden) | Hepsi PASS. PANNs'te kelime kayıtlarında "Speech" ilk 3'te. Aynı-kişi benzerlik AUC'si > 0.6 (konuşmacı bilgisi güçlü kodlanır). WavLM Large batch 16 × 4 s eğitimde T4'e gradient checkpointing'siz sığmayabilir [HYPOTHESIS] |
-| Kontroller | S1–S13 (`docs/PHASE2_DESIGN.md` Bölüm 5.1) |
+| Kontroller | S1–S14 (`docs/PHASE2_DESIGN.md` Bölüm 9.5); S14 = dolgu yolu (tam uzunlukta `lengths` sonucu değiştirmez) |
 | Veri | Harmonize önbellek (D-030), 8 katılımcı × 7 görev (deterministik örnek) |
 | Ağırlıklar | PANNs Zenodo 3987831 (md5 doğrulamalı), WavLM HF (revizyon hash'i), BEATs iter3+ AS2M (OneDrive, elle) |
 | Kod / notebook | `scripts/smoke_test_backbones.py`, `notebooks/20_smoke_tests.ipynb` |
@@ -414,21 +414,40 @@ Bunların hepsi D-025'e girdi.
 | Tarih | 2026-10-09 (tasarım; **sonuçlardan önce**) |
 | DURUM | Planlandı — D-034 onayı ve SMK-001 PASS bekliyor |
 | Araştırma sorusu | RQ1 (onaylayıcı, füzyon): backbone temsili MFCC'den fazla doğrusal çözülebilir bilgi taşıyor mu? RQ3 / RQ4 / RQ5 keşifsel |
-| Beklenti (önceden) [HYPOTHESIS] | B1: füzyon AUC'leri 0.70–0.85; en az biri MFCC-LR'yi (0.77) sayısal olarak geçebilir ama onaylayıcı testi geçen olmaması daha olası (güç: saptanabilir fark ≈ 0.08–0.10). B2: bağlam izleme göstergeleri MFCC'den yüksek. B3: |cnn14 − cnn14_16k| < 0.03. B5: görevler arasında güvenilir sıralama yok. B7: Large, Base+'tan anlamlı biçimde iyi değil |
+| Beklenti (önceden) [HYPOTHESIS] | B1: füzyon AUC'leri 0.70–0.85; en az biri MFCC-LR'yi (0.77) sayısal olarak geçebilir ama onaylayıcı testi geçen olmaması daha olası (kaba güç hesabı: saptanabilir fark ≈ 0.06–0.09; eşik değil, varsayımlar tasarım belgesi Bölüm 5.5). B2: bağlam izleme göstergeleri MFCC'den yüksek. B3: |cnn14 − cnn14_16k| < 0.03. B5: görevler arasında güvenilir sıralama yok. B7: Large, Base+'tan anlamlı biçimde iyi değil |
 | Veri sürümü | CSV sha256 + önbellek index sha256 (D-030) + gömme sha256'ları (`embeddings_v1/*/MANIFEST.sha256`) |
 | Katılımcı / hasta / kontrol | 342 / 283 / 59 (görev 4: 341) |
 | N kayıt / N segment | 2 393 kayıt; ≈ 12 000 pencere (4 s / 2 s) [INFERENCE] |
 | Kayıt türleri | 7 görev; birincil birim füzyon (D-032) |
 | Split stratejisi | outer_r0–4 (D-029), 5 × 5, iç 5-fold |
-| Girdi / SR / ön işleme | Harmonize önbellek; modelin resmi SR'si; 4 s / 2 s, son pencere sona hizalı, kısa kayıt dolgusuz (D-034 madde 1) |
+| Girdi / SR / ön işleme | Harmonize önbellek; modelin resmi SR'si; 4 s / 2 s, son pencere sona hizalı; 17 kısa kayıt: birincil `zeropad` (D-015; BEATs/WavLM'de resmi maske), `nopad` EXP-016S'de (D-034 madde 1, onay bekliyor) |
 | Model / ağırlık | cnn10, cnn14, cnn14_16k, beats (iter3+ AS2M), wavlm_base_plus, wavlm_large — hepsi dondurulmuş |
 | Temsil | PANNs fc1; SSL katman 1..L z-skorlu ortalaması (D-034 madde 3) |
 | Başlık / kayıp / dengesizlik | LR (class_weight=balanced); MFCC: LR + MLP (SMOTE, D-032) |
 | Hiperparametreler | C ∈ 1e-5…1e2, iç 5-fold neg_log_loss; eşik iç 5-fold OOF (D-033) |
-| İstatistik | NB düzeltilmiş t (25 fold), kesişim-birleşim (LR ve MLP), Holm (6); bootstrap CI; DeLong (tekrar başına); iç içe seçim; D-035 doğrulama skoru; bağlam izleme (3 AUC) |
+| Birim / fold'lar | Katılımcı (füzyon); bütün kollar aynı 25 dış fold'da, aynı katılımcılarda (assert) |
+| İstatistik | Fold düzeyinde eşleştirilmiş ΔAUC; NB düzeltilmiş t, **tek yönlü** (H1: Δ > 0); kesişim-birleşim (LR ve MLP); Holm (6), eşik 0.025; ayrıca iki bootstrap CI'ının alt sınırı > 0; DeLong destekleyici. Keşifsel aileler içinde Holm |
+| D-035 | Fold başına seçim, yalnız o fold'un eğitim verisindeki iç OOF füzyon AUC'si → `d035_selection.csv`; prosedürün dürüst tahmini ayrıca |
+| Meta veri | Bağlam / süre karşılaştırmaları bu deneyde YOK → META-016 (ayrı rapor) |
 | Regresyon testi | mfcc_lr füzyonu EXP-011 LR füzyonunu (0.771) ±0.01 içinde yeniden üretmeli |
 | Kod / notebook | `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `notebooks/21_frozen_embeddings.ipynb` |
 | Sonuç konumu | `reports/frozen/EXP-016_frozen.{md,json}`; Drive `experiments/frozen_probe/`, `data_derived/embeddings_v1/` |
+
+## EXP-016S — Kısa kayıt dolgu politikası duyarlılığı (önceden belirlenmiş)
+| Alan | Değer |
+|---|---|
+| DURUM | Planlandı (EXP-016'dan sonra) |
+| Soru | 17 kısa kayıtta diğer politika (birincil zeropad ise nopad) kullanılsaydı füzyon sonuçları değişir miydi? |
+| Beklenti (önceden) [HYPOTHESIS] | B8: \|Δ\| < 0.01 (etkilenen kayıt %0.7) |
+| Tasarım | 6 backbone, birincil temsil, tekrar 0; eşleştirilmiş Δ (alternatif − birincil). Seçimde kullanılmaz |
+
+## META-016 — Meta veri / confounder izleme (AYRI rapor; ana akışa girmez)
+| Alan | Değer |
+|---|---|
+| DURUM | Planlandı (EXP-016'dan sonra; kaydedilmiş tahminler üzerinde) |
+| İçerik | (1) EXP-014'ün üç bağlam bağımlılığı AUC'si, her kol ve referanslar; (2) görev × etiket süre dağılımı ve kısa kayıt sayıları; (3) yalnız-süre referans çizgisi (D-005; aynı fold'lar); (4) önceden belirlenmiş duyarlılık: kısa kaydı olan katılımcılar değerlendirmeden çıkarıldığında füzyon AUC'leri |
+| Kural | Hiçbir sayı onaylayıcı karara, D-035 seçimine ya da katman seçimine girmez. Asıl bağlam değerlendirmesi model geliştirme bitince (D-028) |
+| Kod | `scripts/report_metadata_monitor.py` → `reports/frozen/META-016_metadata_monitor.{md,json}` |
 
 ## EXP-017 — Katman katman prob (BEATs, WavLM; keşifsel)
 | Alan | Değer |
@@ -460,9 +479,9 @@ Bunların hepsi D-025'e girdi.
 | 1d | ~~Harmonize ses önbelleği~~ → Colab'da üretildi ve doğrulandı (D-030; rapor `reports/audio_cache/`) | altyapı | 1c |
 | 2 | ~~MFCC sadık yeniden üretim (EXP-010)~~ → tamamlandı | RQ1 | 1d |
 | 3 | ~~MFCC, ortak protokol (EXP-011)~~ → tamamlandı; EXP-012–015 keşifsel analizler | RQ1, RQ4, RQ5, RQ6 | 1c, 1d |
-| 4 | **Dondurulmuş gömme + lineer prob → SMK-001, EXP-016/017/018** (tasarım `docs/PHASE2_DESIGN.md`, D-034 önerildi); gömmeler saklanır (D-028) | RQ1, RQ3, RQ4, RQ5 | Ses önbelleği, SMK-001 PASS |
+| 4 | **Dondurulmuş gömme + lineer prob → SMK-001, EXP-016 / 016S / 017 / 018, META-016 (ayrı)** (tasarım `docs/PHASE2_DESIGN.md`; D-034 önerildi, 13. turda revize; D-035 kabul); gömmeler saklanır (D-028) | RQ1, RQ3, RQ4, RQ5 | Ses önbelleği, D-034 onayı, SMK-001 PASS |
 | 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
-| 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü **Faz 2 sonuçlarından önce yazıldı: D-035 (önerildi)** — CNN10 + CNN14 sabit, PANNs dışı bir backbone iç doğrulama skoruyla | RQ2, RQ3 | 4 ve 5 tamam |
+| 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü **Faz 2 sonuçlarından önce yazıldı: D-035 (KABUL)** — CNN10 + CNN14 sabit; PANNs dışı backbone **her dış fold'da**, yalnız o fold'un eğitim verisindeki iç doğrulamayla | RQ2, RQ3 | 4 ve 5 tamam |
 | 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ8, RQ9 | OOF tahminleri |
 
 Model geliştirme sırasında her sonuç **üst sınır** olarak raporlanır. Her tabloda iki referans satırı bulunur: yalnız bağlam (tarih + saat) AUC 0.931, yalnız yaş 0.681 (D-028).

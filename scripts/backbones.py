@@ -14,7 +14,21 @@ BİLİMSEL AMAÇ
         PANNs : n_store = 1          (resmi 'embedding' = fc1 + ReLU)
         SSL   : n_store = L + 1      (katman 0 = ilk transformer bloğunun girdisi; i = i'inci bloğun çıkışı)
     bb.primary_layers               birincil temsilde ortalanan katmanlar (PANNs [0]; SSL 1..L) — D-034 madde 3
-    Zaman (BEATs'te zaman × frekans yaması) üzerinden ortalama; dolgu yok, maske yok (D-034 madde 1).
+    Zaman (BEATs'te zaman × frekans yaması) üzerinden ortalama.
+
+KISA KAYITLAR VE DOLGU (D-015, D-034 madde 1)
+    embed(wav)                → dolgusuz; her satır kendi gerçek uzunluğunda (batch'teki satırlar eşit uzunlukta olmalı)
+    embed(wav, lengths=n)     → wav sağdan sıfırla doldurulmuş (B, T); n = gerçek örnek sayıları. Dolgu bölgesi:
+        PANNs   maske yok (resmi API'de yok; Boll gibi düz sıfır dolgusu — dolgu çerçeveleri havuzlamaya girer)
+        BEATs   resmi padding_mask (örnek → fbank çerçevesi → yama; BEATs.forward_padding_mask) + yalnız dolu
+                yamalar üzerinden ortalama (resmi fine-tune sınıflandırıcısının yaptığı gibi)
+        WavLM   resmi özellik çıkarıcı yalnız gerçek kısımla normalize eder; attention_mask yalnız işlemci
+                return_attention_mask=True ise (Large) modele verilir (HF önerisi: Base+'ya verilmez); havuzlama
+                yalnız gerçek çerçeveler üzerinden (_get_feat_extract_output_lengths)
+
+ŞEKİLLER
+    BEATs kancası: (T_yama, B, C)   WavLM kancası: (B, T_çerçeve, C)   → katman başına zaman ortalaması (B, C)
+    → katmanlar yığılır (B, n_store, C). Bütün katmanlarda C aynıdır (768 / 1024); assert edilir.
 
 NEDEN KENDİ KANCALARIMIZ?
     BEATs ara katmanları yalnız tgt_layer verilince döndürüyor (resmi kod). transformers'ta `hidden_states`'in
@@ -166,16 +180,37 @@ class Backbone:
         return int(sum(p.numel() for p in self.model.parameters()))
 
     @torch.no_grad()
-    def embed(self, wav: torch.Tensor) -> torch.Tensor:
+    def embed(self, wav: torch.Tensor, lengths: torch.Tensor | None = None) -> torch.Tensor:
+        """wav (B, T) float32 → (B, n_store, dim) float32 CPU. lengths verilirse wav sıfır dolguludur (yukarıya bakın)."""
         assert wav.ndim == 2 and wav.dtype == torch.float32, f"girdi (B, T) float32 olmalı: {tuple(wav.shape)} {wav.dtype}"
         assert not self.model.training, "embed() yalnız eval modunda"
-        out = self._embed(wav.to(self.device))
+        if lengths is not None:
+            lengths = torch.as_tensor(lengths, dtype=torch.long)
+            assert lengths.shape == (wav.shape[0],) and (lengths > 0).all() and (lengths <= wav.shape[1]).all()
+            pad = torch.arange(wav.shape[1])[None, :] >= lengths[:, None]
+            assert (wav[pad] == 0).all(), "dolgu bölgesi sıfır değil"
+        out = self._embed(wav.to(self.device), lengths)
         assert out.shape == (wav.shape[0], self.n_store, self.dim), f"{self.name}: çıktı {tuple(out.shape)}"
         assert torch.isfinite(out).all(), f"{self.name}: sonlu olmayan gömme"
         return out.float().cpu()
 
-    def _embed(self, wav):  # pragma: no cover
+    def _embed(self, wav, lengths):  # pragma: no cover
         raise NotImplementedError
+
+    @staticmethod
+    def _masked_mean(a: torch.Tensor, valid: torch.Tensor | None, time_dim: int) -> torch.Tensor:
+        """a: (T, B, C) (time_dim=0) ya da (B, T, C) (time_dim=1); valid: (B, T) bool ya da None → (B, C)."""
+        if valid is None:
+            return a.mean(time_dim)
+        w = valid.T[..., None] if time_dim == 0 else valid[..., None]
+        w = w.to(a.dtype)
+        assert w.shape[time_dim] == a.shape[time_dim], f"maske uzunluğu {w.shape} ≠ aktivasyon {a.shape}"
+        return (a * w).sum(time_dim) / w.sum(time_dim).clamp(min=1)
+
+    def _stack(self, pooled: list[torch.Tensor]) -> torch.Tensor:
+        dims = {t.shape[-1] for t in pooled}
+        assert dims == {self.dim}, f"{self.name}: katmanlar farklı boyutta {dims}"
+        return torch.stack(pooled, dim=1)
 
     # Faz 3 bellek ölçümü için: eğitim modunda tek bir havuzlanmış vektör (augmentation kapalı, D-016)
     def train_features(self, wav: torch.Tensor) -> torch.Tensor:  # pragma: no cover
@@ -195,7 +230,8 @@ class PannsBackbone(Backbone):
         super().__init__(name, contract, model, device, info)
         self.n_store, self.dim, self.primary_layers = 1, int(model.fc1.out_features), [0]
 
-    def _embed(self, wav):
+    def _embed(self, wav, lengths):
+        # lengths yok sayılır: PANNs'in resmi forward'ında maske yok; sıfır dolgusu (varsa) Boll'daki gibi girdiye dahil
         return self.model(wav)["embedding"][:, None, :]
 
     @torch.no_grad()
@@ -251,22 +287,29 @@ class BeatsBackbone(Backbone):
                 self._acts[i] = out[0]          # (T, B, C)
         return hook
 
-    def _run(self, wav):
+    def _run(self, wav, lengths=None):
+        """Döner: (resmi çıktı x (B, T_yama, C), geçerli yama maskesi (B, T_yama) ya da None)."""
+        pm = None
+        if lengths is not None:
+            pm = torch.arange(wav.shape[1], device=wav.device)[None, :] >= lengths.to(wav.device)[:, None]   # True = dolgu
         self._acts, self._capture = {}, True
         try:
-            x, _ = self.model.extract_features(wav, padding_mask=None)
+            x, patch_pm = self.model.extract_features(wav, padding_mask=pm)
         finally:
             self._capture = False
         assert len(self._acts) == self.n_store, f"BEATs: {len(self._acts)} katman yakalandı"
-        return x
+        valid = None if patch_pm is None else ~patch_pm
+        if valid is not None:
+            assert valid.shape == x.shape[:2] and valid.any(1).all(), "her örnekte en az bir geçerli yama olmalı"
+        return x, valid
 
-    def _embed(self, wav):
-        self._run(wav)
-        return torch.stack([self._acts[i].mean(0) for i in range(self.n_store)], dim=1)
+    def _embed(self, wav, lengths):
+        _, valid = self._run(wav, lengths)
+        return self._stack([self._masked_mean(self._acts[i], valid, 0) for i in range(self.n_store)])
 
     @torch.no_grad()
     def official_last(self, wav):
-        x = self._run(wav.to(self.device))
+        x, _ = self._run(wav.to(self.device))
         return self._acts[self.L].transpose(0, 1).mean(1).cpu(), x.mean(1).cpu()
 
     def train_features(self, wav):
@@ -320,31 +363,49 @@ class WavlmBackbone(Backbone):
                 self._acts[i] = out[0] if isinstance(out, tuple) else out   # (B, T, C)
         return hook
 
-    def preprocess(self, wav: torch.Tensor) -> torch.Tensor:
-        """Resmi Wav2Vec2FeatureExtractor (do_normalize sözleşmeye göre). Dolgu yok: bütün girdiler aynı uzunlukta."""
-        arr = [w.detach().cpu().numpy() for w in wav]
-        out = self.fe(arr, sampling_rate=self.sr, return_tensors="np", padding=False)
+    def preprocess(self, wav: torch.Tensor, lengths: torch.Tensor | None = None):
+        """Resmi Wav2Vec2FeatureExtractor (do_normalize sözleşmeye göre).
+        lengths yok: bütün girdiler aynı uzunlukta, dolgu yok. lengths var: gerçek kısımlar çıkarıcıya verilir; çıkarıcı
+        yalnız gerçek kısımla normalize eder ve T'ye kadar sıfırla doldurur (HF'nin batch davranışı). Döner: (iv, attention_mask|None)."""
+        T = wav.shape[1]
+        if lengths is None:
+            arr = [w.detach().cpu().numpy() for w in wav]
+            out = self.fe(arr, sampling_rate=self.sr, return_tensors="np", padding=False)
+            am = None
+        else:
+            arr = [w[: int(n)].detach().cpu().numpy() for w, n in zip(wav, lengths)]
+            out = self.fe(arr, sampling_rate=self.sr, return_tensors="np", padding="max_length", max_length=T,
+                          return_attention_mask=True)
+            am = torch.from_numpy(np.asarray(out["attention_mask"], dtype=np.int64)).to(self.device)
         iv = torch.from_numpy(np.asarray(out["input_values"], dtype=np.float32))
         assert iv.shape == wav.shape, f"özellik çıkarıcı uzunluğu değiştirdi: {tuple(iv.shape)}"
-        return iv.to(self.device)
+        return iv.to(self.device), am
 
-    def _run(self, wav):
-        iv = self.preprocess(wav)
+    def _run(self, wav, lengths=None):
+        """Döner: (resmi son çıktı (B, T_çerçeve, C), geçerli çerçeve maskesi (B, T_çerçeve) ya da None)."""
+        iv, am = self.preprocess(wav, lengths)
+        pass_mask = am is not None and bool(getattr(self.fe, "return_attention_mask", False))
         self._acts, self._capture = {}, True
         try:
-            out = self.model(iv)
+            out = self.model(iv, attention_mask=am if pass_mask else None)
         finally:
             self._capture = False
         assert len(self._acts) == self.n_store, f"WavLM: {len(self._acts)} katman yakalandı"
-        return out.last_hidden_state
+        last = out.last_hidden_state
+        valid = None
+        if lengths is not None:
+            n_fr = self.model._get_feat_extract_output_lengths(lengths.to(last.device))
+            valid = torch.arange(last.shape[1], device=last.device)[None, :] < n_fr[:, None]
+            assert valid.any(1).all()
+        return last, valid
 
-    def _embed(self, wav):
-        self._run(wav)
-        return torch.stack([self._acts[i].mean(1) for i in range(self.n_store)], dim=1)
+    def _embed(self, wav, lengths):
+        _, valid = self._run(wav, lengths)
+        return self._stack([self._masked_mean(self._acts[i], valid, 1) for i in range(self.n_store)])
 
     @torch.no_grad()
     def official_last(self, wav):
-        last = self._run(wav)
+        last, _ = self._run(wav)
         ours = self._acts[self.L]
         if getattr(self.model.config, "do_stable_layer_norm", False):
             ours = self.model.encoder.layer_norm(ours)    # resmi çıktı = son LayerNorm(son blok)
@@ -354,7 +415,7 @@ class WavlmBackbone(Backbone):
         self.model.config.apply_spec_augment = False      # D-016: zaman/frekans maskeleme kapalı
 
     def train_features(self, wav):
-        return self.model(self.preprocess(wav)).last_hidden_state.mean(1)
+        return self.model(self.preprocess(wav)[0]).last_hidden_state.mean(1)
 
 
 def _build_wavlm(name, contract, model_dir, device, random_init):
@@ -377,6 +438,9 @@ def _build_wavlm(name, contract, model_dir, device, random_init):
         assert c.hidden_size == exp["hidden_size"] and c.num_hidden_layers == exp["num_hidden_layers"], "WavLM boyut/katman"
         assert bool(fe.do_normalize) == exp["do_normalize"], f"do_normalize {fe.do_normalize} ≠ sözleşme {exp['do_normalize']}"
         assert int(fe.sampling_rate) == exp["sampling_rate"]
+        assert bool(getattr(fe, "return_attention_mask", False)) == exp["return_attention_mask"], (
+            f"return_attention_mask {getattr(fe, 'return_attention_mask', None)} ≠ sözleşme {exp['return_attention_mask']} "
+            "(dolgulu girdide maskenin modele verilip verilmeyeceğini belirler; D-034 madde 1)")
         assert int(np.prod(c.conv_stride)) == 320, "özellik kodlayıcı adımı 320 örnek olmalı"
         rev = path / "REVISION.txt"
         info = {"checkpoint": path.name, "checkpoint_sha256": sha256_dir(path), "load": "from_pretrained",
@@ -384,7 +448,11 @@ def _build_wavlm(name, contract, model_dir, device, random_init):
                 "unexpected_keys": list(li["unexpected_keys"]),
                 "config": {k: getattr(c, k) for k in ["do_stable_layer_norm", "feat_extract_norm", "mask_time_prob",
                                                        "mask_feature_prob", "layerdrop", "apply_spec_augment"]},
-                "do_normalize": bool(fe.do_normalize)}
+                "do_normalize": bool(fe.do_normalize),
+                "padding_handling": {"fe_return_attention_mask": bool(getattr(fe, "return_attention_mask", False)),
+                                     "feat_extract_norm": c.feat_extract_norm,
+                                     "mask_passed_to_model_when_padded": bool(getattr(fe, "return_attention_mask", False)),
+                                     "pooling": "yalnız gerçek çerçeveler"}}
     return WavlmBackbone(name, contract, model, device, info, fe)
 
 
@@ -404,7 +472,8 @@ def build_backbone(name: str, model_dir: str | Path | None = None, device: str =
 
 
 def window_starts(n: int, win: int, hop: int) -> list[tuple[int, int]]:
-    """4 s / 2 s pencereler; son pencere sona hizalı; n < win ise tüm kayıt tek pencere (dolgu yok) — D-034 madde 1.
+    """4 s / 2 s pencereler; son pencere sona hizalı; n <= win ise tüm kayıt tek parça (0, n).
+    Kısa parçanın sıfırla doldurulup doldurulmayacağı çağıranın kararıdır (extract_embeddings --short-policy; D-034).
     Döner: [(başlangıç, uzunluk), ...]"""
     assert n > 0 and win > 0 and hop > 0
     if n <= win:
