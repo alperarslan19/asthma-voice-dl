@@ -1,6 +1,7 @@
 """
-Faz 2 — Dondurulmuş gömmeler üzerinde lineer prob: EXP-016 (onaylayıcı), EXP-017 (katman, keşifsel),
-EXP-018 (tüm kayıt vs 4 s, keşifsel)   (D-032, D-033, D-034, D-035; docs/PHASE2_DESIGN.md Bölüm 5.4–5.10)
+Faz 2 — Dondurulmuş gömmeler üzerinde lineer prob: EXP-016 (onaylayıcı), EXP-016S (kısa kayıt politikası
+duyarlılığı), EXP-017 (katman, keşifsel), EXP-018 (tüm kayıt vs 4 s, keşifsel)
+(D-032, D-033, D-034, D-035; docs/PHASE2_DESIGN.md)
 
 BİLİMSEL AMAÇ
     Altı backbone'un temsili, astım / sağlıklı ayrımında MFCC'den daha fazla doğrusal olarak çözülebilir bilgi
@@ -10,7 +11,8 @@ BİLİMSEL AMAÇ
 KOLLAR (arm) — adlar benzersizdir; ara sonuçlar ad + imza ile saklanır ve deneyler arasında yeniden kullanılır
     <backbone>          win4 görünümü, birincil temsil (PANNs: fc1; SSL: katman 1..L, fold içi z-skoru + ortalama)
     <backbone>@full     tüm kayıt görünümü, birincil temsil (EXP-018)
-    <backbone>@L<l>     tek katman l (EXP-017)
+    <backbone>@L<l>     tek katman l (EXP-017; hiçbir seçimde kullanılmaz)
+    <backbone>@alt      win4, birincil temsil, ama 4 s'den kısa kayıtlarda DİĞER dolgu politikası (EXP-016S)
     mfcc_lr / mfcc_mlp  44 MFCC özelliği; LR (aynı ızgara) / StandardScaler → SMOTE → MLP (D-032)
     ref_context / ref_age  sesi kullanmayan referans çizgileri (D-005, D-028)
 
@@ -20,12 +22,20 @@ PROTOKOL (her dış fold × görev × kol)
     füzyon: katılımcının görev olasılıklarının ortalaması (test ve iç OOF için ayrı ayrı)
 
 SIZINTI KONTROLLERİ
-    train ∩ test = ∅ assert'i; LayerAverage / StandardScaler / SMOTE yalnız train'de fit (Pipeline);
-    eşik ve C yalnız iç döngüden; testte etiket yalnız metrik hesabında kullanılır.
+    Katılımcı düzeyinde: bir katılımcının 7 kaydı da aynı role (train ya da dış test) düşer (assert, bütün görevlerde).
+    Bütün kollar aynı split dosyalarını, aynı katılımcı kümesini ve aynı değerlendirme birimini (katılımcı) kullanır (assert).
+    LayerAverage / StandardScaler / SMOTE yalnız train'de fit (Pipeline); C ve eşik yalnız iç döngüden.
+    D-035: Faz 3 seçimi her dış fold'da YALNIZ o fold'un eğitim katılımcılarının iç OOF tahminleriyle yapılır
+    (select_per_fold; dış test tahminlerini parametre olarak almaz; iç satırların eğitim rolünde olduğu assert edilir).
+
+AYRI RAPORLAR
+    Kayıt bağlamı / süre gibi meta veri karşılaştırmaları bu script'te YOK → scripts/report_metadata_monitor.py
+    (META-016). Ana tabloda yalnız D-028'in iki referans satırı (bağlam, yaş) bulunur; onlarla test yapılmaz.
 
 ÇIKTILAR
     <out_dir> (Drive experiments/frozen_probe/): partial/<kol>_r<r>_{test,inner}.csv + .json (imza)
-    <report_dir> (git): EXP-01{6,7,8}_frozen.{json,md} (yalnız agrega)  ·  --registry → results/registry.csv
+    <out_dir>/d035_selection.csv  fold başına D-035 seçimi (katılımcı ID'si içermez; Faz 3'ün girdisi)
+    <report_dir> (git): EXP-016/016S/017/018_frozen.{json,md} (yalnız agrega)  ·  --registry → results/registry.csv
 """
 from __future__ import annotations
 
@@ -233,27 +243,45 @@ class Arm:
         self.name, self.pids, self.X, self.pipe, self.grid, self.signature = name, pids_by_slot, X_by_slot, pipe, grid, signature
 
 
-def emb_arm(emb_root: Path, backbone: str, view: str, layer: int | None) -> Arm:
+def emb_arm(emb_root: Path, backbone: str, view: str, layer: int | None, short_alt: bool = False) -> Arm:
+    """Gömme kolu. Şekiller (ör. WavLM Large): rec_win4.npy (N=2393, n_store=25, D=1024) → birincil katmanlar 1..24
+    seçilir (N, 24, 1024) → (N, 24·1024) düzleştirilir → Pipeline içinde LayerAverage (fit yalnız train) → (n, 1024)."""
     d = emb_root / backbone
     E = np.load(d / f"rec_{view}.npy", mmap_mode="r")
     meta = pd.read_csv(d / "recordings.csv")
     info = json.loads((d / "info.json").read_text())
     assert E.shape[0] == len(meta) and E.ndim == 3, f"{backbone}: gömme şekli {E.shape}"
+    if "n_store" in info:
+        assert E.shape[1:] == (info["n_store"], info["dim"]), f"{backbone}: {E.shape} ≠ info ({info['n_store']}, {info['dim']})"
     assert not meta.duplicated(["participant_id", "slot"]).any()
+    assert (meta.row.to_numpy() == np.arange(len(meta))).all(), f"{backbone}: recordings.csv 'row' dizi sırasıyla aynı değil"
+    policy = info.get("short_policy", "nopad")
+    if short_alt:
+        assert view == "win4" and layer is None, "alternatif dolgu politikası yalnız win4 birincil temsilde"
+        z = np.load(d / "short_alt_win4.npz")
+        E = np.array(E)                                   # kopya: yalnız kısa kayıt satırları değişir
+        assert np.array_equal(z["rows"], meta.row[meta.dur_s < 4.0].to_numpy()), "kısa kayıt satırları uyuşmuyor"
+        E[z["rows"]] = z["emb"]
+        policy = str(z["policy"])
     if layer is None:
         layers = info.get("primary_layers", [0] if E.shape[1] == 1 else list(range(1, E.shape[1])))
+        if E.shape[1] > 1:
+            assert layers == list(range(1, E.shape[1])), f"{backbone}: birincil katmanlar 1..L olmalı (D-034 madde 3)"
         la = (len(layers), E.shape[2]) if len(layers) > 1 else None
-        name = backbone if view == "win4" else f"{backbone}@{view}"
+        name = (backbone if view == "win4" else f"{backbone}@{view}") + ("@alt" if short_alt else "")
     else:
         layers, la, name = [layer], None, f"{backbone}@L{layer}"
     X2 = np.asarray(E[:, layers, :], dtype=np.float32).reshape(len(meta), -1)
-    assert np.isfinite(X2).all()
+    assert X2.shape == (len(meta), len(layers) * E.shape[2]) and np.isfinite(X2).all()
     pids, Xs = {}, {}
     for slot in TASKS:
         m = (meta.slot == slot).to_numpy()
         pids[slot], Xs[slot] = meta.participant_id.to_numpy()[m], X2[m]
     sig = {"kind": "emb", "backbone": backbone, "view": view, "layers": layers, "layer_average": bool(la),
-           "grid": C_GRID, "emb_sha256": sha256_short(d / f"rec_{view}.npy"), "random_init": info.get("random_init", False)}
+           "grid": C_GRID, "emb_sha256": sha256_short(d / f"rec_{view}.npy"), "random_init": info.get("random_init", False),
+           "short_policy": policy if view == "win4" else "n/a (tüm kayıt, dolgusuz)"}
+    if short_alt:
+        sig["short_alt_sha256"] = sha256_short(d / "short_alt_win4.npz")
     arm = Arm(name, pids, Xs, lr_pipe(la), {"clf__C": C_GRID}, sig)
     arm.n_params = info.get("n_params")
     return arm
@@ -292,10 +320,13 @@ def run_arm_repeat(arm: Arm, C: pd.DataFrame, S: pd.DataFrame, r: int, n_jobs: i
         Bk = S[S.outer_fold == k].set_index("participant_id")
         test_ids, train_ids = set(Bk.index[Bk.role == "test"]), set(Bk.index[Bk.role == "train"])
         assert not test_ids & train_ids, f"r{r} k{k}: SIZINTI"
+        assert test_ids | train_ids == set(S.participant_id), f"r{r} k{k}: rolü olmayan katılımcı"
         for slot, task in TASKS.items():
             pid, X = arm.pids[slot], arm.X[slot]
             tr, te = np.isin(pid, list(train_ids)), np.isin(pid, list(test_ids))
-            assert not (tr & te).any()
+            # katılımcı düzeyi: bu görevin kayıtları, katılımcının split rolüne göre atanır (aynı kişi iki tarafta olamaz)
+            assert not (tr & te).any() and (tr | te).all()
+            assert set(pid[tr]) <= train_ids and set(pid[te]) <= test_ids
             ytr, yte = C.loc[pid[tr], "label"].to_numpy(), C.loc[pid[te], "label"].to_numpy()
             assert 0 < ytr.sum() < len(ytr) and 0 < yte.sum() < len(yte)
             inner = Bk.loc[pid[tr], "inner_fold"].to_numpy()
@@ -422,50 +453,52 @@ def compare(test, FT, C, a: str, b: str, task: str, ratio: float) -> dict:
             "delong_p_per_repeat": dl, "delong_p_median": float(np.median(dl))}
 
 
-def context_monitors(test, C, arm) -> dict:
-    s = pooled(test, arm, FUSION, C).rename("score").to_frame().join(C[["label", "period", "ampm"]])
-    known = s[s.period != "unknown"]
-    pat, hlt = known[known.label == 1], known[known.label == 0]
-    pa, ha = pat[pat.ampm != "unknown"], hlt[hlt.ampm != "unknown"]
-    return {"patients_late_vs_early": float(roc_auc_score(pat.period == "late", pat.score)) if pat.period.nunique() > 1 else np.nan,
-            "patients_AM_vs_PM": float(roc_auc_score(pa.ampm == "AM", pa.score)) if pa.ampm.nunique() > 1 else np.nan,
-            "healthy_AM_vs_PM": float(roc_auc_score(ha.ampm == "AM", ha.score)) if ha.ampm.nunique() > 1 else np.nan}
+def check_same_units(test: pd.DataFrame, arms: list[str]) -> None:
+    """EXP-016: her (tekrar, fold, görev) için bütün kollar AYNI dış test katılımcılarında değerlendirilir."""
+    t = test[test.arm.isin(arms)]
+    for (r, k, task), g in t.groupby(["repeat", "fold", "task"]):
+        sets = {a: frozenset(gg.participant_id) for a, gg in g.groupby("arm")}
+        assert len(sets) == len(arms) and len(set(sets.values())) == 1, f"r{r} k{k} {task}: kollar farklı test kümesinde"
 
 
-def inner_fusion_auc(inner, C) -> pd.DataFrame:
-    """Her (kol, tekrar, fold) için eğitim katılımcılarının iç OOF füzyon AUC'si (D-035 doğrulama skoru)."""
-    f = inner.groupby(["participant_id", "arm", "repeat", "fold"], as_index=False).prob.mean()
-    out = [{"arm": a, "repeat": r, "fold": k, "inner_auc": roc_auc_score(C.loc[g.participant_id, "label"], g.prob)}
-           for (a, r, k), g in f.groupby(["arm", "repeat", "fold"])]
-    return pd.DataFrame(out)
-
-
-def nested_selection(FT, IA, arms: list[str]) -> dict:
-    ft = FT[(FT.task == FUSION) & FT.arm.isin(arms)].set_index(["arm", "repeat", "fold"]).auc
-    ia = IA[IA.arm.isin(arms)].set_index(["arm", "repeat", "fold"]).inner_auc
+def select_per_fold(inner_raw: pd.DataFrame, C: pd.DataFrame, splits: dict, candidates: list[str],
+                    params: dict, tie: float = 0.01) -> pd.DataFrame:
+    """D-035 (Alper'in koşuluyla KABUL): her dış fold (r, k) için seçim YALNIZ o fold'un eğitim katılımcılarının iç
+    5-fold OOF tahminlerinden yapılır. Bu fonksiyon dış test tahminlerini parametre olarak ALMAZ.
+    Güvenceler: (1) iç satırların her katılımcısı split dosyasında o fold için role == 'train' (assert);
+    (2) iç tahminler run_arm_repeat → fit_one içinde yalnız X[tr], y[tr] ile üretildi (cross_val_predict, iç fold'lar);
+    (3) tests/test_phase2.py P7: dış test tahminleri bozulduğunda seçimin değişmediği sınanır.
+    Ölçüt: aday başına, 7 görevin iç OOF olasılıklarının katılımcı ortalamasıyla (füzyon) AUC. En yükseğe `tie`'dan
+    yakın olanlar arasından en az parametreli seçilir."""
     rows = []
-    for (r, k), g in ia.groupby(level=["repeat", "fold"]):
-        ch = g.idxmax()[0]
-        rows.append({"repeat": r, "fold": k, "chosen": ch, "test_auc": ft[(ch, r, k)]})
-    R = pd.DataFrame(rows)
+    inn = inner_raw[inner_raw.arm.isin(candidates)]
+    for (r, k), g in inn.groupby(["repeat", "fold"]):
+        S = splits[r]
+        role = S[S.outer_fold == k].set_index("participant_id").role
+        assert (role.loc[g.participant_id.unique()] == "train").all(), f"r{r} k{k}: iç tahminlerde dış test katılımcısı var"
+        assert set(g.participant_id) == set(role.index[role == "train"]), f"r{r} k{k}: iç tahminler eğitim kümesinin tamamını kapsamıyor"
+        f = g.groupby(["arm", "participant_id"]).prob.mean().reset_index()
+        sc = {a: float(roc_auc_score(C.loc[ff.participant_id, "label"], ff.prob)) for a, ff in f.groupby("arm")}
+        assert set(sc) == set(candidates), f"r{r} k{k}: eksik aday {set(candidates) - set(sc)}"
+        top = max(sc.values())
+        tied = [a for a in candidates if top - sc[a] < tie]
+        chosen = min(tied, key=lambda a: params[a])
+        rows.append({"repeat": int(r), "fold": int(k), **{f"inner_auc_{a}": round(v, 4) for a, v in sc.items()},
+                     "tied": ",".join(tied), "selected": chosen})
+    assert len(rows) == 5 * len(splits), f"D-035: {len(rows)} fold seçildi, {5 * len(splits)} bekleniyordu"
+    return pd.DataFrame(rows)
+
+
+def procedure_estimate(sel: pd.DataFrame, FT: pd.DataFrame, candidates: list[str]) -> dict:
+    """Seçim prosedürünün dürüst (iç içe) tahmini: her fold'da seçilen kolun o fold'daki dış test füzyon AUC'si.
+    Dış test AUC'si burada yalnız DEĞERLENDİRME için okunur; seçim `sel`'de önceden yapılmıştır."""
+    ft = FT[(FT.task == FUSION) & FT.arm.isin(candidates)].set_index(["arm", "repeat", "fold"]).auc
+    got = np.array([ft[(s.selected, s.repeat, s.fold)] for s in sel.itertuples()])
     fixed = ft.groupby(level="arm").mean()
-    return {"arms": arms, "nested_auc_mean": float(R.test_auc.mean()), "nested_auc_sd": float(R.test_auc.std(ddof=1)),
-            "best_fixed_arm": str(fixed.idxmax()), "best_fixed_auc_mean": float(fixed.max()),
-            "winners_curse": float(fixed.max() - R.test_auc.mean()),
-            "chosen_counts": R.chosen.value_counts().to_dict()}
-
-
-def d035_rule(IA, arms_info: dict) -> dict:
-    cand = [a for a in D035_CANDIDATES if a in set(IA.arm)]
-    if not cand:
-        return {"note": "aday yok"}
-    score = IA[IA.arm.isin(cand)].groupby("arm").inner_auc.mean().sort_values(ascending=False)
-    top = score.iloc[0]
-    tied = [a for a in score.index if top - score[a] < 0.01]
-    params = {a: (arms_info.get(a) or PARAMS_APPROX[a]) for a in tied}
-    chosen = min(tied, key=params.get)
-    return {"validation_score": score.round(4).to_dict(), "tied_within_0.01": tied, "params": params, "selected": chosen,
-            "rule": "D-035: iç OOF füzyon AUC ortalaması (25 dış fold); 0.01 içinde eşitlikte en az parametreli"}
+    return {"candidates": candidates, "procedure_auc_mean": float(got.mean()), "procedure_auc_sd": float(got.std(ddof=1)),
+            "best_fixed_arm_post_hoc": str(fixed.idxmax()), "best_fixed_auc_mean": float(fixed.max()),
+            "winners_curse": float(fixed.max() - got.mean()), "chosen_counts": sel.selected.value_counts().to_dict(),
+            "n_folds": int(len(sel))}
 
 
 # ----------------------------------------------------------------------------- rapor
@@ -478,19 +511,19 @@ def report_md(exp, rep, summ) -> str:
          f"**Rol:** {rep['role']}  ", "**Üst sınır uyarısı (D-028):** bütün AUC'ler kayıt bağlamı değerlendirilmeden hesaplandı. "
          "Aynı fold'larda yalnız bağlam (saat + saat² + tarih) ve yalnız yaş referansları aşağıda.", "",
          f"Split: {rep['split_files']} · tekrar: {rep['n_repeats']} · test/train oranı (Nadeau–Bengio): {rep['test_train_ratio']:.3f}", "",
-         "## Füzyon (katılımcı düzeyi; 7 görev olasılığının ortalaması)", "",
-         "| kol | AUC fold ort ± SD [p2.5–p97.5] | havuzlanmış AUC [%95 CI] | dengeli doğr. (iç-CV eşiği) | duyarlılık / özgüllük | Brier | ort. tahmin − oran | kal. eğimi | hastalarda geç vs erken | hastalarda sabah vs ö.sonra | sağlıklılarda sabah vs ö.sonra |",
-         "|---|---|---|---|---|---|---|---|---|---|---|"]
-    mon = rep.get("context_monitors", {})
+         "Değerlendirme birimi: **katılımcı**. Bütün kollar aynı split dosyalarında, aynı dış test katılımcılarında "
+         "değerlendirildi (assert). Kayıt bağlamı / süre gibi meta veri karşılaştırmaları bu raporda yok → META-016.", "",
+         "## Füzyon (katılımcı düzeyi; 7 görev olasılığının ortalaması) — betimsel", "",
+         "| kol | AUC fold ort ± SD [p2.5–p97.5] | havuzlanmış AUC [%95 CI] | dengeli doğr. (iç-CV eşiği) | duyarlılık / özgüllük | Brier | ort. tahmin − oran | kal. eğimi |",
+         "|---|---|---|---|---|---|---|---|"]
     for r in summ[summ.task == FUSION].itertuples():
-        m = mon.get(r.arm, {})
         thr_note = " (eşik 0.5)" if r.arm.startswith("ref_") else ""
-        L.append(f"| {r.arm} | {r.auc_mean:.3f} ± {r.auc_sd:.3f} [{r.auc_fold_p2_5:.3f}–{r.auc_fold_p97_5:.3f}] | "
+        name = f"{r.arm} — referans çizgisi (D-028; test edilmez)" if r.arm.startswith("ref_") else r.arm
+        L.append(f"| {name} | {r.auc_mean:.3f} ± {r.auc_sd:.3f} [{r.auc_fold_p2_5:.3f}–{r.auc_fold_p97_5:.3f}] | "
                  f"{fmt_ci(r.pooled_auc, r.pooled_ci_low, r.pooled_ci_high)} | {r.balacc_mean:.3f} ± {r.balacc_sd:.3f}{thr_note} | "
-                 f"{r.sens_mean:.2f} / {r.spec_mean:.2f} | {r.brier:.3f} | {r.mean_pred_minus_prev:+.3f} | {r.calib_slope:.2f} | "
-                 f"{m.get('patients_late_vs_early', np.nan):.3f} | {m.get('patients_AM_vs_PM', np.nan):.3f} | {m.get('healthy_AM_vs_PM', np.nan):.3f} |")
+                 f"{r.sens_mean:.2f} / {r.spec_mean:.2f} | {r.brier:.3f} | {r.mean_pred_minus_prev:+.3f} | {r.calib_slope:.2f} |")
     if rep.get("confirmatory"):
-        L += ["", "## Onaylayıcı aile (RQ1; D-034 madde 6) — backbone füzyonu vs iki MFCC tabanı", "",
+        L += ["", "## A. Önceden belirlenmiş onaylayıcı analiz (RQ1; D-034 madde 6) — backbone füzyonu vs iki MFCC tabanı", "",
               f"Nadeau–Bengio düzeltilmiş t ({rep['n_repeats'] * 5} fold). Yönlü iddia (backbone > MFCC) için **tek yönlü** p; kesişim-birleşim "
               f"p = max(p_LR, p_MLP); Holm (6); eşik {ALPHA_ONE_SIDED} (iki yönlü 0.05'in pozitif yarısı). "
               "\"Destekleniyor\" ayrıca iki bootstrap CI'ının da 0'ı dışlamasını gerektirir. Parantez içinde iki yönlü p. "
@@ -503,7 +536,10 @@ def report_md(exp, rep, summ) -> str:
                      f"{b['fold_delta_mean']:+.3f} · {b['pooled_delta']:+.3f} [{b['boot_ci_low']:+.3f}, {b['boot_ci_high']:+.3f}] · {b['nb_p_one_sided']:.3f} ({b['nb_p']:.3f}) | "
                      f"{c['iut_p']:.3f} | {c['holm_p']:.3f} | {a['delong_p_median']:.3f} / {b['delong_p_median']:.3f} | {c['verdict']} |")
     if rep.get("exploratory_pairs"):
-        L += ["", "## Keşifsel karşılaştırmalar (füzyon; Holm aile içinde, yorum keşifsel)", "",
+        head = {"EXP-016S": "## Önceden belirlenmiş duyarlılık: kısa kayıtlarda diğer dolgu politikası − birincil (füzyon, tekrar 0)",
+                "EXP-018": "## Önceden listelenmiş keşifsel karşılaştırma: tüm kayıt − 4 s pencere (füzyon)"}.get(
+            exp, "## B. Önceden listelenmiş keşifsel karşılaştırmalar (füzyon; Holm aile içinde; yorum keşifsel)")
+        L += ["", head, "",
               "| a − b | fold ort. Δ ± SD | havuzlanmış Δ [%95 CI] | NB p | Holm p |", "|---|---|---|---|---|"]
         for c in rep["exploratory_pairs"]:
             L.append(f"| {c['a']} − {c['b']} | {c['fold_delta_mean']:+.3f} ± {c['fold_delta_sd']:.3f} | "
@@ -529,18 +565,30 @@ def report_md(exp, rep, summ) -> str:
                 q = summ[(summ.arm == arm) & (summ.task == t)]
                 vals.append(f"{q.auc_mean.iloc[0]:.3f} ± {q.auc_sd.iloc[0]:.3f}" if len(q) else "—")
             L.append(f"| {arm} | " + " | ".join(vals) + " |")
-    if rep.get("nested_selection"):
-        L += ["", "## Seçim iyimserliği (iç içe seçim; D-034 madde 7)", "",
-              "| kapsam | iç içe AUC ort ± SD | sonradan en iyi sabit kol (ort.) | kazananın laneti | seçim sıklıkları |", "|---|---|---|---|---|"]
-        for k, v in rep["nested_selection"].items():
-            L.append(f"| {k} | {v['nested_auc_mean']:.3f} ± {v['nested_auc_sd']:.3f} | {v['best_fixed_arm']} ({v['best_fixed_auc_mean']:.3f}) | "
+    if rep.get("d035_per_fold") is not None:
+        sel = pd.DataFrame(rep["d035_per_fold"])
+        L += ["", "## C. D-035 — Faz 3 için fold başına seçim (yalnız o fold'un eğitim verisindeki iç doğrulama)", "",
+              "Seçim her dış fold'da, o fold'un eğitim katılımcılarının iç 5-fold OOF füzyon AUC'siyle yapıldı; dış test "
+              "tahminleri seçime girmedi. Fold'lar farklı backbone seçebilir; Faz 3 her fold'da o fold'un seçtiğini fine-tune eder. "
+              "Tablo `d035_selection.csv` (Drive) ile aynıdır.", "",
+              "| tekrar | fold | " + " | ".join(f"iç AUC {a}" for a in D035_CANDIDATES if f"inner_auc_{a}" in sel) + " | eşit (<0.01) | seçilen |",
+              "|---|---|" + "---|" * sum(f"inner_auc_{a}" in sel for a in D035_CANDIDATES) + "---|---|"]
+        for r_ in sel.itertuples(index=False):
+            d = r_._asdict()
+            L.append(f"| {d['repeat']} | {d['fold']} | " + " | ".join(f"{d[f'inner_auc_{a}']:.3f}" for a in D035_CANDIDATES
+                                                                      if f"inner_auc_{a}" in d) + f" | {d['tied']} | **{d['selected']}** |")
+    if rep.get("affected_shift"):
+        L += ["", "### Kısa kaydı olan katılımcılarda füzyon olasılığının değişimi (|alternatif − birincil|, tekrar 0)", "",
+              "Kısa kaydı olmayanlarda da küçük değişim beklenir: eğitim kümesindeki kısa kayıtlar değiştiği için model biraz değişir.", "",
+              "| backbone | etkilenen katılımcı | ort. \\|Δp\\| | en büyük \\|Δp\\| | etkilenmeyenlerde ort. \\|Δp\\| |", "|---|---|---|---|---|"]
+        for b, v in rep["affected_shift"].items():
+            L.append(f"| {b} | {v['n_affected']} | {v['affected_mean_abs_dprob']:.4f} | {v['affected_max_abs_dprob']:.4f} | {v['unaffected_mean_abs_dprob']:.4f} |")
+    if rep.get("procedure_estimates"):
+        L += ["", "## Seçim prosedürünün dürüst tahmini (iç içe; dış test AUC'si yalnız değerlendirmede okunur)", "",
+              "| kapsam | prosedür AUC ort ± SD | sonradan en iyi sabit kol (ort.) | kazananın laneti | seçim sıklıkları |", "|---|---|---|---|---|"]
+        for k, v in rep["procedure_estimates"].items():
+            L.append(f"| {k} | {v['procedure_auc_mean']:.3f} ± {v['procedure_auc_sd']:.3f} | {v['best_fixed_arm_post_hoc']} ({v['best_fixed_auc_mean']:.3f}) | "
                      f"{v['winners_curse']:+.3f} | {v['chosen_counts']} |")
-    if rep.get("d035"):
-        d = rep["d035"]
-        L += ["", "## D-035 doğrulama skoru (Faz 3 seçimi; dış test tahminleri ölçüte girmez)", "",
-              f"- Skorlar (iç OOF füzyon AUC, 25 fold ortalaması): {d.get('validation_score')}",
-              f"- 0.01 içinde eşit: {d.get('tied_within_0.01')} · parametre: {d.get('params')}",
-              f"- **Kuralın seçtiği: {d.get('selected')}** (karar Alper'e sunulur)"]
     if rep.get("regression_check"):
         g = rep["regression_check"]
         L += ["", f"## Regresyon testi (D-034 madde 5)", "",
@@ -559,6 +607,8 @@ def registry_rows(exp, summ, rep) -> list[dict]:
     for r in summ.itertuples():
         if exp != "EXP-016" and r.task != FUSION:
             continue
+        if exp == "EXP-016S" and not r.arm.endswith("@alt"):
+            continue
         is_ref = r.arm.startswith("ref_")
         rows.append({
             "experiment_id": exp, "date": time.strftime("%Y-%m-%d"), "status": "done",
@@ -567,7 +617,8 @@ def registry_rows(exp, summ, rep) -> list[dict]:
             "n_recordings": "", "n_segments": 0, "cohort": "audio cohort (342; görev 4: 341)", "recording_types": r.task,
             "split_strategy": "split files outer_r0..4 (D-029), participant-level", "split_file_sha256": rep["split_sha256"],
             "input_representation": "none" if is_ref else ("44-d MFCC" if r.arm.startswith("mfcc") else f"frozen embedding {r.arm}"),
-            "sampling_rate": "", "preprocessing": "harmonized cache (D-030); 4 s/2 s windows end-aligned, no padding (D-034)",
+            "sampling_rate": "", "preprocessing": "harmonized cache (D-030); 4 s/2 s windows end-aligned; short-recording policy: "
+            + str(rep["arms"].get(r.arm, {}).get("short_policy", "n/a")),
             "model": r.arm, "pretrained_weights": "" if is_ref or r.arm.startswith("mfcc") else r.arm.split("@")[0],
             "frozen_layers": "all (frozen)", "classification_head": "LR (inner-CV C)" if r.arm != "mfcc_mlp" else "MLP (SMOTE)",
             "imbalance_strategy": "class_weight balanced" if r.arm != "mfcc_mlp" else "SMOTE (D-032)", "augmentation": "none",
@@ -586,7 +637,7 @@ def registry_rows(exp, summ, rep) -> list[dict]:
 # ----------------------------------------------------------------------------- main
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exp", required=True, choices=["EXP-016", "EXP-017", "EXP-018"])
+    ap.add_argument("--exp", required=True, choices=["EXP-016", "EXP-016S", "EXP-017", "EXP-018"])
     ap.add_argument("--emb-root", required=True, type=Path)
     ap.add_argument("--backbones", default=",".join(BACKBONES))
     ap.add_argument("--mfcc-features", type=Path, help="features_cache.csv (EXP-016)")
@@ -599,7 +650,7 @@ def main() -> None:
     ap.add_argument("--n-jobs", type=int, default=-1)
     args = ap.parse_args()
     t0 = time.time()
-    n_rep = 1 if args.exp == "EXP-017" else args.n_repeats
+    n_rep = 1 if args.exp in {"EXP-017", "EXP-016S"} else args.n_repeats
     splits = {r: pd.read_csv(args.splits_dir / f"outer_r{r}.csv") for r in range(n_rep)}
     cohort = set(splits[0].participant_id)
     assert all(set(S.participant_id) == cohort for S in splits.values()), "split dosyalarının kohortları farklı"
@@ -615,6 +666,10 @@ def main() -> None:
         assert args.mfcc_features, "EXP-016 MFCC kollarını gerektirir (--mfcc-features)"
         arms = [emb_arm(args.emb_root, b, "win4", None) for b in bbs] + mfcc_arms(args.mfcc_features)
         role = "onaylayıcı (füzyon, 6 backbone vs 2 MFCC tabanı) + keşifsel (görev başına, çiftler)"
+    elif args.exp == "EXP-016S":
+        for b in bbs:
+            arms += [emb_arm(args.emb_root, b, "win4", None), emb_arm(args.emb_root, b, "win4", None, short_alt=True)]
+        role = "önceden belirlenmiş duyarlılık analizi (kısa kayıt dolgu politikası; yalnız tekrar 0; seçimde kullanılmaz)"
     elif args.exp == "EXP-017":
         for b in [b for b in bbs if b in SSL]:
             n_store = np.load(args.emb_root / b / "rec_win4.npy", mmap_mode="r").shape[1]
@@ -642,13 +697,14 @@ def main() -> None:
     test, inner = add_fusion(test), add_fusion(inner)
     FT = fold_table(test, inner, C)
     summ = summarize(test, FT, C)
-    IA = inner_fusion_auc(inner_raw, C)
+    audio_arms = [a.name for a in arms]
+    check_same_units(test[test.task != FUSION], audio_arms)
+    check_same_units(test[test.task == FUSION], audio_arms)
     git = rb.git_commit()
     rep = {"exp": args.exp, "role": role, "date": time.strftime("%Y-%m-%d"), "n_repeats": n_rep, "test_train_ratio": ratio,
            "split_files": [f"outer_r{r}.csv" for r in range(n_rep)], "split_sha256": split_sha, "git_commit": git,
            "arms": {a.name: a.signature for a in arms}, "c_grid": C_GRID}
     arm_names = [a.name for a in arms]
-    rep["context_monitors"] = {a: context_monitors(test, C, a) for a in arm_names + ["ref_context", "ref_age"]}
 
     if args.exp == "EXP-016":
         bb_present = [b for b in BACKBONES if b in arm_names]
@@ -687,11 +743,16 @@ def main() -> None:
         for i, v in enumerate(vowel):
             v["holm_p"] = hp4[i]
         rep["vowel_vs_words"] = vowel
-        rep["nested_selection"] = {"6 backbone": nested_selection(FT, IA, bb_present)}
+        params = {a.name: (getattr(a, "n_params", None) or PARAMS_APPROX.get(a.name)) for a in arms if a.name in BACKBONES}
         cands = [b for b in D035_CANDIDATES if b in bb_present]
+        rep["procedure_estimates"] = {}
         if cands:
-            rep["nested_selection"]["D-035 adayları"] = nested_selection(FT, IA, cands)
-        rep["d035"] = d035_rule(IA, {a.name: getattr(a, "n_params", None) for a in arms})
+            sel = select_per_fold(inner_raw, C, splits, cands, params)          # yalnız iç OOF (dış test yok)
+            sel.to_csv(args.out_dir / "d035_selection.csv", index=False)
+            rep["d035_per_fold"] = sel.to_dict(orient="records")
+            rep["procedure_estimates"]["D-035 (BEATs / WavLM adayları)"] = procedure_estimate(sel, FT, cands)
+        sel6 = select_per_fold(inner_raw, C, splits, bb_present, params)
+        rep["procedure_estimates"]["6 backbone (keşifsel)"] = procedure_estimate(sel6, FT, bb_present)
         m = summ[(summ.arm == "mfcc_lr") & (summ.task == FUSION)].auc_mean.iloc[0]
         rep["regression_check"] = {"mfcc_lr_fusion_auc_mean": float(m), "delta": float(m - EXP011_LR_FUSION),
                                    "pass": bool(abs(m - EXP011_LR_FUSION) <= 0.01)}
@@ -706,6 +767,24 @@ def main() -> None:
                              "ci": [q.pooled_ci_low, q.pooled_ci_high], "mean_task_auc": per})
             curves[b] = rows
         rep["layer_curves"] = curves
+    elif args.exp == "EXP-016S":
+        rep["exploratory_pairs"] = [compare(test, FT, C, f"{b}@alt", b, FUSION, ratio) for b in BACKBONES
+                                    if b in arm_names and f"{b}@alt" in arm_names]
+        hp2 = holm({i: c["nb_p"] for i, c in enumerate(rep["exploratory_pairs"])}) if rep["exploratory_pairs"] else {}
+        for i, c in enumerate(rep["exploratory_pairs"]):
+            c["holm_p"] = hp2[i]
+        # Etkilenen katılımcılar düzeyinde: füzyon olasılığının politika değişince ne kadar değiştiği (AUC farkı seyrelir)
+        shift = {}
+        for b in [b for b in BACKBONES if b in arm_names and f"{b}@alt" in arm_names]:
+            meta = pd.read_csv(args.emb_root / b / "recordings.csv")
+            affected = set(meta.participant_id[meta.dur_s < 4.0])
+            pa, pb = pooled(test, b, FUSION, C), pooled(test, f"{b}@alt", FUSION, C)
+            dlt = (pb - pa.reindex(pb.index)).abs()
+            aff = dlt[dlt.index.isin(affected)]
+            shift[b] = {"n_affected": int(len(aff)), "affected_mean_abs_dprob": float(aff.mean()) if len(aff) else float("nan"),
+                        "affected_max_abs_dprob": float(aff.max()) if len(aff) else float("nan"),
+                        "unaffected_mean_abs_dprob": float(dlt[~dlt.index.isin(affected)].mean())}
+        rep["affected_shift"] = shift
     else:
         rep["exploratory_pairs"] = [compare(test, FT, C, f"{b}@full", b, FUSION, ratio) for b in BACKBONES
                                     if b in arm_names and f"{b}@full" in arm_names]

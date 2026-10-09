@@ -14,12 +14,20 @@ KONTROLLER (her biri PASS / FAIL / INFO; tek FAIL → çıkış kodu 1, çıkar�
     S4 parametre sayısı   S5 ileri geçiş: şekil/dtype/sonluluk   S6 eval determinizmi   S7 batch-değişmezlik
     S8 son katman kancası = resmi çıktı   S9 PANNs: kelime kayıtlarında "Speech" ilk 3'te
     S10 aynı-kişi benzerliği (farklı görevler)   S11 kaydet → yükle → aynı çıktı   S12 Faz 3 eğitim adımı   S13 hız
+    S14 dolgu yolu: tam uzunluk + lengths = dolgusuz çıktı (PASS ölçütü); kısa parça sıfır dolgulu vs dolgusuz benzerliği (INFO)
+
+İKİ AYRI KULLANIM (karıştırılmamalı)
+    Gerçek checkpoint'lerle (Colab, GPU): rapor = SMK-001_smoke.{json,md}. Gömme çıkarımının ÖN KOŞULU budur.
+    --random-init (yalnız birim testi; ağırlıksız küçük modeller): rapor = UNITTEST_random_init_smoke.{json,md}.
+        Bu, kod yollarının çalıştığını gösterir; modellerin doğru yüklendiğini / anlamlı çıktı verdiğini GÖSTERMEZ.
+        S1, S9, S10 bu kipte yalnız INFO'dur. SMK-001 yerine geçmez.
 
 GİRDİLER
     --cache-dir   audio_cache_v1 (index.csv, audio_32k.f32, audio_16k.f32)
     --model-dir   Drive models/ (checkpoint'ler; MANIFEST.json burada tutulur)
 ÇIKTI
-    <report_dir>/SMK-001_smoke.{json,md}   (yalnız agrega; katılımcı ID'si içermez)
+    <report_dir>/SMK-001_smoke.{json,md}   (gerçek checkpoint; yalnız agrega; katılımcı ID'si içermez)
+    <report_dir>/UNITTEST_random_init_smoke.{json,md}   (--random-init)
 """
 from __future__ import annotations
 
@@ -239,6 +247,20 @@ def check_backbone(name, args, cache, manifest) -> dict:
         bb.embed(batch)
     wps = 2 * len(batch) / (time.time() - t1)
     put("S13_speed", "INFO", windows_per_s=round(wps, 1), est_minutes_12k_windows=round(12000 / wps / 60, 1))
+    # S14 dolgu yolu (D-015 / D-034 madde 1): (a) tam uzunlukta lengths verilmesi sonucu değiştirmemeli;
+    # (b) 2.5 s'lik parça: 4 s'ye sıfır dolgulu (resmi maske + maskeli ortalama; PANNs maskesiz) vs dolgusuz
+    full_len = torch.full((len(w),), w.shape[1], dtype=torch.long)
+    d14 = float((bb.embed(w, lengths=full_len) - e1).abs().max())
+    n_short = int(2.5 * bb.sr)
+    xs = w[:1, :n_short].clone()
+    xp = torch.zeros(1, w.shape[1])
+    xp[0, :n_short] = xs[0]
+    e_np, e_zp = bb.embed(xs), bb.embed(xp, lengths=torch.tensor([n_short]))
+    cos = torch.nn.functional.cosine_similarity(e_np[0], e_zp[0], dim=-1)
+    rel14 = d14 / (float(e1.abs().max()) + 1e-12)
+    put("S14_padding_path", "PASS" if (d14 < 1e-4 or rel14 < 1e-4) else "FAIL", full_length_max_abs_diff=d14,
+        short_nopad_vs_zeropad_cos_min=round(float(cos.min()), 4), short_nopad_vs_zeropad_cos_mean=round(float(cos.mean()), 4),
+        mask="yok (PANNs resmi API)" if bb.family == "panns" else "resmi maske + maskeli ortalama")
     # S12 Faz 3 eğitim adımı (en son: model ağırlıklarını değiştirir)
     if args.skip_train:
         put("S12_train_step", "INFO", note="atlandı")
@@ -267,10 +289,12 @@ def check_backbone(name, args, cache, manifest) -> dict:
 
 
 def to_md(rep: dict) -> str:
-    L = ["# SMK-001 — Faz 2 smoke test (otomatik üretildi; katılımcı ID'si içermez)", "",
+    title = ("# BİRİM TESTİ (rastgele küçük modeller) — SMK-001 DEĞİL; modellerin doğruluğu hakkında bilgi vermez"
+             if rep["random_init"] else "# SMK-001 — Faz 2 smoke test, GERÇEK checkpoint'ler (otomatik üretildi; katılımcı ID'si içermez)")
+    L = [title, "",
          f"- Ortam: {rep['env']}", f"- Cihaz: {rep['device']} · random_init: {rep['random_init']}", "",
-         "| backbone | durum | S3 strict | S5 şekil | S6 det. | S7 batch | S8 kanca | S9 Speech sırası | S10 aynı kişi AUC | S11 | S12 eğitim (GB, s/adım) | S13 pencere/s |",
-         "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+         "| backbone | durum | S3 strict | S5 şekil | S6 det. | S7 batch | S8 kanca | S9 Speech sırası | S10 aynı kişi AUC | S11 | S12 eğitim (GB, s/adım) | S13 pencere/s | S14 dolgu (tam=; kısa cos min) |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rep["results"]:
         if "error" in r:
             L.append(f"| {r['backbone']} | **HATA** | {r['error'][:80]} |" + " |" * 9)
@@ -283,7 +307,8 @@ def to_md(rep: dict) -> str:
             r["backbone"], r["status"], c["S3_strict_load"]["status"], "×".join(map(str, c["S5_forward"]["out_shape"])),
             c["S6_determinism"]["max_abs_diff"], c["S7_batch_invariance"]["max_abs_diff"], s8v,
             c["S9_speech_class"].get("speech_rank", "—"), c["S10_same_person"]["auc_same_vs_diff_person"],
-            c["S11_save_load"]["status"], s12v, c["S13_speed"]["windows_per_s"]))
+            c["S11_save_load"]["status"], s12v, c["S13_speed"]["windows_per_s"])
+                 + f" {c['S14_padding_path']['status']}; {c['S14_padding_path']['short_nopad_vs_zeropad_cos_min']} |")
     L += ["", "Ayrıntılar (parametre sayısı, sha256, yükleme yöntemi, config) JSON'da. FAIL olan bir backbone için çıkarım başlatılmaz."]
     return "\n".join(L) + "\n"
 
@@ -320,16 +345,17 @@ def main() -> None:
         man_path.write_text(json.dumps(manifest, indent=2))
     import transformers
     import torchaudio
-    rep = {"exp": "SMK-001", "date": time.strftime("%Y-%m-%d"), "device": args.device,
+    tag = "UNITTEST_random_init" if args.random_init else "SMK-001"
+    rep = {"exp": tag, "date": time.strftime("%Y-%m-%d"), "device": args.device,
            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",
            "random_init": args.random_init,
            "env": {"python": platform.python_version(), "torch": torch.__version__, "torchaudio": torchaudio.__version__,
                    "transformers": transformers.__version__, "numpy": np.__version__},
            "cache_index_sha256": B.sha256_file(args.cache_dir / "index.csv"), "results": results}
     args.report_dir.mkdir(parents=True, exist_ok=True)
-    (args.report_dir / "SMK-001_smoke.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False, default=str))
+    (args.report_dir / f"{tag}_smoke.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False, default=str))
     md = to_md(rep)
-    (args.report_dir / "SMK-001_smoke.md").write_text(md)
+    (args.report_dir / f"{tag}_smoke.md").write_text(md)
     print(md)
     if any(r["status"] == "FAIL" for r in results):
         sys.exit(1)

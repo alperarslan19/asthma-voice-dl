@@ -1,27 +1,25 @@
 # Faz 2 tasarımı: smoke test, dondurulmuş gömme, lineer prob
 
-**Tarih:** 2026-10-09 (12. tur) · **Durum:** tasarım ÖNERİLDİ (D-034, D-035) · **Kod:** `scripts/backbones.py`, `scripts/smoke_test_backbones.py`, `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `tests/test_phase2.py` · **Notebook'lar:** `20_smoke_tests.ipynb`, `21_frozen_embeddings.ipynb`
+**Tarih:** 2026-10-09 (12. tur) · **Revizyon:** 13. tur (Alper'in soruları üzerine) · **Durum:** D-034 **ÖNERİLDİ** (revize, onay bekliyor) · D-035 **KABUL** (Alper'in koşuluyla: seçim fold başına)
+**Kod:** `scripts/backbones.py`, `scripts/smoke_test_backbones.py`, `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `scripts/report_metadata_monitor.py`, `tests/test_phase2.py` · **Notebook'lar:** `20_smoke_tests.ipynb`, `21_frozen_embeddings.ipynb`
 
-**Bu belge sonuçlar görülmeden yazıldı.** Faz 2'de hiçbir model henüz bu veride çalıştırılmadı. Buradaki beklentiler ve seçim kuralları, Faz 2 sonuçlarına bakılmadan sabitlenmiştir.
+**Bu belge gerçek verideki sonuçlar görülmeden yazıldı.** Faz 2'de hiçbir model henüz bu veride çalıştırılmadı. Bu belgede performans hakkında hiçbir çıkarım yoktur.
 
 ---
 
-## 0. Beş dakikada özet
+## 0. Faz 2'nin projedeki yeri
 
-**Ne yapıyoruz?**
-- Hazır (önceden eğitilmiş) altı ses modelini **hiç değiştirmeden** kullanıyoruz.
-- Her kaydı modelden geçirip bir sayı vektörü çıkarıyoruz. Bu vektöre "gömme" (embedding) diyoruz.
-- Gömmelerin üstüne, MFCC'de kullandığımız lojistik regresyonun aynısını kuruyoruz ("lineer prob").
+- **Ana hedef Faz 3'tür:** ham ses üzerinde, önceden eğitilmiş modelle uçtan uca fine-tune.
+- **Faz 2, Faz 3'ün yerine geçmez.** Faz 3'ten önce yapılan **kontrollü bir temsil karşılaştırmasıdır**: modeller değiştirilmez, yalnız "hazır temsil astım / sağlıklı bilgisini ne kadar taşıyor?" sorusu sorulur.
+- Faz 2 sonucu ne olursa olsun Faz 3 yapılır (D-035 madde 4). Faz 2'nin Faz 3'e kattıkları:
+  1. fine-tune'un karşılaştırılacağı "dondurulmuş" taban (aynı fold'larda, aynı girdiyle);
+  2. Faz 3'te hangi PANNs dışı backbone'un fine-tune edileceği (D-035, fold başına);
+  3. Faz 3 için bellek ve hız ölçümü (SMK-001 S12).
+- Bu yüzden Faz 2'nin girdi biçimi Faz 3'ünkiyle **aynı** olmalı: 4 s / 2 s pencere ve kısa kayıtlar için aynı politika (Bölüm 3).
 
-**Neden?**
-- Soru şu: Bu modellerin sesi temsil etme biçimi, astım ile sağlıklıyı MFCC'den daha iyi ayıracak bilgi taşıyor mu?
-- Modelleri değiştirmediğimiz için fark yalnız **temsilden** gelir. Eğitim şansı, hiperparametre, epoch sayısı gibi konular karışmaz.
-- Ucuz bir adım: GPU'da toplam ~1 saat, gerisi CPU.
-- Faz 3'te hangi modelleri fine-tune edeceğimizi seçmemize yardım eder. Seçim kuralı bu belgede **şimdiden** yazılı.
+**Benzetme:** Altı farklı uzman aynı ses kaydını dinleyip birer "not kâğıdı" dolduruyor (gömme). Uzmanlara astım hakkında hiçbir şey öğretmiyoruz; yalnız kâğıtlardaki notlardan basit bir kuralla (lineer model) astımı tahmin edebiliyor muyuz diye bakıyoruz. Faz 3'te ise uzmanlara astımı öğreteceğiz (fine-tune).
 
-**Benzetme:** Altı farklı uzman aynı ses kaydını dinleyip birer "not kâğıdı" dolduruyor. Uzmanlara astım hakkında hiçbir şey öğretmiyoruz. Yalnız şuna bakıyoruz: Kâğıtlardaki notlardan basit bir kuralla (lineer model) astımı tahmin edebiliyor muyuz? Fine-tune (Faz 3) ise uzmanlara astımı öğretmek demek.
-
-**Altı backbone ve bir taban:**
+**Altı backbone ve iki MFCC tabanı:**
 
 | Kısa ad | Model | Ön-eğitim | SR | Gömme |
 |---|---|---|---|---|
@@ -33,361 +31,418 @@
 | wavlm_large | WavLM Large | aynı | 16 kHz | 24 katman × 1024 |
 | mfcc_lr / mfcc_mlp | 44 MFCC özelliği (EXP-011) | — | 22.05 kHz | 44 |
 
-\* iter3+'ın tokenizer'ı, AudioSet etiketleriyle fine-tune edilmiş bir öğretmenden damıtılmış olabilir. Doğruysa BEATs iter3+ "tamamen öz-gözetimli" sayılmaz. Bu, RQ3 yorumunu (gözetimli mi, öz-gözetimli mi) etkiler. [NEEDS VERIFICATION: BEATs makalesi Bölüm 3–4]
+\* iter3+'ın tokenizer'ı, AudioSet etiketleriyle fine-tune edilmiş bir öğretmenden damıtılmış olabilir. Doğruysa "tamamen öz-gözetimli" sayılmaz; RQ3 yorumunu etkiler. [NEEDS VERIFICATION: BEATs makalesi Bölüm 3–4]
 
-**Deneyler:**
+**Deneyler ve raporlar:**
 
 | ID | Ne | Rol |
 |---|---|---|
-| SMK-001 | Smoke test: yükleme, şekil, determinizm, işlevsel kontrol, Faz 3 bellek ölçümü | Ön koşul |
-| EXP-016 | Dondurulmuş gömme + lineer prob, 6 backbone + 2 MFCC kolu, 5 × 5 CV | **Onaylayıcı** (füzyon) + keşifsel (görev başına) |
-| EXP-017 | Katman katman prob (BEATs, WavLM), yalnız tekrar 0 | Keşifsel |
+| (birim testleri) | `tests/test_phase2.py`, rastgele küçük modeller, CPU | Kod yolları; **SMK-001 değildir** |
+| SMK-001 | Gerçek checkpoint'lerle smoke test, GPU | Çıkarımın ön koşulu |
+| EXP-016 | 6 backbone + 2 MFCC tabanı, 5 × 5 CV, katılımcı düzeyi füzyon | **Onaylayıcı** (Bölüm 2.1 R6) + önceden listelenmiş keşifsel |
+| EXP-016S | Kısa kayıtlarda diğer dolgu politikası, tekrar 0 | Önceden belirlenmiş duyarlılık |
+| META-016 | Bağlam bağımlılığı, süre analizi, yalnız-süre referansı, dışlama duyarlılığı | **Ayrı** meta veri / confounder raporu; ana akışa girmez |
+| EXP-017 | Katman katman prob (BEATs, WavLM), tekrar 0 | Keşifsel; **hiçbir seçimde kullanılmaz** |
 | EXP-018 | Tüm kayıt tek girdi vs 4 s pencereler | Keşifsel |
 
-**Onay bekleyen kararlar:** D-034 (protokol) ve D-035 (Faz 3 seçim kuralı). Ayrıntı Bölüm 9.
-
 ---
 
-## 1. Bilimsel amaç
+## 1. Gerçek checkpoint'li smoke test ile rastgele küçük modelli testler AYRI şeylerdir
 
-### 1.1 Cevaplamak istediğimiz sorular
-
-| Soru | Faz 2'deki biçimi | Rol |
+| | Birim testleri (`tests/test_phase2.py`) | SMK-001 (`20_smoke_tests.ipynb`) |
 |---|---|---|
-| RQ1 MFCC vs pretrained | Her backbone'un füzyon AUC'si, MFCC-LR ve MFCC-MLP füzyonundan yüksek mi? (aynı fold'lar, eşleştirilmiş) | **Onaylayıcı** |
-| RQ3 PANNs vs BEATs vs WavLM | Backbone çiftleri arasındaki füzyon farkları | Keşifsel (önceden listelenmiş çiftler) |
-| D-008 bant genişliği | CNN14 (32k) vs CNN14_16k | Keşifsel |
-| RQ4 / RQ5 görev türü | Görev başına AUC, ünlü (aaa) vs kelimeler | Keşifsel |
-| Katman | SSL modellerinde hangi katman bilgi taşıyor? (EXP-017) | Keşifsel |
-| Girdi uzunluğu | 4 s pencere vs tüm kayıt (EXP-018) | Keşifsel; Faz 3 girdi tasarımına bilgi |
-| Faz 3 seçimi | Hangi backbone fine-tune edilecek? (D-035) | Önceden yazılmış kural |
+| Model ağırlıkları | **Rastgele**, küçük yapılandırma (ör. 2 katman × 64) | **Resmi checkpoint'ler** (Zenodo, HF, OneDrive) |
+| Veri | Sentetik ses ve sentetik gömmeler | Gerçek önbellek (8 katılımcı × 7 görev) |
+| Donanım | CPU (yerel ya da Colab) | Colab GPU (T4) |
+| Neyi gösterir | Kod yolları doğru: şekiller, kancalar, dolgu yolu, sızıntı assert'leri, istatistik fonksiyonları, D-035'in dış testten bağımsızlığı, rapor biçimi | Resmi ağırlık eksiksiz yükleniyor, resmi girdi biçimi, determinizm, batch-değişmezlik, PANNs "Speech" kontrolü, aynı-kişi benzerliği, Faz 3 bellek |
+| Neyi **göstermez** | Modellerin doğru yüklendiğini ya da anlamlı çıktı verdiğini | Performansı (bilerek) |
+| Rapor adı | `UNITTEST_random_init_smoke.*` (geçici klasörde; repoya girmez) | `reports/phase2/SMK-001_smoke.*` |
 
-### 1.2 Cevaplamadığımız sorular (bilerek)
-
-- **"Ses astım bilgisi taşıyor mu, yoksa kayıt bağlamını mı öğreniyor?"** Bu, D-028 ile değerlendirme aşamasına ayrıldı. Faz 2'deki her AUC bir **üst sınırdır**. Bağlam tek başına 0.93, yaş tek başına 0.68 AUC veriyor; bu iki referans çizgisi her tabloda yer alır.
-- **"Fine-tune işe yarar mı?"** Faz 3'ün sorusu. Faz 2, fine-tune'un karşılaştırılacağı "dondurulmuş" tabanı üretir.
-
-### 1.3 Neden önce dondurulmuş prob? (D-012'nin tekrarı)
-
-- **Temsili izole eder.** Ağırlıklar sabit; eğitim gürültüsü yok. Fark yalnız temsilden gelir.
-- **Deterministik ve ucuz.** Gömmeler bir kez çıkarılır. Problar CPU'da dakikalar–saatler sürer. Altı backbone aynı protokolde karşılaştırılır.
-- **MFCC ile birebir aynı sınıflandırıcı.** EXP-011'deki LR protokolü aynen kullanılır. RQ1 karşılaştırmasında tek değişken temsil olur.
-- **Faz 3'ün tabanı.** "Fine-tune, dondurulmuş temsile göre ne kazandırıyor?" sorusu ancak bu tabanla cevaplanır.
+- Birim testlerinin hepsi geçti (P1–P9, P7b, P7c). Bu, **SMK-001'in geçtiği anlamına gelmez**.
+- Notebook 21, gömme çıkarımından önce `SMK-001_smoke.json`'ı okur; `random_init` ise ya da herhangi bir backbone PASS değilse durur.
+- WavLM işlemcilerinin `return_attention_mask` değerleri (Base+ false, Large true) sözleşmede `expect` alanında; SMK-001 gerçek dosyalarla assert eder. [NEEDS VERIFICATION]
 
 ---
 
-## 2. Verinin yapısı
+## 2. Gerçek veride sonuç görülmeden kilitlenen kurallar ve sonuçlara göre yapılabilecek keşifsel analizler
+
+### 2.1 Kilitli kurallar (sonuç görülmeden; değiştirmek yeni bir D-kaydı ve "sonuç görüldükten sonra" notu gerektirir)
+
+| # | Kural | Ayrıntı |
+|---|---|---|
+| R1 | **Aynı dış fold'lar, aynı birim.** Bütün backbone'lar ve iki MFCC tabanı `outer_r0–4.csv`'nin aynı katılımcı düzeyi dış fold'larında değerlendirilir. Birincil değerlendirme birimi **katılımcı** (7 görev olasılığının ortalaması = füzyon, D-032) | Bölüm 7 |
+| R2 | **Katılımcı ayrımı.** Bir katılımcının 7 kaydı da (ve kayıtlarının bütün pencereleri) aynı role düşer: ya eğitim ya dış test. İç fold'lar da katılımcı düzeyinde | Bölüm 7 |
+| R3 | **Girdi.** 4 s / 2 s pencere, son pencere sona hizalı. Kısa kayıt politikası D-034 madde 1 (onayına bağlı; Bölüm 3). Diğer politika EXP-016S'de duyarlılık | Bölüm 3 |
+| R4 | **Temsil.** PANNs: fc1. SSL: katman 1..L'nin, her katman eğitim fold'unda z-skoruna çevrildikten sonraki eşit ortalaması. **Katman seçimi yok** | Bölüm 4 |
+| R5 | **Prob.** LR (class_weight=balanced); C ∈ 10⁻⁵…10², iç 5-fold `neg_log_loss`; eşik iç 5-fold OOF'tan (D-033); görev başına model | Bölüm 6.2 |
+| R6 | **Onaylayıcı aile.** 6 hipotez (backbone füzyonu > MFCC). Tek yönlü Nadeau–Bengio; kesişim-birleşim (LR ve MLP); Holm (6); karar: Holm p < 0.025 **ve** iki bootstrap CI'ının alt sınırı > 0 | Bölüm 5 |
+| R7 | **Keşifsel liste (önceden sabit).** 15 backbone çifti; görev başına Δ (42); ünlü − kelimeler; EXP-017 katman eğrileri; EXP-018 tüm kayıt − 4 s; EXP-016S. Her aile içinde Holm. Yorum keşifsel | Bölüm 5.4 |
+| R8 | **D-035.** Faz 3'teki PANNs dışı backbone her dış fold'da, yalnız o fold'un eğitim verisindeki iç doğrulamayla seçilir | Bölüm 6 |
+| R9 | **Meta veri / confounder karşılaştırmaları ayrı.** Yalnız META-016'da. Hiçbir karar, seçim ya da onaylayıcı sonuç bunlara dayanmaz. Ana tabloda yalnız D-028'in iki referans satırı (bağlam, yaş) var; onlarla test yapılmaz | Bölüm 8 |
+| R10 | **Beklentiler** (B1–B7, Bölüm 10) sonuçtan önce yazıldı; yanlış çıkarsa da raporlanır | Bölüm 10 |
+| R11 | **SMK-001 PASS** olmadan çıkarım yok; birim testleri yerine geçmez | Bölüm 1 |
+| R12 | **Regresyon testi.** mfcc_lr füzyonu EXP-011 LR füzyonunu (0.771) ±0.01 içinde yeniden üretmeli; üretmezse önce kod incelenir, yorum yapılmaz | Bölüm 6.3 |
+
+### 2.2 Sonuçlara bakarak yapılabilecek keşifsel analizler (izinli, ama etiketli)
+
+Gerçek sonuçlar görüldükten sonra şunlar yapılabilir:
+- hata analizi (hangi görevlerde, hangi alt gruplarda (yaş, cinsiyet) hata yoğun) — agrega düzeyde;
+- katman eğrilerinin (EXP-017) ve kalibrasyonun yorumlanması;
+- beklenmedik bir sonucun nedenini araştırmak (ör. regresyon testi başarısızsa kod incelemesi; bir backbone şans düzeyindeyse girdi kontrolü);
+- Faz 3 tasarımı için fikir üretmek (ör. ağırlıklı katman toplamı, tüm kayıt girdi).
+
+Kurallar:
+1. Bu analizler raporda **"post hoc / keşifsel"** diye etiketlenir ve önceden kilitlenmiş sonuçlardan ayrı bölümde durur.
+2. R1–R12'yi değiştiremezler. Onaylayıcı sonucu, D-035 seçimini ya da Faz 2'nin birincil temsilini değiştiremezler.
+3. Bir keşifsel bulgu yeni bir hipotez doğurursa, o hipotez **yeni veride ya da Faz 3'te önceden yazılarak** sınanır; aynı Faz 2 sonuçlarıyla "doğrulanmaz".
+4. Olumsuz ve beklenmedik sonuçlar silinmez.
+
+---
+
+## 3. Kısa kayıtlar, dolgu ve süre bilgisi (D-015, D-034 madde 1)
+
+### 3.1 Mevcut kural tam olarak ne?
+
+- **D-015 (KABUL):** "Mono → model SR'sine resample → enerji tabanlı kenar kırpma (tepeye göre) → tepe normalizasyonu → 4.0 s pencere / 2.0 s hop, **kısa kayıtlar sıfırla doldurulur**." [DECISION]
+- Kaynağı Boll ve ark.: "Recordings are zero-padded to 4.0 s if they are shorter than the window length." [FROM PAPER: Boll ve ark. 2026, Bölüm 4.3]
+- Önbellek raporu (D-030): kırpma sonrası **17 kayıt 4 s'den kısa**, en kısası 2.28 s, 2 s'den kısa yok. Medyan 10.26 s. [FACT: `reports/audio_cache/`]
+- 12. turdaki tasarım bu kuraldan sapıp kısa kayıtları **dolgusuz** işlemeyi önermişti. Bu revizyonda öneri değişti (Bölüm 3.6).
+
+### 3.2 Kod yolu: kısa bir kayıt nasıl işleniyor?
+
+`scripts/extract_embeddings.py` kayıtları önbellek sırasıyla **teker teker** işler:
+
+```python
+x = cache.audio(r, bb.sr)                                  # kırpılmış, normalize kayıt (T,)
+ws = B.window_starts(len(x), win=4*sr, hop=2*sr)            # T > 4 s → [(0,4s), (2s,4s), …, (T-4s, 4s)]; T ≤ 4 s → [(0, T)]
+if len(x) < win:                                            # kısa kayıt
+    both = short_embeddings(bb, x, win)                     # İKİ politika da hesaplanır
+    #   nopad  : bb.embed(x[None, :])                       # (1, T) gerçek uzunluk
+    #   zeropad: xp = zeros(1, 4s); xp[0, :T] = x
+    #            bb.embed(xp, lengths=[T])                  # (1, 4 s) + gerçek uzunluk bilgisi
+    E = both[short_policy]                                  # birincil → rec_win4.npy
+    short_alt.append(both[diğer])                           # diğeri → short_alt_win4.npz (EXP-016S)
+else:
+    W = stack([x[s:s+4s] for s in ws])                      # (pencere, 4 s) — hepsi tam 4 s, dolgu yok
+    E = bb.embed(W)                                         # (pencere, n_store, dim)
+rec_embedding = E.mean(0)                                   # (n_store, dim)
+```
+
+`bb.embed(wav, lengths)` dolgu bölgesinin gerçekten sıfır olduğunu assert eder. Model ailelerine göre dolgunun işlenişi (`scripts/backbones.py`):
+
+| Aile | `zeropad` politikasında | Kaynak |
+|---|---|---|
+| PANNs | Düz sıfır dolgusu; **maske yok** (resmi `forward` maske almaz). Dolgu çerçeveleri log-Mel'de çok düşük değer (≈ −100 dB) olarak modele girer; global max + mean havuzlamaya katılır | Boll'un yaptığı; [FROM OFFICIAL DOCS: PANNs `models.py`] |
+| BEATs | Resmi `padding_mask` (örnek → fbank çerçevesi → yama, `BEATs.forward_padding_mask`); dolgu yamaları dikkatte maskelenir; havuzlama **yalnız gerçek yamalar** üzerinden | Resmi fine-tune sınıflandırıcısı da maskeli ortalama yapar [FROM OFFICIAL DOCS: `BEATs.py`] |
+| WavLM Large | Resmi özellik çıkarıcı **yalnız gerçek kısımla** normalize eder ve sıfırla doldurur; `attention_mask` modele verilir (işlemcide `return_attention_mask=True`); havuzlama yalnız gerçek çerçeveler (`_get_feat_extract_output_lengths`). Sonuç: dolgu **etkisiz** (birim testi: 4 s ve 6 s'ye dolgu aynı gömmeyi verir; zeropad ≈ nopad) | HF önerisi [FROM OFFICIAL DOCS] |
+| WavLM Base+ | Özellik çıkarıcı normalize etmez (`do_normalize=False`), sıfırla doldurur; HF önerisiyle `attention_mask` modele **verilmez** (`return_attention_mask=False`, `feat_extract_norm=group`); havuzlama yalnız gerçek çerçeveler. Ama özellik kodlayıcının GroupNorm'u bütün girdi (dolgu dahil) üzerinden hesaplanır → dolgu gerçek çerçevelerin temsilini de **değiştirir**. Maskeli havuzlama bunu gidermez | HF önerisi [FROM OFFICIAL DOCS]; etki [INFERENCE] (rastgele küçük modelde ölçüldü) |
+
+`nopad` politikasında üç aile de kaydı gerçek uzunluğunda alır (üçü de değişken uzunluğu destekler).
+
+### 3.3 Değişken uzunluklar batch oluşturulurken nasıl ele alınıyor?
+
+- Faz 2'de batch = **tek bir kaydın pencereleri**. 4 s'den uzun bir kaydın bütün pencereleri tam 4 s'dir (son pencere sona hizalı olduğu için kısmi pencere yok).
+- Kısa kayıt **tek satırlık** bir batch'tir (nopad: gerçek uzunluk; zeropad: 4 s + `lengths`).
+- Yani **farklı uzunluklar asla aynı batch'e girmez.** Dolgu yalnız `zeropad` politikasında ve yalnız 17 kısa kayıtta oluşur.
+- Modeller eval modunda; BatchNorm batch istatistiği kullanmaz. Batch'in kompozisyonunun sonucu değiştirmediği SMK-001 S7'de (başka katılımcıların kayıtlarıyla aynı batch) sınanır.
+- Faz 3'te (eğitim) durum farklı: batch'ler birden çok kayıttan oluşur ve PANNs'in BatchNorm'u eğitim modunda batch istatistiği kullanır. Faz 3'ün kısa kayıt politikası Faz 2'ninkiyle aynı olmalı (Bölüm 3.6).
+
+### 3.4 Model süre bilgisini dolaylı biçimde kullanabilir mi?
+
+**Evet, mümkün.** Prob kayıt süresini ya da pencere sayısını doğrudan görmez (pencereler ortalanır). Ama süre gömmeye dolaylı yollarla girebilir: [INFERENCE]
+
+| Yol | Ne zaman | Büyüklük beklentisi |
+|---|---|---|
+| (a) Sıfır dolgusu temsile girer: PANNs'te havuzlamaya, WavLM Base+'ta GroupNorm istatistiğine | yalnız `zeropad`, yalnız 17 kayıt | En güçlü yol; kısa kayıtların gömmesi sistematik olarak kayar |
+| (b) Kısa kayıtta daha kısa bağlam (dikkat / evrişim kenar etkileri) | iki politikada da, 17 kayıt | Küçük; maskeli havuzlama bunu yok etmez |
+| (c) Kayıt içi sessizlik oranı / konuşma hızı | bütün kayıtlar | Bu gerçek içeriktir (kenarlar kırpıldı, iç duraklamalar kaldı); MFCC tabanında da aynı biçimde var (zaman ortalaması) |
+| (d) Sona hizalı son pencerenin örtüşme ağırlığı | bütün kayıtlar | İhmal edilebilir |
+
+Bunun bir sorun olup olmadığı, **sürenin etiketle ilişkili olup olmadığına** bağlıdır. Bunu ana akışa taşımadan, ayrı META-016 raporunda ölçüyoruz:
+- görev ve etiket başına süre dağılımı;
+- 4 s'den kısa kayıtların etikete ve göreve göre sayısı;
+- yalnız-süre referans çizgisi (D-005'teki kayıt-koşulu tabanı; aynı dış fold'lar);
+- önceden belirlenmiş duyarlılık: kısa kaydı olan katılımcılar **değerlendirmeden** çıkarıldığında füzyon AUC'leri.
+
+### 3.5 Karşılaştırılabilirliğe etkisi
+
+| | zeropad (D-015) | nopad |
+|---|---|---|
+| Boll ile birebirlik | Evet (PANNs) | Hayır (17 kayıtta) |
+| Kabul edilmiş D-015 ile | Uyumlu | Sapma |
+| Faz 3 ile tutarlılık | Doğal (batch eğitimi için dolgu gerekir) | Faz 3'te ayrı bir çözüm gerekir (tek satırlık batch → PANNs BatchNorm eğitimde sorunlu) |
+| Yapay içerik | PANNs'te var (maskesiz) · WavLM Base+'ta var (GroupNorm dolguyu görür; yalnız havuzlama maskeli) · BEATs'te çok küçük (resmi maske; fbank sınır çerçeveleri ve yamanın kısmen dolu satırı) · WavLM Large'da yok | Yok |
+| Etkilenen veri | 17 / 2 393 kayıt (%0.7); en çok 17 katılımcı (%5); her biri füzyonda 7 görevden yalnız 1'i | aynı |
+
+İki politikanın etkisinin büyüklüğü önceden bilinemez; bu yüzden ikisi de hesaplanır ve fark EXP-016S'de (tekrar 0) raporlanır. MFCC kolları etkilenmez (dolgu kavramı yok).
+- EXP-016S, WavLM Large için tanım gereği ≈ 0'dır (maske dolguyu tamamen dışlar); asıl bilgi PANNs ve WavLM Base+'tan gelir.
+- En çok 17 / 342 katılımcı etkilendiği için füzyon AUC farkı seyrelir. EXP-016S bu yüzden ayrıca **etkilenen katılımcılarda** füzyon olasılığının ne kadar değiştiğini (ortalama ve en büyük |Δp|) raporlar.
+- EXP-018'in "tüm kayıt − 4 s" farkı, 17 kısa kayıtta dolgu politikası farkını da içerir (tüm kayıt görünümü her zaman dolgusuzdur). Etkisi küçük; yorumda belirtilir.
+
+### 3.6 Öneri (D-034 madde 1; onayına bağlı)
+
+- **KARAR (önerilen):** Birincil politika **zeropad = D-015** (Boll ile aynı); dolgunun işlenişi Bölüm 3.2'deki tablodaki gibi (resmi API ne destekliyorsa). `nopad` önceden belirlenmiş duyarlılık (EXP-016S). Ek duyarlılık: kısa kaydı olan katılımcıların değerlendirmeden çıkarılması (META-016).
+- **NEDEN:** Faz 2, Faz 3'ün (ana hedef) girdisini yansıtmalı. Faz 3 batch eğitimi gerektirir; kabul edilmiş D-015 ve Boll bu durumu sıfır dolgusuyla çözer. 12. turdaki "dolgusuz" önerim yalnız dondurulmuş çıkarımın temizliğini düşünüyordu; Faz 2–Faz 3 tutarlılığını ve Boll karşılaştırmasını gözden kaçırıyordu.
+- **ALTERNATİFLER:** (a) nopad birincil (dondurulmuş çıkarım için en temiz; Faz 3'te ayrı çözüm gerekir); (b) döngüsel dolgu (yapay periyodiklik); (c) kısa kayıtları atmak (kayıp rastgele olmayabilir; görev başına kohort değişir).
+- **RİSK:** PANNs ve WavLM Base+'ta 17 kayıtta dolgu yapay içerik üretir ve süre bilgisi gömmeye girebilir. META-016 süre–etiket ilişkisini, EXP-016S politikanın etkisini gösterir.
+- **BİLİMSEL SONUÇ:** Politika sonuçlar görülmeden sabitlenir; etkisi iki bağımsız duyarlılıkla ölçülür.
+- **UYGULAMA:** `extract_embeddings.py --short-policy zeropad` (varsayılan); notebook 21'deki `SHORT_POLICY`. Onayında `nopad` seçersen yalnız bu değişken değişir; iki politika da zaten hesaplanıyor.
+
+---
+
+## 4. Katman ortalaması tam olarak nasıl hesaplanıyor? (BEATs, WavLM)
+
+### 4.1 Adım adım tensor boyutları
+
+| Adım | BEATs (4 s pencere) | WavLM Base+ (4 s) | WavLM Large (4 s) |
+|---|---|---|---|
+| Girdi | (B, 64 000) | (B, 64 000) | (B, 64 000) |
+| Ön işleme | fbank (B, 398, 128) → yamalar 24 × 8 = 192 | 7 katmanlı CNN → 199 çerçeve | aynı, 199 çerçeve |
+| Kanca çıktısı, katman i (i = 0..L) | (192, B, 768) — **T × B × C** | (B, 199, 768) — **B × T × C** | (B, 199, 1024) |
+| Zaman ortalaması (dolgu varsa yalnız geçerli) | (B, 768) | (B, 768) | (B, 1024) |
+| Katmanları yığ (`_stack`; bütün katmanlarda C aynı, assert) | (B, 13, 768) | (B, 13, 768) | (B, 25, 1024) |
+| Pencereler üzerinden ortalama → kayıt | (13, 768) | (13, 768) | (25, 1024) |
+| Dosya `rec_win4.npy` | (2393, 13, 768) | (2393, 13, 768) | (2393, 25, 1024) |
+| Prob: birincil katmanlar 1..L | (n, 12, 768) | (n, 12, 768) | (n, 24, 1024) |
+| Düzleştir (sklearn için) | (n, 9 216) | (n, 9 216) | (n, 24 576) |
+| `LayerAverage` (fit yalnız eğitim fold'u) | (n, 768) | (n, 768) | (n, 1024) |
+| `StandardScaler` → `LogisticRegression` | | | |
+
+Katman 0 = ilk transformer bloğunun **girdisi** (konum evrişiminden sonra; BEATs ve WavLM Base+'ta ardından LayerNorm da uygulanmış hâli, WavLM Large'da (stable layer norm) LayerNorm'suz); katman i = i'inci bloğun **çıkışı**. Katman 0 birincil temsile girmez. WavLM Large'da (stable layer norm) son LayerNorm modelin çıkışına uygulanır; bizim katman 24'ümüz ondan önceki değerdir. SMK-001 S8, son kancanın (gerekirse bu LayerNorm uygulanmış hâlinin) resmi çıktıyla aynı olduğunu doğrular. Birim testi P3, ara katman kancalarının resmi ara çıktılarla (BEATs `tgt_layer` yolu, HF `hidden_states`) aynı olduğunu doğrular.
+
+### 4.2 Aynı boyuta getirme ve normalizasyon
+
+- **Aynı boyut:** Bir modelin bütün transformer katmanları aynı gizli boyuttadır (BEATs ve Base+ 768, Large 1024). İzdüşüm gerekmez. `_stack` bunu assert eder; `emb_arm` dosya şeklini `info.json` ile karşılaştırır.
+- **Normalizasyon:** Katmanların ölçekleri çok farklı olabilir (özellikle Large'ın LayerNorm'suz artık akışı). Ham ortalamada büyük normlu katmanlar baskın olurdu. Bu yüzden `LayerAverage`:
+
+```python
+class LayerAverage(BaseEstimator, TransformerMixin):          # scripts/run_probes.py
+    def fit(self, X):                                         # X: (n_train, L·D) — YALNIZ eğitim fold'u
+        Z = X.reshape(n, L, D)
+        self.mean_ = Z.mean(0)                                # (L, D): katman × kanal ortalaması
+        self.std_ = Z.std(0) (0'a yakınsa 1)                  # (L, D)
+    def transform(self, X):
+        Z = X.reshape(n, L, D)
+        return ((Z - self.mean_) / self.std_).mean(1)         # her katman z-skoru → katmanlar ortalanır → (n, D)
+```
+
+- Bu dönüşüm sklearn `Pipeline`'ın ilk adımıdır; `GridSearchCV` içinde her iç fold'da ve dış fold'un eğitim kümesinde yeniden fit edilir. Test verisinin istatistiği hiçbir zaman kullanılmaz.
+- **Varsayım:** Aynı kanal indeksinin (j) farklı katmanlarda benzer bir anlam taşıdığı (artık akış ortak bir taban paylaşır). Bu yüzden z-skorlarını kanal kanal ortalamak anlamlıdır. SUPERB'deki katman ağırlıklı toplamı da aynı varsayıma dayanır. [INFERENCE]
+- **Alternatifler:** kare başına LayerNorm (parametresiz, ama kare düzeyi enerji bilgisini siler); katmanları uç uca eklemek (Large'da 24 576 boyut, ~220 eğitim örneği); öğrenilmiş ağırlıklı toplam (lineer prob olmaktan çıkar; Faz 3'ün doğal parçası).
+
+### 4.3 EXP-017 keşifsel kalır; katman seçimi yapılmaz
+
+- EXP-016'nın kolları yalnız birincil temsili kullanır. `emb_arm`, SSL modellerinde birincil katmanların tam olarak 1..L olduğunu assert eder.
+- D-035 seçim fonksiyonu yalnız birincil kol adlarını (`beats`, `wavlm_base_plus`, `wavlm_large`) kabul eder. Katman kolları (`<backbone>@L<l>`) ayrı bir çalıştırmada (EXP-017) üretilir ve EXP-016'ya, D-035'e ya da Faz 3 seçimine girmez.
+- EXP-017 yalnız tekrar 0'da çalışır ve raporu "keşifsel; hiçbir seçimde kullanılmaz" başlığını taşır.
+
+---
+
+## 5. İstatistik (EXP-016)
+
+### 5.1 Değerlendirme birimi
+
+- **Birim katılımcıdır.** Her katılımcı için 7 görevin olasılık ortalaması (füzyon) alınır; 101244'te 6 görev.
+- Her (tekrar r, dış fold k) için, o fold'un dış test katılımcılarında (68–69 kişi; ≈ 56–57 astım / ≈ 11–12 sağlıklı) füzyon AUC'si hesaplanır.
+- Bütün kollar aynı 25 (r, k) hücresinde, **aynı katılımcılarda** değerlendirilir (assert). Bu yüzden karşılaştırmalar eşleştirilmiştir.
+
+### 5.2 Onaylayıcı test
+
+Her backbone b ve her MFCC tabanı m ∈ {mfcc_lr, mfcc_mlp} için:
+
+1. Fold düzeyinde fark: d_rk = AUC_b(r, k) − AUC_m(r, k), 25 değer.
+2. **Nadeau–Bengio düzeltilmiş tekrarlı-CV t-testi** [FROM PAPER: Nadeau & Bengio 2003]:
+   t = d̄ / √((1/J + n_test/n_train) · s²_d), J = 25, df = 24, n_test/n_train ≈ 0.25 (split dosyalarından).
+   Neden: CV fold'ları ortak eğitim verisi paylaştığı için bağımsız değildir; düz t-testi varyansı küçümser. Düzeltme terimi bunu kabaca telafi eder (D-011).
+3. **Tek yönlü** p (H1: d̄ > 0).
+4. **Kesişim-birleşim:** p_b = max(p_b,LR, p_b,MLP). "b MFCC'den iyi" iddiası iki tabanı da geçmeyi gerektirir (D-032); bu birleşim ek düzeltme olmadan α'yı korur. [FROM PAPER: Berger 1982]
+5. **Holm** düzeltmesi 6 backbone üzerinde, eşik **0.025**.
+6. **Karar:** "destekleniyor (üst sınır, geçici)" ⇔ Holm-düzeltilmiş p_b < 0.025 **ve** iki tabana karşı da havuzlanmış ΔAUC'nin katılımcı bootstrap %95 CI'ının alt sınırı > 0.
+   - Havuzlanmış: her katılımcının 5 tekrardaki OOF olasılıklarının ortalaması; 2 000 katılımcı bootstrap'ı (eşleştirilmiş).
+   - %95 iki yönlü CI'ın alt sınırı > 0, tek yönlü %2.5 testine karşılık gelir; t-testiyle tutarlıdır.
+7. Tekrar başına **DeLong** eşleştirilmiş testi (D-011) yalnız destekleyici bilgi olarak raporlanır; kararı belirlemez.
+8. "Geçici": D-011'in ikinci koşulu (yönün zaman-örtüşen alt kohortta korunması) D-028 ile değerlendirme aşamasına ertelendi.
+
+### 5.3 Neden tek yönlü?
+
+- İddia yönlüdür: "backbone MFCC'den **daha iyi**". Tek yönlü test bu iddianın testidir.
+- İki yönlü p'ler Holm'a girseydi, MFCC'den anlamlı biçimde **kötü** bir backbone en küçük p ile Holm sırasının başına geçer, diğer backbone'ların eşiklerini gevşetirdi. Bu, "daha iyi" iddiası için istenmeyen bir etkidir.
+- Eşik 0.025, iki yönlü 0.05'in pozitif yarısıyla aynı katılıktadır; tek yönlü test bize ek kolaylık sağlamaz.
+- **Bedel:** tek yönlü test "daha kötü" sonucunu kanıtlayamaz. Bu yüzden iki yönlü p'ler ve bütün Δ'lar (negatif olanlar dahil) raporlanır; olumsuz sonuçlar betimsel olarak korunur.
+
+### 5.4 Keşifsel aileler (önceden listelenmiş; her aile içinde Holm; yorum keşifsel)
+
+- RQ3: 15 backbone çifti (cnn14 − cnn14_16k ve wavlm_large − wavlm_base_plus dahil), iki yönlü.
+- RQ4: görev başına Δ (backbone − mfcc_lr), 42 karşılaştırma.
+- RQ5: ünlü (aaa) − kelimelerin ortalaması, kol başına.
+- EXP-016S, EXP-017, EXP-018.
+
+### 5.5 "Kaç AUC'lik fark görülebilir?" — varsayımlarıyla, eşik DEĞİL
+
+Bu hesap yalnız beklentiyi ayarlamak içindir. Hiçbir kararda eşik olarak kullanılmaz.
+
+| Varsayım | Değer |
+|---|---|
+| Havuzlanmış AUC | 0.80 civarı |
+| Örneklem | 283 astım / 59 sağlıklı |
+| Tek AUC'nin SE'si (Hanley–McNeil) | 0.027 |
+| İki ses temsilinin AUC tahminleri arasındaki korelasyon ρ | 0.5 ya da 0.7 (bilinmiyor; varsayım) |
+| ΔAUC'nin SE'si = SE · √(2(1 − ρ)) | 0.027 (ρ = 0.5) · 0.021 (ρ = 0.7) |
+| Normal yaklaşım, %80 güç, tek yönlü α | 0.025 (Holm'un en gevşek adımı) ile 0.025/6 (en sıkı adımı) arası |
+
+**Sonuç:** saptanabilir fark kabaca **0.06–0.09 AUC** (ρ = 0.7 ve gevşek adımda 0.058; ρ = 0.5 ve sıkı adımda 0.093). [INFERENCE]
+
+Sınırlar:
+- Bu, havuzlanmış katılımcı düzeyi bir yaklaşımdır. Asıl test fold düzeyindeki Nadeau–Bengio'dur; onun gücü fold'lar arası Δ'nın SD'sine bağlıdır ve veri görülmeden bilinemez.
+- Kesişim-birleşim iki tabanı da geçmeyi gerektirir; güç bu hesaptan **düşüktür**.
+- AUC tavana yaklaştıkça SE küçülür.
+- 12. turdaki "0.08–0.10" ifadesi kaba bir yuvarlamaydı; yukarıdaki tablo onun yerine geçer.
+- Yorum: 0.02–0.05'lik farklar bu örneklemde büyük olasılıkla çözülemez; "anlamlı değil" sonucu "fark yok" demek değildir.
+
+---
+
+## 6. D-035: Faz 3 seçimi fold başına (KABUL, Alper'in koşuluyla)
+
+### 6.1 Kural
+
+- **Sabit adaylar:** CNN10 (RQ2'nin eşi: sıfırdan CNN10 ile aynı mimari) ve CNN14 (Boll).
+- **BEATs / WavLM Base+ / WavLM Large arasından seçim, her dış fold (r, k) için ayrı yapılır:**
+  - Ölçüt: **yalnız o fold'un eğitim katılımcılarının** iç 5-fold OOF tahminleri → 7 görevin katılımcı ortalaması → AUC.
+  - En yükseğe 0.01'den yakın olanlar arasından en az parametreli seçilir.
+  - Dış test fold'unun skorları seçime **girmez**.
+- **Sonuç:** fold'lar farklı backbone seçebilir. Faz 3, her fold'da o fold'un seçtiğini fine-tune eder. Faz 3'ün sonucu belirli bir backbone'un değil, **"iç doğrulamayla seç, sonra fine-tune et" prosedürünün** dürüst tahminidir.
+- Bütçe yetmezse ilk çıkarılan CNN14'tür (D-035 madde 5).
+
+### 6.2 12. turdaki kuraldan farkı (neden önemli)
+
+- 12. turdaki öneri, iç doğrulama skorlarını **25 fold boyunca ortalayıp** tek bir backbone seçiyordu.
+- Bu ortalama, fold k için yapılan seçime **diğer fold'ların** iç skorlarını da katıyordu. Tekrarlı CV'de fold k'nın dış test katılımcıları diğer fold'ların eğitim kümelerindedir. Yani fold k'nın test katılımcıları seçimi dolaylı yoldan etkiliyordu. Küçük ama gerçek bir sızıntı.
+- Fold başına seçim bunu tamamen kaldırır. Bedeli yorumdadır: tek bir "seçilen backbone" yerine bir prosedür tahmin edilir.
+
+### 6.3 Kodda nasıl güvence altında?
+
+1. **İç tahminler yalnız eğitim verisinden.** `run_arm_repeat` → `fit_one(arm, X[tr], y[tr], X[te], inner)`: iç OOF tahminleri `cross_val_predict(est, X[tr], y[tr], cv=PredefinedSplit(inner_fold))` ile üretilir. Dış test satırları bu çağrıya hiç girmez.
+2. **Seçim fonksiyonu dış testi parametre olarak almaz.** `select_per_fold(inner_raw, C, splits, candidates, params)` yalnız iç OOF tablosunu okur.
+3. **Assert:** Her (r, k) için iç tablodaki her katılımcının split dosyasında o fold için `role == "train"` olduğu doğrulanır; dış test katılımcısı varsa hata verir.
+4. **Çıktı ayrı dosyada:** `experiments/frozen_probe/d035_selection.csv` (tekrar, fold, adayların iç AUC'leri, eşit olanlar, seçilen; katılımcı ID'si yok). Faz 3 bu dosyayı okur.
+5. **Testler:**
+   - P6: kurgulanmış örnekte seçim ve eşitlik kuralı doğru; iç tabloya dış test katılımcısı konursa assert hata verir.
+   - P7: dış test tahmin dosyaları kasıtlı olarak "kusursuz" yapılıp EXP-016 yeniden çalıştırılır → `d035_selection.csv` **birebir aynı** kalır; aynı çalıştırmada bozulmuş dosyaların gerçekten kullanıldığı (o kolun AUC'sinin 1'e çıktığı) da doğrulanır.
+6. **Prosedürün dürüst tahmini:** seçimden sonra, her fold'da seçilen kolun o fold'daki dış test füzyon AUC'si yalnız **değerlendirme** için okunur (`procedure_estimate`). Sonradan bakarak en iyi sabit kolla farkı "kazananın laneti" olarak raporlanır.
+
+Kalan küçük iyimserlik: iç OOF tahminleri, C'nin seçildiği aynı iç fold'lardan gelir. Simetrik bir iyimserliktir; boyut ve katman sayısıyla kollar arasında biraz değişebilir. [INFERENCE]
+
+---
+
+## 7. Aynı dış fold'lar, aynı birim, katılımcı ayrımı — koddaki kontroller
+
+| Gereksinim | Kontrol | Yer |
+|---|---|---|
+| Bütün kollar aynı split dosyalarını kullanır | Tek bir `splits` sözlüğü bütün kollara verilir; dosya sha256'ları ara sonuç imzasında | `run_probes.main`, `run_all` |
+| Bütün kollar her görevde aynı katılımcı kümesini kapsar | assert (görev başına küme eşitliği) | `run_probes.main` |
+| Her (r, k, görev) ve füzyon için kollar aynı dış test katılımcılarında | assert | `check_same_units` |
+| Bir katılımcının kayıtları eğitim ve dış teste dağılmaz | **Asıl güvence yapısaldır:** roller split dosyasından katılımcı düzeyinde gelir ve her görevin kayıtları katılımcının rolüne göre atanır. Fold düzeyinde assert: eğitim ∩ test = ∅ ve kohorttaki herkes bir rolde; görev düzeyinde: her kaydın katılımcısı bir rolde (`(tr | te).all()`; split'te olmayan katılımcıyı yakalar). Görev düzeyindeki diğer assert'ler yapı gereği her zaman doğrudur; yalnız akıl sağlığı kontrolüdür | `run_arm_repeat` |
+| Pencereler kayıttan ayrılmaz | Pencereler kayıt gömmesine ortalanır; prob kayıt düzeyinde eğitilir | `extract_embeddings` |
+| İç fold'lar da katılımcı düzeyinde | `inner_fold` split dosyasından katılımcıya bağlı | `run_arm_repeat` |
+| Test: dış test ve iç (eğitim) katılımcıları her (kol, r, k) için ayrık | Ara dosyalardan doğrulanır | `tests/test_phase2.py` P7 |
+
+---
+
+## 8. Meta veri / confounder karşılaştırmaları ayrı raporda (META-016)
+
+- `scripts/report_metadata_monitor.py` → `reports/frozen/META-016_metadata_monitor.{md,json}`. EXP-016'nın kaydedilmiş dış test tahminlerini okur; yeni model eğitmez (yalnız yalnız-süre referans LR'si).
+- İçerik:
+  1. EXP-014'teki üç bağlam bağımlılığı AUC'si (hastalarda geç vs erken, hastalarda sabah vs öğleden sonra, sağlıklılarda sabah vs öğleden sonra), her kol ve referanslar için;
+  2. süre dağılımı (görev × etiket), kısa kayıt sayıları;
+  3. yalnız-süre referans çizgisi (aynı dış fold'lar);
+  4. kısa kaydı olan katılımcılar dışlandığında füzyon AUC'leri.
+- Bu raporun hiçbir sayısı onaylayıcı karara, D-035 seçimine ya da katman seçimine girmez. Kayıt bağlamının asıl değerlendirmesi model geliştirme bitince yapılır (D-028).
+- **Ana tabloda kalanlar:** D-028 (KABUL) her sonuçla birlikte iki referans satırını (yalnız bağlam, yalnız yaş; aynı fold'larda) istiyor. Bu satırlar EXP-016 tablosunda "referans çizgisi (D-028; test edilmez)" etiketiyle duruyor; onlarla hiçbir test yapılmıyor. Bunları da ayrı rapora taşımak D-028'i değiştirmek olur; istersen ayrı bir kararla yapılabilir.
+
+---
+
+## 9. Diğer tasarım ayrıntıları
+
+### 9.1 Verinin yapısı
 
 | Öğe | Değer | Kaynak |
 |---|---|---|
 | Kohort | 342 katılımcı (283 astım / 59 sağlıklı); görev 4 (ordu) için 341 | D-002, AUD-001 |
-| Kayıt | 2 393 (katılımcı × 7 görev; 101244'ün görev 4 kaydı yok) | önbellek raporu |
-| Girdi | Harmonize önbellek `audio_cache_v1` (D-030): kenarlar kırpılmış, 32k yolunda 11 kHz alçak geçiren, tepe −1 dBFS, float32 | `reports/audio_cache/` |
+| Kayıt | 2 393 (101244'ün görev 4 kaydı yok) | önbellek raporu |
+| Girdi | Harmonize önbellek `audio_cache_v1` (D-030) | `reports/audio_cache/` |
 | Süre (kırpma sonrası) | min 2.28 · p5 8.92 · medyan 10.26 · max 13.09 s; 17 kayıt < 4 s | önbellek raporu |
-| Pencere sayısı (4 s / 2 s, son pencere sona hizalı) | 10.26 s'lik kayıt → 5 pencere; toplam ≈ 12 000 [INFERENCE] | Bölüm 5.2 |
-| Split | `outer_r0–4.csv` (D-029): 5 tekrar × 5 dış fold; her dış train içinde 5 iç fold (`inner_fold`) | `reports/splits/` |
-| Bağlam ve yaş | `participant_context.csv` (label, age, start_hour, days, recording_date) | D-024 |
-| MFCC | `features_cache.csv` (EXP-011 girdisi, 44 özellik) | D-031 |
+| Pencere | 10.26 s → 5 pencere; toplam ≈ 12 000 [INFERENCE] | Bölüm 3.2 |
+| Split | `outer_r0–4.csv` (D-029): 5 tekrar × 5 dış fold; her dış eğitim kümesinde 5 iç fold | `reports/splits/` |
+| Bağlam ve yaş | `participant_context.csv` | D-024 |
+| MFCC | `features_cache.csv` (EXP-011 girdisi) | D-031 |
 
-**İstatistiksel birim:** katılımcı (D-003). Bir katılımcının bütün kayıtları ve pencereleri aynı fold'dadır.
+**Toplama hiyerarşisi:** pencere → (zaman ortalaması) → pencere gömmesi → (ortalama) → kayıt gömmesi → LR → kayıt olasılığı → 7 görevin ortalaması → katılımcı füzyonu. LR'nin logit'i doğrusal olduğu için (StandardScaler ve katman ortalaması da doğrusal) "ortalama gömmeye LR" = "pencere logit'lerinin ortalaması" (PHASE0_REPORT Bölüm 7). LR kayıt düzeyinde eğitilir; aynı kaydın pencereleri bağımsız örnek sayılmaz.
 
-**Toplama hiyerarşisi (Faz 2):**
-1. pencere → (zaman ortalaması) pencere gömmesi;
-2. pencereler → (ortalama) kayıt gömmesi;
-3. kayıt gömmesi → LR → kayıt olasılığı (görev başına = katılımcı başına bir kayıt);
-4. 7 görevin olasılık ortalaması → katılımcı füzyon skoru (D-032).
+### 9.2 Varsayımlar
 
-**Bir ayrıntı (doğrusallık):** LR'nin logit'i girdinin doğrusal fonksiyonudur. Bu yüzden "pencere gömmelerinin ortalamasına LR uygulamak", aynı ağırlıklarla "pencere logit'lerinin ortalaması"na eşittir. Yani `docs/PHASE0_REPORT.md` Bölüm 7'deki "kayıt = pencere logit'lerinin ortalaması" kuralıyla tutarlıyız (StandardScaler ve katman ortalaması da doğrusal dönüşümler olduğu için eşitlik korunur). Fark yalnız eğitimde: biz LR'yi kayıt düzeyinde (bağımsız birim) eğitiyoruz, pencere düzeyinde değil. Böylece aynı kaydın 5 penceresi 5 bağımsız örnekmiş gibi sayılmaz. [INFERENCE]
-
----
-
-## 3. Varsayımlar
-
-| # | Varsayım | Etiket | Nasıl kontrol ediliyor |
+| # | Varsayım | Etiket | Kontrol |
 |---|---|---|---|
-| V1 | Resmi kod + resmi ağırlık + resmi SR + resmi frontend = modelin ön-eğitimde gördüğü girdi dağılımı | [FROM OFFICIAL DOCS] | SMK-001: `strict=True` yükleme, sözleşme assert'leri, PANNs'te "Speech" sınıfı kontrolü |
-| V2 | Gömme çıkarımı katılımcıdan katılımcıya bilgi taşımaz (eval modunda her kayıt bağımsız işlenir) | [INFERENCE] | SMK-001: toplu (batch) işleme ile tek tek işleme aynı sonucu veriyor mu? |
-| V3 | Gömmeler etiketten habersiz üretilir; split'ten önce bir kez çıkarmak sızıntı yaratmaz | [INFERENCE] | Çıkarım kodu etiket okumaz; öğrenilen hiçbir parametre bizim veride ayarlanmaz |
-| V4 | Zaman ortalaması (mean pooling), astımla ilgili bilgiyi büyük ölçüde korur | [HYPOTHESIS] | Test edilmiyor; alternatifler Bölüm 5.3 |
-| V5 | 11 kHz alçak geçiren, 32 kHz PANNs'in en üst ~4 mel bandını boşaltır; model bunu tolere eder | [INFERENCE] | 64 bandın 4'ünün merkezi > 11 kHz (librosa mel hesabı). AudioSet'te dar bantlı çok kayıt var. CNN14 vs CNN14_16k karşılaştırması dolaylı bilgi verir |
-| V6 | WavLM'in İngilizce ön-eğitimi Türkçe kelimelerde de kullanılabilir akustik temsil üretir | [HYPOTHESIS] | Test edilmiyor; sonuç yorumunda kısıt |
-| V7 | 7 görevin olasılık ortalaması makul bir katılımcı skorudur | [DECISION, D-032] | EXP-011'de füzyon her görevden +0.08–0.13 iyi |
+| V1 | Resmi kod + ağırlık + SR + frontend = ön-eğitimdeki girdi dağılımı | [FROM OFFICIAL DOCS] | SMK-001 S2, S3, S9 |
+| V2 | Eval modunda katılımcılar arası bilgi akışı yok | [INFERENCE] | SMK-001 S7 |
+| V3 | Gömmeler etiketten habersiz; split'ten önce çıkarmak sızıntı yaratmaz | [INFERENCE] | Çıkarım kodu etiket okumaz |
+| V4 | Zaman ortalaması astımla ilgili bilgiyi büyük ölçüde korur | [HYPOTHESIS] | Test edilmiyor |
+| V5 | 11 kHz alçak geçiren, 32 kHz PANNs'in üst ~4 mel bandını boşaltır; model tolere eder | [INFERENCE] | CNN14 vs CNN14_16k dolaylı bilgi |
+| V6 | WavLM'in İngilizce ön-eğitimi Türkçe kelimelerde kullanılabilir temsil üretir | [HYPOTHESIS] | Test edilmiyor |
+| V7 | 7 görevin olasılık ortalaması makul bir katılımcı skorudur | [DECISION, D-032] | EXP-011 |
+| V8 | Katman ortalamasında kanal indeksleri katmanlar arasında hizalıdır | [INFERENCE] | Bölüm 4.2 |
 
----
+### 9.3 Sızıntı tablosu
 
-## 4. Riskler: sızıntı, confounding, seçim yanlılığı
-
-### 4.1 Sızıntı (leakage)
-
-| Risk | Nerede | Önlem |
-|---|---|---|
-| Katılımcı sızıntısı | Split | Katılımcı düzeyinde split dosyaları; her fold'da `train ∩ test = ∅` assert'i (D-003) |
-| BatchNorm'un batch istatistiği kullanması | PANNs | `model.eval()` assert'i; batch-değişmezlik testi (V2) |
-| Model içi augmentation | PANNs SpecAugment, WavLM maskeleme | Yalnız `training` modunda çalışırlar; eval'de kapalı. SMK-001 kontrol eder (D-016) |
-| Ölçekleme / katman standardizasyonu testi görmesi | Prob | Bütün dönüşümler sklearn Pipeline içinde, yalnız train'de fit edilir |
-| Düzenlileştirme (C) ve eşik seçiminin testi görmesi | Prob | C: iç 5-fold `neg_log_loss`. Eşik: iç 5-fold OOF tahminlerinde dengeli doğruluk (D-033) |
-| Katman seçiminin testi görmesi | SSL modelleri | Birincil temsil **önceden sabit** (katman ortalaması). Katman katman sonuçlar yalnız keşifsel (EXP-017) |
-| Sıfır dolgusunun (padding) süre ipucu taşıması | < 4 s kayıtlar | Dolgu yok (Bölüm 5.2) |
-
-### 4.2 Confounding (D-028 ile ayrı başlık)
-
-- **Kayıt bağlamı (saat, tarih).** Gömmeler MFCC'den çok daha zengin. Oda gürültüsü, cihaz durumu, günün saatine bağlı ses değişimi gibi bilgileri de taşıyabilirler. Bu yüzden derin gömmelerin MFCC'den **daha çok** bağlam öğrenmesi olasıdır. [HYPOTHESIS]
-  - Faz 2'de bunu test etmiyoruz (D-028).
-  - Ama **unutmamak** için her backbone'a üç ucuz izleme göstergesi ekliyoruz (D-034 madde 8). Bunlar EXP-014'teki "bağlam bağımlılığı" ölçüleri: etiket sabitken (yalnız hastalar ya da yalnız sağlıklılar içinde) füzyon skorunun geç vs erken dönemi ve sabah vs öğleden sonrayı ne kadar ayırdığı.
-  - Bu göstergeler hiçbir seçimde kullanılmaz, yalnız raporlanır.
-- **Yaş.** Referans çizgisi olarak her tabloda.
-- **Kodlama zinciri (Apple / FFmpeg).** Harmonizasyon bant genişliği farkını sildi (AUC 0.865 → 0.486). 11 kHz altındaki spektral şekillendirme kalmış olabilir. Gömme düzeyinde zincir probu değerlendirme aşamasında (D-028). Gömmeler bunun için saklanıyor.
-
-### 4.3 Seçim yanlılığı (D-033 madde 5)
-
-- **Faz 2'nin kendi sayıları:** Bütün backbone'lar, birincil temsil ve karşılaştırma ailesi önceden sabit. Hepsi raporlanır. Raporlanan sayılarda seçim iyimserliği yok.
-- **"En iyi backbone" cümlesi:** 6 backbone'un en yükseği, seçim nedeniyle iyimserdir (kazananın laneti; EXP-012'de MFCC görevleri için ~0.02). Bunu ölçmek için **iç içe seçim** tahmini raporlanır (Bölüm 5.7).
-- **Faz 3'e geçiş:** Faz 2 sonuçlarına bakarak fine-tune modeli seçmek bir seçimdir. Kural şimdiden yazılı (D-035). Kuralın kendisi dış test tahminlerine değil, iç doğrulama tahminlerine dayanır.
-
----
-
-## 5. Tasarım kararları
-
-### 5.1 Smoke test (SMK-001)
-
-**Amaç:** Tam çıkarımdan önce, her backbone'un doğru yüklendiğini, doğru girdiyi aldığını ve doğru çıktıyı verdiğini göstermek. Ayrıca Faz 3 için bellek ve hız ölçmek.
-
-Her backbone için kontroller (hepsi geçmeden çıkarım başlamaz):
-
-| # | Kontrol | Geçme ölçütü |
-|---|---|---|
-| S1 | Checkpoint sha256 | Kaydedilir; `models/MANIFEST.json`'dakiyle aynı (ilk çalıştırmada yazılır). PANNs için Zenodo md5'i indirmede doğrulanır |
-| S2 | Sözleşme | SR, mel parametreleri, katman sayısı, gizli boyut, `do_normalize` vb. `configs/model_input_contracts.yaml` ile aynı |
-| S3 | `load_state_dict(strict=True)` | Eksik / fazla anahtar = 0 |
-| S4 | Parametre sayısı | Kaydedilir (sözleşmedeki yaklaşık değerler doğrulanır) |
-| S5 | İleri geçiş | Gerçek bir kaydın pencereleri: çıktı şekli `(pencere, katman, boyut)`, dtype float32, cihaz, sonlu değerler |
-| S6 | Eval determinizmi | Aynı girdi iki kez → max fark < 1e-5 |
-| S7 | Batch-değişmezlik | Kayıt tek başına vs başka kayıtlarla aynı batch'te → max fark < 1e-4 |
-| S8 | Kanca (hook) doğruluğu | Son katman kancası, modelin resmi son çıktısıyla aynı (WavLM Large'da son LayerNorm uygulandıktan sonra) |
-| S9 | İşlevsel kontrol (PANNs) | Kelime kayıtlarında ortalama AudioSet çıktısında "Speech" (sınıf 0) ilk 3'te |
-| S10 | İşlevsel kontrol (hepsi) | Aynı katılımcının farklı görev kayıtları, farklı katılımcılarınkinden daha benzer (kosinüs). Zayıf bir akıl sağlığı kontrolü: çökmüş (sabit) çıktıları yakalar |
-| S11 | Kaydet → yükle → aynı çıktı | Faz 3 checkpoint akışı için |
-| S12 | Faz 3 bellek / hız | `train()` modunda (augmentation kapalı, D-016), batch 16 × 4 s, fp16 autocast, 1 AdamW adımı: kayıp sonlu, gradyan sonlu, parametre değişti, GPU tepe belleği ve adım süresi. WavLM Large'da gerekirse gradient checkpointing ile tekrar |
-| S13 | Çıkarım hızı | Pencere/saniye → tam çıkarım süresi tahmini |
-
-**Not:** S9 güçlü bir kontroldür. SR veya frontend yanlışsa (ör. 16 kHz sesi 32 kHz modele vermek), "Speech" sınıfı tutarlı biçimde üstte çıkmaz. SSL modellerinin sınıflandırıcısı yok; onlar için S2, S3, S8 ve S10'a güveniyoruz. [INFERENCE]
-
-### 5.2 Girdi: pencereleme
-
-- **KARAR:**
-  - 4.0 s pencere, 2.0 s adım (D-015).
-  - **Son pencere kaydın sonuna hizalanır.** Örnek: 10.26 s → başlangıçlar 0, 2, 4, 6 ve 6.26 s. Kaydın her anı en az bir pencerede; dolgu yok.
-  - **4 s'den kısa kayıtlar (17 kayıt, en kısa 2.28 s) dolgusuz, olduğu uzunlukta tek pencere olarak işlenir.** Bu, D-015'teki "kısa kayıtlar sıfırla doldurulur" kuralından **sapmadır** ve onay gerektirir.
-  - Keşifsel ek görünüm (EXP-018): **tüm kayıt tek girdi** (dolgusuz, ~10 s).
-- **NEDEN:**
-  - 4 s / 2 s: Boll ile karşılaştırılabilirlik ve Faz 3'te aynı segmentasyon. Dondurulmuş-vs-fine-tune karşılaştırması ancak girdi aynıysa temizdir.
-  - Sona hizalı son pencere: kalan kısmı atmak (son ≤2 s kaybolur) ya da sıfırla doldurmak (yapay sessizlik) yerine.
-  - Dolgusuz kısa kayıtlar: Sıfır dolgusu modelde yapay bir "dijital sessizlik" bölgesi yaratır. PANNs'te log-Mel'i −100 dB'ye düşer; ortalama gömmeyi kaydın **uzunluğuna** göre kaydırır. Kayıt süresi sesle ilgisiz bir ipucu olabilir (kişi, seans, prosedür farkı). Faz 2'de batch zorunluluğu yok (her kayıt kendi başına işlenir), bu yüzden dolguya gerek de yok. Üç modelin üçü de değişken uzunluğu destekler. [FROM OFFICIAL DOCS + INFERENCE]
-  - Tüm kayıt görünümü (keşifsel): Kayıtların neredeyse hepsi ~10 s. PANNs ve BEATs, AudioSet'in 10 s'lik klipleriyle eğitildi. Yani tüm kayıt, ön-eğitim koşuluna 4 s pencereden daha yakın. Boll'un 4 s seçimi ablasyonsuz. Ek maliyet kayıt başına bir ileri geçiş. Sonuç Faz 3'ün girdi tasarımına bilgi verir; Faz 2'de seçim için kullanılmaz.
-- **ALTERNATİFLER:**
-  - (a) D-015'e aynen uymak: kısa kayıtları sıfırla doldurmak. 17 kayıtta süre ipucu riski.
-  - (b) Döngüsel dolgu (kaydı tekrarlamak): yapay periyodiklik.
-  - (c) < 4 s kayıtları atmak: 17 kayıt kaybı; kayıp rastgele olmayabilir.
-  - (d) Birincil görünümü tüm kayıt yapmak: ön-eğitime daha uygun ama Boll ve Faz 3 ile tutarsız. Bu yüzden keşifsel.
-- **RİSK:**
-  - 17 kısa kayıt diğerlerinden daha kısa bağlam görür. Etkisi küçük olmalı (%0.7). [INFERENCE]
-  - Faz 3'te batch eğitimi için kısa kayıtlar yine bir karar gerektirecek (dolgu + maske ya da batch 1). Faz 3 tasarımında ayrıca ele alınır.
-- **BİLİMSEL SONUÇ:** Gömmeler yapay içerik barındırmaz. Kayıt süresi, dolgu yoluyla temsile sızmaz.
-- **UYGULAMA:** `extract_embeddings.py` → `window_starts()`; birim testle doğrulanır.
-
-### 5.3 Katman ve havuzlama
-
-- **KARAR:**
-  - **PANNs:** resmi `embedding` çıktısı (fc1 + ReLU; CNN10 512, CNN14 2048). Tek katman.
-  - **BEATs ve WavLM:** her transformer bloğunun çıkışı forward hook ile yakalanır.
-    - Katman 0 = ilk bloğun girdisi; katman i = i'inci bloğun çıkışı.
-    - Her katmanda zaman (ve BEATs'te frekans yaması) üzerinden ortalama alınır.
-    - **Hepsi saklanır:** BEATs ve Base+ 13 × 768, Large 25 × 1024.
-  - **Birincil temsil (önceden sabit): katman 1..L'nin eşit ağırlıklı ortalaması.**
-    - Her katman önce **eğitim fold'unda** z-skoruna çevrilir, sonra katmanlar ortalanır, sonra LR.
-    - Bu adım Pipeline içindedir (`LayerAverage`); test verisini görmez.
-  - **Katman katman sonuçlar (EXP-017):** yalnız keşifsel, tekrar 0, hiçbir seçimde kullanılmaz.
-- **NEDEN:**
-  - Öz-gözetimli konuşma modellerinde son katman, ön-eğitim hedefine özelleşir. Paralinguistik bilgi (ses kalitesi, konuşmacı, duygu) genellikle orta katmanlarda yoğunlaşır. [FROM PAPER: Pasad ve ark. 2021, wav2vec 2.0 katman analizi; Chen ve ark. 2022, WavLM — SUPERB'de katmanların ağırlıklı toplamı]
-  - Yalnız son katmanı almak SSL modellerini sistematik olarak dezavantajlı kılabilir. Katmanı dış sonuçlara bakarak seçmek ise seçim iyimserliği yaratır (D-033).
-  - Eşit ağırlıklı ortalama, SUPERB'deki öğrenilmiş ağırlıklı toplamın seçimsiz, önceden sabitlenebilen en basit hâlidir.
-  - Z-skoru gerekli: WavLM Large "stable layer norm" kullanır; ara katmanların ölçeği çok farklıdır. Ham ortalamada büyük normlu katmanlar baskın olur.
-  - Katman 0 hariç: transformer öncesi yerel özellikler. Birincil temsil "transformer katmanları"dır; katman 0 EXP-017'de ayrıca görülür.
-- **ALTERNATİFLER:**
-  - (a) Yalnız son katman: basit ama SSL modelleri aleyhine yanlı olabilir.
-  - (b) En iyi katmanı dış CV'den seçmek: seçim iyimserliği.
-  - (c) En iyi katmanı iç CV'de seçmek (iç içe): geçerli, ama 25 katman × 7 görev × 25 fold'da kararsız ve pahalı. EXP-015, küçük örneklemde seçimin kararsız olduğunu gösterdi.
-  - (d) Bütün katmanları uç uca eklemek: Large'da 25 600 boyut, ~270 örnek. Çok yüksek boyut.
-  - (e) Öğrenilmiş ağırlıklı toplam: lineer prob değil; Faz 3'ün doğal parçası.
-  - Havuzlama için: ortalama + standart sapma (boyut iki katı), dikkat havuzlama (öğrenilen parametre). Ortalama en basit ve en yaygın olanı.
-- **RİSK:**
-  - Eşit ortalama, bilgi taşıyan birkaç katmanı bilgisiz katmanlarla seyreltebilir. EXP-017 bunu gösterir. Birincil sonucu değiştirmez.
-  - Ortalama havuzlama, kayıt içindeki kısa olayları (ör. nefes alma, ses kırılması) seyreltir. [HYPOTHESIS]
-- **BİLİMSEL SONUÇ:** Altı backbone, seçim iyimserliği olmadan, aynı kurallarla karşılaştırılır.
-- **UYGULAMA:** `backbones.py` (kancalar), `run_probes.py` → `LayerAverage`.
-
-### 5.4 Prob (sınıflandırıcı)
-
-- **KARAR:** EXP-011'in LR protokolü + D-033:
-  - `LayerAverage` (yalnız SSL) → `StandardScaler` → `LogisticRegression(class_weight="balanced", max_iter=5000)`.
-  - C, split dosyasındaki iç 5-fold'da `neg_log_loss` ile seçilir. Izgara **10⁻⁵ … 10²** (8 değer); bütün temsiller için aynı. MFCC dahil.
-  - Görev başına ayrı model; katılımcı skoru = 7 görev olasılığının ortalaması (D-032).
-  - Eşik: her dış fold'da, eğitim katılımcılarının iç 5-fold OOF tahminlerinde dengeli doğruluğu en yükselten değer (D-033). Füzyon için eşik, iç OOF füzyon skorlarından.
-  - Kalibrasyon: Brier, ortalama tahmin − gerçek oran, kalibrasyon eğimi (D-033).
-  - C'nin ızgaranın ucuna düştüğü fold oranı raporlanır (ızgara yeterli mi?).
-- **NEDEN:**
-  - MFCC ile aynı sınıflandırıcı → temsil farkı izole.
-  - Izgara genişletildi: 2048 boyut ve ~220 eğitim örneğinde (p ≫ n) en iyi C, EXP-011'in alt sınırı 0.001'in altında olabilir. Çok küçük C'de L2-LR, sınıf ortalamaları farkı yönüne yakın bir sınıflandırıcıya dönüşür; p ≫ n'de bu genellikle iyi çalışır. [INFERENCE] MFCC için ızgaranın genişlemesi zararsız (seçilmezse etkisi yok).
-  - Ağırlıklı BCE / sınıf ağırlığı, EXP-011 ile tutarlılık için (D-033 madde 1).
-- **ALTERNATİFLER:**
-  - Doğrusal olmayan prob (MLP) gömmeler üzerinde: daha güçlü ama artık "temsil" değil "temsil + öğrenilen dönüşüm" ölçülür; seçenek sayısı artar.
-  - PCA + LR: ek bir seçim (bileşen sayısı).
-  - Görevleri birleştirip tek prob (7 × daha çok kayıt): MFCC protokolünden farklı olur; Faz 3'te düşünülebilir.
-- **RİSK:**
-  - LR, gömmelerdeki doğrusal olmayan bilgiyi kaçırabilir. Bu, gömmeler **aleyhine** bir yanlılıktır. MFCC tarafında ise bir de MLP tabanı var (D-032). Karşılaştırma bu yüzden muhafazakârdır. [INFERENCE]
-  - Sınıf ağırlığı kalibrasyonu kaydırır (EXP-013) → raporlanır.
-- **BİLİMSEL SONUÇ:** RQ1'de tek değişken temsildir.
-- **UYGULAMA:** `run_probes.py`.
-
-### 5.5 MFCC kolları aynı kodla yeniden çalıştırılır
-
-- **mfcc_lr:** EXP-011'deki LR, yeni ızgara ve D-033 eşiğiyle, aynı split'lerde.
-- **mfcc_mlp:** D-032'nin ikinci tabanı: StandardScaler → SMOTE(42) → varsayılan MLPClassifier(42). Izgara yok. Eşik iç OOF'tan.
-- **Neden yeniden?** Eşleştirilmiş karşılaştırma aynı fold'larda, aynı kodla, aynı eşik kuralıyla yapılmalı. Ayrıca bir regresyon testi: mfcc_lr füzyonu EXP-011 LR füzyonunu (0.771 ± 0.078) ±0.01 içinde yeniden üretmeli. Üretmezse önce kod incelenir, sonra yorum.
-
-### 5.6 Karşılaştırmalar ve istatistik
-
-**Onaylayıcı aile (RQ1, 6 hipotez):**
-- Her backbone b için, füzyon düzeyinde:
-  - H0(b, LR): AUC(b) = AUC(mfcc_lr);
-  - H0(b, MLP): AUC(b) = AUC(mfcc_mlp).
-- "b, MFCC'den iyi" iddiası **iki tabanı da** geçmeyi gerektirir (D-032). İstatistiksel olarak bu bir kesişim-birleşim testidir: p(b) = max(p_LR, p_MLP). Bu, ek düzeltme gerektirmeden α düzeyini korur. [FROM PAPER: Berger 1982]
-- Altı backbone arasında **Holm** düzeltmesi.
-- Test: 25 fold'un eşleştirilmiş ΔAUC'sinde **Nadeau–Bengio düzeltilmiş t-testi** (D-011; df = 24, test/train oranı gerçek fold boyutlarından).
-- **Tek yönlü** p (H1: Δ > 0), eşik 0.025. İddia yönlü ("daha iyi"). İki yönlü p kullanılsaydı, MFCC'den anlamlı biçimde *kötü* bir backbone Holm sırasının başına geçer ve diğer backbone'ların düzeltmesini gevşetirdi. 0.025 eşiği, iki yönlü 0.05'in pozitif yarısıyla aynı katılıktadır. İki yönlü p'ler de raporlanır.
-- Destek: tekrarlar boyunca ortalama OOF olasılığında **katılımcı bootstrap'lı** ΔAUC %95 CI (2 000 tekrar) ve tekrar başına **DeLong** eşleştirilmiş testi (D-011).
-- **Karar kuralı:** "Destekleniyor (üst sınır)" ancak Holm-düzeltilmiş tek yönlü p < 0.025 **ve** iki bootstrap CI'ı da 0'ı dışlıyorsa. D-011'in ikinci koşulu (yönün zaman-örtüşen alt kohortta korunması) D-028 ile değerlendirme aşamasına ertelendi. Bu yüzden Faz 2'nin her "destekleniyor"u **geçicidir**.
-
-**Keşifsel (önceden listelenmiş; her aile içinde Holm, ama yorum keşifsel):**
-- RQ3: 15 backbone çifti, füzyon ΔAUC (D-008'in cnn14 − cnn14_16k'sı ve ölçek karşılaştırması wavlm_large − wavlm_base_plus bu ailenin içinde).
-- RQ4: görev başına ΔAUC (backbone − mfcc_lr), 42 karşılaştırma.
-- RQ5: ünlü (aaa) − kelimelerin ortalaması, kol başına fold düzeyinde.
-- EXP-017: katman eğrileri. EXP-018: tüm kayıt − 4 s pencere.
-
-**Güç (önceden, dürüstçe):**
-- Havuzlanmış AUC ≈ 0.80, 283 / 59 için Hanley–McNeil SE ≈ 0.03. [INFERENCE]
-- İki ses temsilinin skorları arasındaki korelasyon ρ = 0.5–0.7 varsayılırsa, ΔAUC'nin SE'si ≈ 0.023–0.030. [INFERENCE]
-- %80 güçle saptanabilir fark ≈ 0.065–0.085; Holm (6 test) ile ≈ 0.08–0.10.
-- **Yani:** MFCC-LR füzyonu 0.77 iken, bir backbone'un "anlamlı biçimde iyi" çıkması için füzyon AUC'sinin kabaca **≥ 0.85** olması gerekir. 0.02–0.05'lik farklar bu örneklemde çözülemez. "Anlamlı değil" sonucu "fark yok" demek değildir.
-
-### 5.7 Seçim iyimserliğinin ölçülmesi (iç içe seçim)
-
-- Her dış fold'da, backbone'lar arasından **iç OOF füzyon AUC'si** en yüksek olan seçilir. Dış test füzyon AUC'si kaydedilir.
-- 25 fold'un ortalaması = "en iyi backbone'u seç, sonra kullan" **prosedürünün** dürüst performansı.
-- "Sonradan bakarak en iyi sabit backbone" ile arasındaki fark = kazananın laneti.
-- İki kapsamda: 6 backbone ve D-035'in 3 adayı.
-
-### 5.8 Kayıt bağlamı: Faz 2'de neyi kaydediyoruz? (D-028 yükümlülükleri)
-
-| Yükümlülük | Faz 2'de |
+| Risk | Önlem |
 |---|---|
-| Katılımcı düzeyi OOF tahminleri | ✓ füzyon skoru, her (tekrar, fold) |
-| Kayıt düzeyi OOF tahminleri | ✓ görev başına = kayıt başına |
-| Segment düzeyi | Uygulanamaz: prob kayıt düzeyinde eğitilir. Pencere gömmeleri `--save-windows` ile isteğe bağlı saklanır |
-| En iyi / son epoch | Uygulanamaz (eğitim yok) |
-| Gömmeler | ✓ hepsi (bütün katmanlar), Drive `embeddings_v1/` |
-| Split hash'leri | ✓ her rapor ve registry satırında |
-| Üst sınır uyarısı + 2 referans çizgisi | ✓ bağlam ve yaş, aynı fold'larda |
-| İzleme göstergeleri (D-034 madde 8) | EXP-014'teki üç "bağlam bağımlılığı" ölçüsü, etiket sabitken füzyon skorunun bağlamı ayırma gücü (0.5 = bağımlılık yok): hastalarda geç vs erken, hastalarda sabah vs öğleden sonra, sağlıklılarda sabah vs öğleden sonra. MFCC-LR'de 0.556 / 0.524 / 0.464; yalnız-bağlam referansında 0.939 / 0.739 / 1.000. Yalnız raporlanır |
+| Katılımcı sızıntısı | Bölüm 7 |
+| BatchNorm'un batch istatistiği | eval assert'i; S7 |
+| Model içi augmentation | yalnız eğitim modunda; eval'de kapalı (D-016) |
+| Ölçekleme / katman standardizasyonu | Pipeline içinde, yalnız eğitimde fit |
+| C ve eşik | yalnız iç döngü |
+| Katman seçimi | yok (Bölüm 4.3) |
+| Faz 3 seçimi | fold başına, yalnız iç doğrulama (Bölüm 6) |
+| Dolgu yoluyla süre | Bölüm 3; META-016; EXP-016S |
 
-**CONFOUND_CONTROL_DESIGN'daki EXP-021 ile ilişkisi:** O belgedeki EXP-021 (dondurulmuş prob + lens seti L1–L8) D-028 ile ertelendi. Lens seti, değerlendirme aşamasında **EXP-016'nın kaydedilmiş tahminleri ve gömmeleri** üzerinde uygulanır. Yeni bir eğitim gerektirmez.
+### 9.4 Prob ve MFCC kolları
 
-### 5.9 Hesap ayrıntıları
+- LR: `[LayerAverage] → StandardScaler → LogisticRegression(class_weight="balanced", max_iter=5000)`; C ∈ {10⁻⁵ … 10²} (8 değer, bütün temsillerde aynı); iç 5-fold `neg_log_loss`; eşik iç OOF'ta dengeli doğruluğu en yükselten değer; kalibrasyon (Brier, ortalama tahmin − oran, eğim). C'nin ızgara ucuna düştüğü fold oranı raporlanır.
+- Izgaranın alt ucu 10⁻⁵: p ≫ n (2048 boyut, ~220 örnek) durumunda en iyi C 0.001'in altında olabilir. [INFERENCE]
+- mfcc_lr: aynı LR. mfcc_mlp: D-032 (StandardScaler → SMOTE → MLP). Doğrusal olmayan bir MFCC tabanına karşı doğrusal gömme probu → karşılaştırma gömmeler aleyhine, muhafazakâr.
 
-- **Hassasiyet:** çıkarım fp32. TF32 kapalı, `cudnn.deterministic=True`, `benchmark=False`. Dondurulmuş çıkarım ucuz; fp16'nın küçük sayısal farkları gereksiz bir değişken olur.
-- **Saklama** (Drive `data_derived/embeddings_v1/<backbone>/`; katılımcı düzeyi → git'e girmez, D-014):
-  - `rec_win4.npy` float32 `[kayıt, katman, boyut]` (pencere ortalaması);
-  - `rec_full.npy` float32 (tüm kayıt görünümü);
-  - isteğe bağlı `win4_windows.npy` float16 + `windows.csv`;
-  - `recordings.csv`, `info.json` (backbone, checkpoint sha256, sözleşme, sürümler, git commit, önbellek index sha256), `MANIFEST.sha256`.
-  - Boyut tahmini: Large ~0.5 GB, diğerleri toplam ~0.4 GB. [INFERENCE]
-- **Kaldığı yerden devam:** 100 kayıtlık parçalar (`shards/`) atomik yazılır (önce `.tmp`, sonra yeniden adlandırma). Yeniden çalıştırmada biten parçalar atlanır. Problarda (tekrar, backbone) başına `partial/`.
-- **Süre tahmini:** GPU çıkarımı backbone başına 2–10 dk, toplam < 1 saat (T4). Problar CPU'da: EXP-016 birkaç saat, EXP-017 ~1–2 saat. [INFERENCE — SMK-001 S13 ve ilk tekrar ölçer]
-- **Ağırlıklar:** Drive `models/`. PANNs Zenodo'dan (md5 doğrulamalı), WavLM HF'den (çözümlenen commit hash'i kaydedilir, `save_pretrained` ile Drive'a kopya), BEATs OneDrive'dan **elle** (Bölüm 8).
+### 9.5 SMK-001 kontrolleri (gerçek checkpoint'ler)
 
-### 5.10 Faz 3'e hangi backbone'lar geçer? (D-035, sonuçlardan önce)
+S1 sha256 (Zenodo md5'i indirmede) · S2 sözleşme · S3 strict yükleme · S4 parametre sayısı · S5 şekil / dtype / cihaz / sonluluk · S6 eval determinizmi · S7 batch-değişmezlik (başka katılımcılarla) · S8 son kanca = resmi çıktı · S9 PANNs "Speech" ilk 3'te · S10 aynı-kişi benzerliği · S11 kaydet-yükle · S12 Faz 3 eğitim adımı (bellek, süre) · S13 hız · **S14 dolgu yolu** (tam uzunlukta `lengths` sonucu değiştirmez = PASS ölçütü; kısa parça zeropad vs nopad benzerliği INFO).
 
-- **KARAR:**
-  1. **Sabit:** PANNs **CNN10** (pretrained). Neden: RQ2'nin eşi. Faz 3'teki "sıfırdan CNN10" ancak aynı mimarinin pretrained hâliyle karşılaştırılırsa ön-eğitimin etkisi mimariden ayrılır.
-  2. **Sabit:** PANNs **CNN14** (32 kHz). Neden: Boll'un en iyi modeli (konuşmada AUC 0.93); karşılaştırılabilirlik.
-  3. **Kurala bağlı:** PANNs dışı adaylardan (BEATs, WavLM Base+, WavLM Large) **bir** tanesi.
-     - Ölçüt: **doğrulama skoru** = 25 dış fold'un her birinde, yalnız eğitim katılımcılarının iç 5-fold OOF füzyon AUC'si; bunların ortalaması. Dış test tahminleri ölçüte girmez.
-     - Eşitlik: en yüksek skora 0.01'den yakın olanlar arasından **en az parametreli** olan (BEATs ~90 M < Base+ ~95 M < Large ~316 M).
-  4. Bağlam izleme göstergeleri ölçüt **değildir**; seçilen modelinki ayrıca raporlanır.
-  5. Faz 3, Faz 2'nin sonucu ne olursa olsun yapılır (hiçbir backbone MFCC'yi geçmese de). Faz 3'ün sorusu farklı: fine-tune ve ön-eğitim ne kazandırır (RQ2)?
-  6. Faz 3 hesap bütçesi (SMK-001 S12 ölçümleriyle) yetmezse ilk çıkarılan **CNN14**'tür. CNN10 RQ2 için, PANNs dışı aday RQ3 için gereklidir.
-- **NEDEN:**
-  - Seçimi sonuçlardan önce yazmak, "sonuca bakıp en iyisini seçtik" iyimserliğini sınırlar (D-033 madde 5).
-  - İç doğrulama skoru, dış test fold'larını seçime katmaz. Tam bağımsız değildir: tekrarlı CV'de her katılımcı başka bir fold'un eğitim kümesindedir. Kalan iyimserlik Bölüm 5.7'deki iç içe seçim tahminiyle ölçülür. [INFERENCE]
-  - Seçim nedeniyle, seçilen backbone'un dondurulmuş skoru biraz şişkin olabilir. Bu, Faz 3'teki "fine-tune − dondurulmuş" farkını **küçültür** (ortalamaya dönüş). Yani "fine-tune işe yarıyor" iddiası aleyhine çalışır; muhafazakâr. [INFERENCE]
-  - Eşitlikte küçük model: T4 bütçesi ve küçük veride aşırı uyum riski.
-- **ALTERNATİFLER:**
-  - (a) Dış havuzlanmış füzyon AUC'siyle seçmek: daha basit ama seçimi test fold'larına bağlar.
-  - (b) CONFOUND_CONTROL_DESIGN'daki öneri (D-026, ertelendi): **artımlı test T1'e göre** seçmek (bağlamın ötesinde bilgi). Bilimsel olarak daha güçlü bir ölçüt: "en çok kestirme öğreneni seçme" riskini azaltır. Ama D-028 bağlam değerlendirmesini model geliştirme sonuna bıraktı. T1'i şimdi seçim için kullanmak, ertelenen testi öne çekmek demek.
-  - (c) Her dış fold'da ayrı backbone fine-tune etmek (tam iç içe): pahalı ve yorumu zor.
-  - (d) Bütün backbone'ları fine-tune etmek: 40+ GPU saati (D-012).
-- **RİSK:**
-  - Ölçüt E1 (tam kohort) temelli. Bağlamı en iyi öğrenen backbone seçilebilir. Azaltma: (i) PANNs iki model seçimden bağımsız sabit; (ii) altı backbone'un **hepsinin** dondurulmuş tahminleri saklanır ve değerlendirme aşamasında lens setinden geçer; seçim bağlam kaynaklıysa orada görünür; (iii) izleme göstergeleri raporlanır.
-  - İç OOF tahminleri, C'nin seçildiği aynı iç fold'lardan gelir. Doğrulama skoru bu yüzden hafif iyimserdir; iyimserlik boyuta ve katman sayısına göre kollar arasında biraz değişebilir. [INFERENCE]
-  - Sen (b)'yi tercih edersen: T1'in (D-025) kesinleştirilmesi ve EXP-016 tahminleri üzerinde yalnız seçim için çalıştırılması gerekir. Bu bir tasarım değişikliğidir; ayrıca konuşalım.
-- **BİLİMSEL SONUÇ:** Faz 3'e geçiş, Faz 2 sonuçları görülmeden yazılmış bir kurala bağlı.
-- **UYGULAMA:** `run_probes.py` EXP-016 raporunda doğrulama skorlarını ve kuralın seçtiği backbone'u otomatik yazar. Karar yine de sana sunulur.
+### 9.6 Hesap ayrıntıları
+
+- fp32, TF32 kapalı, deterministik cuDNN.
+- Drive `data_derived/embeddings_v1/<backbone>/`: `rec_win4.npy`, `rec_full.npy`, `short_alt_win4.npz`, `recordings.csv`, `info.json` (kısa kayıt politikası dahil), `MANIFEST.sha256`.
+- Kaldığı yerden devam: 100 kayıtlık parçalar, imzalı (backbone, checkpoint sha256, önbellek sha256, pencere, politika); imza uyuşmazsa yeniden üretilir.
+- Süre: GPU çıkarımı < 1 saat; problar CPU'da saatler. [INFERENCE — SMK-001 S13 ölçer]
 
 ---
 
-## 6. Önceden yazılmış beklentiler [HYPOTHESIS]
+## 10. Önceden yazılmış beklentiler [HYPOTHESIS]
 
-Bunlar sonuçlar görülmeden yazıldı. Yanlış çıkmaları da raporlanır.
+Sonuçlar görülmeden yazıldı; yanlış çıkmaları da raporlanır.
 
 | # | Beklenti | Gerekçe |
 |---|---|---|
-| B1 | Backbone füzyon AUC'leri 0.70–0.85 aralığında; en az birinin MFCC-LR'yi (0.77) sayısal olarak geçmesi olası, ama **onaylayıcı testi geçen olmaması** daha olası | Güç hesabı (Bölüm 5.6); MFCC füzyonu zaten yüksek |
-| B2 | Dondurulmuş gömmelerin bağlam izleme göstergeleri MFCC'ninkinden yüksek | Daha zengin temsil oda / cihaz / saat bilgisini de taşır |
-| B3 | cnn14 − cnn14_16k: |Δ| < 0.03 | 32k yolu zaten 11 kHz'e kesildi; iki model arasındaki bant farkı 11 vs 8 kHz |
-| B4 | WavLM'de katman eğrisi ortada tepe yapar; son katman ortalamadan kötü | Pasad ve ark. 2021; Chen ve ark. 2022 |
-| B5 | Görevler arasında güvenilir bir sıralama çıkmaz | EXP-011/012'de MFCC için de çıkmadı |
-| B6 | Tüm kayıt vs 4 s pencere: |Δ| < 0.02 | Kayıtlar ~10 s; ortalama havuzlama iki görünümde benzer bilgi toplar |
-| B7 | WavLM Large, Base+'tan anlamlı biçimde iyi değil | 342 katılımcıda ölçek avantajı görünmeyebilir |
+| B1 | Backbone füzyon AUC'leri 0.70–0.85; onaylayıcı testi geçen olmaması daha olası | Bölüm 5.5; MFCC füzyonu zaten 0.77 |
+| B2 | Bağlam bağımlılığı göstergeleri (META-016) MFCC'ninkinden yüksek | Daha zengin temsil oda / cihaz / saat bilgisini de taşır |
+| B3 | \|cnn14 − cnn14_16k\| < 0.03 | 32k yolu 11 kHz'e kesildi |
+| B4 | WavLM'de katman eğrisi ortada tepe yapar | Pasad ve ark. 2021; Chen ve ark. 2022 |
+| B5 | Görevler arasında güvenilir sıralama yok | EXP-011/012 |
+| B6 | \|tüm kayıt − 4 s\| < 0.02 | Kayıtlar ~10 s |
+| B7 | WavLM Large, Base+'tan anlamlı biçimde iyi değil | 342 katılımcı |
+| B8 | \|zeropad − nopad\| (EXP-016S) füzyon AUC'sinde < 0.01; WavLM Large'da ≈ 0 (tanım gereği) | Etkilenen kayıt %0.7; asıl bilgi etkilenen katılımcılardaki \|Δp\| |
 
 ---
 
-## 7. Çıktılar
+## 11. Senin yapman gerekenler
 
-| Ne | Nerede | Git'e girer mi? |
-|---|---|---|
-| SMK-001 raporu | `reports/phase2/SMK-001_smoke.{md,json}` | Evet (agrega) |
-| Gömmeler | Drive `data_derived/embeddings_v1/` | Hayır |
-| OOF ve iç OOF tahminleri, fold metrikleri | Drive `experiments/EXP-016_frozen-probe/` vb. | Hayır |
-| EXP-016/017/018 raporları | `reports/frozen/` | Evet (agrega) |
-| Registry satırları | `results/registry.csv` | Evet |
-
----
-
-## 8. Senin yapman gerekenler (sırasıyla)
-
-1. **BEATs ağırlığını indir.** `github.com/microsoft/unilm/tree/master/beats` README'sindeki tabloda **"BEATs_iter3+ (AS2M)"** bağlantısı (fine-tuned **olmayan**, üçüncü sütun). OneDrive'dan indir, Drive'da `MyDrive/asthma-voice/models/BEATs_iter3_plus_AS2M.pt` adıyla kaydet. Dosya ~350 MB civarında olmalı. [NEEDS VERIFICATION: boyut]
-2. **D-034 ve D-035'i onayla ya da değiştir** (Bölüm 9).
-3. `notebooks/20_smoke_tests.ipynb` (GPU, T4): PANNs ve WavLM ağırlıklarını Drive'a indirir, testleri ve SMK-001'i çalıştırır, raporu bir dala gönderir.
-4. SMK-001 raporunu birlikte okuyalım. Hepsi geçerse:
-5. `notebooks/21_frozen_embeddings.ipynb`: önce GPU'da gömme çıkarımı, sonra (aynı ya da CPU oturumunda) problar.
-
----
-
-## 9. Onay bekleyen kararlar
-
-| Karar | Özet | Neden onay gerekiyor |
-|---|---|---|
-| **D-034** | Dondurulmuş gömme protokolü: pencereleme (kısa kayıtlar dolgusuz — D-015'ten sapma), katman ortalaması, prob, MFCC kolları, onaylayıcı aile, iç içe seçim tahmini, bağlam izleme göstergeleri | D-015'i değiştiriyor; onaylayıcı aileyi sabitliyor |
-| **D-035** | Faz 3 backbone seçim kuralı, Faz 2 sonuçlarından **önce**: CNN10 (RQ2 eşi) + CNN14 (Boll) sabit; PANNs dışı tek backbone iç doğrulama füzyon AUC'siyle | Seçimi şimdiden bağlıyor; CONFOUND belgesindeki "T1'e göre seç" önerisinden (D-026, ertelendi) ayrılıyor |
-
-**Uygulama düzeltmesi (karar değil):** `model_input_contracts.yaml`'daki CNN14_16k notu yanlıştı. "Cnn14 sınıfı bu parametrelerle" değil, resmi kodda **ayrı bir `Cnn14_16k` sınıfı** var; sınıf kendi içinde SR = 16000, pencere 512, adım 160, 64 mel, 50–8000 Hz assert ediyor. [FROM OFFICIAL DOCS: `pytorch/models.py`, commit d2f4b8c]
+1. **D-034'ü onayla ya da değiştir.** Özellikle madde 1 (kısa kayıt politikası: önerim zeropad = D-015). Sonuç görülmeden.
+2. **BEATs ağırlığı:** README tablosundaki "BEATs_iter3+ (AS2M)" (fine-tune edilmemiş, üçüncü sütun) → Drive `MyDrive/asthma-voice/models/BEATs_iter3_plus_AS2M.pt`.
+3. PR'ı birleştir → `20_smoke_tests.ipynb` (T4) → SMK-001 raporunu birlikte okuyalım.
+4. Hepsi PASS ise `21_frozen_embeddings.ipynb`.

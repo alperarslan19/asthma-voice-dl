@@ -6,7 +6,7 @@
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
-| Son güncelleme | 2026-10-09 (12. tur): D-032 / D-033 kabul; Faz 2 tasarımı (`docs/PHASE2_DESIGN.md`), D-034 ve D-035 önerildi; smoke test, gömme çıkarımı ve prob kodu + testleri. Önceki (11. tur): metodoloji soruları — EXP-013/014/015, `docs/IMBALANCE_AND_SELECTION.md`, D-033 önerildi. Önceki (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-09 (13. tur): Faz 2 tasarımı revize — kısa kayıt politikası (D-015'e dönüş, iki duyarlılık), katman ortalaması ve istatistik ayrıntıları, kilitli kurallar / keşifsel analizler ayrımı, D-035 kabul (fold başına seçim), META-016 ayrı rapor. Önceki (12. tur): D-032 / D-033 kabul; Faz 2 tasarımı (`docs/PHASE2_DESIGN.md`), D-034 ve D-035 önerildi; smoke test, gömme çıkarımı ve prob kodu + testleri. Önceki (11. tur): metodoloji soruları — EXP-013/014/015, `docs/IMBALANCE_AND_SELECTION.md`, D-033 önerildi. Önceki (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -642,7 +642,21 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 ---
 
-## 12. Durum raporu (12. tur — Faz 2 tasarımı)
+## 12. Durum raporu (13. tur — Faz 2 tasarımının revizyonu)
+
+- **Ne yaptık?** Alper'in soruları üzerine `docs/PHASE2_DESIGN.md` yeniden yazıldı (gerçek veride sonuç yok):
+  - Faz 2, Faz 3'ün yerine geçmeyen kontrollü bir temsil karşılaştırması olarak tanımlandı.
+  - Kısa kayıtlar: D-015'in kuralı (sıfır dolgusu, Boll) birincil öneri olarak geri geldi; BEATs / WavLM'de resmi maske + maskeli havuzlama; dolgusuz politika EXP-016S'de, dışlama duyarlılığı META-016'da. Süre bilgisinin dolaylı kullanılabileceği yollar listelendi.
+  - Katman ortalamasının tensor boyutları ve normalizasyonu (eğitim fold'unda katman × kanal z-skoru) belgelendi; EXP-017 seçime kapalı (assert'ler).
+  - İstatistik: birim katılımcı; tek yönlü Nadeau–Bengio, kesişim-birleşim, Holm (eşik 0.025) + bootstrap CI; güç hesabının varsayımları (0.06–0.09 AUC; eşik değil).
+  - D-035 Alper'in koşuluyla kabul: seçim fold başına, yalnız o fold'un eğitim verisindeki iç doğrulamayla; kodda ve testte güvence (dış test tahminleri bozulunca seçim değişmiyor).
+  - Meta veri / confounder karşılaştırmaları ayrı rapora (META-016) taşındı.
+  - Gerçek checkpoint'li SMK-001 ile rastgele küçük modelli birim testleri ayrıldı (rapor adları farklı).
+  - Kilitli kurallar (R1–R12) ve sonuçlara göre yapılabilecek keşifsel analizler ayrı bölümlerde.
+- **Hangi karar onay bekliyor?** D-034 (revize; özellikle madde 1, kısa kayıt politikası).
+- **Bir sonraki minimum gerekli adım:** D-034 onayı → PR birleştir → BEATs ağırlığı → `20_smoke_tests.ipynb` (SMK-001, gerçek checkpoint'ler).
+
+*Önceki (12. tur — Faz 2 tasarımı):*
 
 - **Ne yaptık?**
   - D-032 ve D-033 kabul edildi.
