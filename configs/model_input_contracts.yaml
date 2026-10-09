@@ -108,10 +108,10 @@ wavlm_base_plus:
   hidden: {size: 768, layers: 12}
   n_layers: 12
   embedding_dim: 768
-  expect: {hidden_size: 768, num_hidden_layers: 12, do_normalize: false, sampling_rate: 16000, return_attention_mask: false}   # return_attention_mask: needs_verification (SMK-001 assert eder)
-  padding_note: "feat_extract_norm=group: özellik kodlayıcının GroupNorm'u bütün girdi (dolgu dahil) üzerinden normalize eder; HF önerisiyle maske modele verilmez → dolgu gerçek çerçeveleri de etkiler; yalnız havuzlama maskelidir (D-034 madde 1)"
+  expect: {hidden_size: 768, num_hidden_layers: 12, do_normalize: false, sampling_rate: 16000, return_attention_mask: true}   # DÜZELTİLDİ (SMK-001, 2026-10-09): gerçek preprocessor_config'te true; önceki "false" beklentisi bellekten yazılmıştı ve yanlıştı
+  padding_note: "İşlemci return_attention_mask=true → dolgulu girdide maske modele (transformer dikkatine) verilir. feat_extract_norm (SMK-001 raporunda) 'group' ise özellik kodlayıcının GroupNorm'u yine bütün girdi (dolgu dahil) üzerinden normalize eder → dolgunun etkisi kısmen kalır; havuzlama yalnız gerçek çerçeveler (D-034 madde 1)"
   layer_capture: "encoder.layers[i] forward hook → çıktı[0] (B×T×C); katman 0 = layers[0] girdisi. transformers sürümleri arasında hidden_states anlamı değişebildiği için (v5 kayıt kancaları) kendi kancalarımız kullanılır"
-  training_time_config: {mask_time_prob: 0.05, layerdrop: 0.05}   # needs_verification: SMK-001 config'ten okur; Faz 3'te apply_spec_augment=False (D-016)
+  training_time_config: {mask_time_prob: 0.05, layerdrop: 0.05}   # needs_verification: SMK-001 config'ten okur; Faz 3'te apply_spec_augment=False (D-016). (Large'da gerçek değerler: mask_time_prob 0.075, layerdrop 0.1 — SMK-001)
   pretraining: "94k h English speech (~60k Libri-Light, ~10k GigaSpeech, ~24k VoxPopuli), self-supervised: masked speech prediction + denoising; targets = k-means pseudo-labels from HuBERT Base iter-2 layer 9; no transcripts"   # verified (13. tur): WavLM makalesi arXiv 2110.13900
   representation_plan: "Faz 2: katman 1..L'nin z-skorlu eşit ortalaması (D-034); Faz 3: öğrenilmiş ağırlıklı toplam düşünülebilir"
 

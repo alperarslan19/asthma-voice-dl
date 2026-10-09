@@ -147,7 +147,7 @@ def train_probe(bb, wav: torch.Tensor, amp: bool, grad_ckpt: bool, steps: int = 
     before = probe_p.detach().clone()
     if dev.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
-    times, losses = [], []
+    times, losses, step_log = [], [], []
     for _ in range(steps):
         t0 = time.time()
         opt.zero_grad(set_to_none=True)
@@ -157,14 +157,21 @@ def train_probe(bb, wav: torch.Tensor, amp: bool, grad_ckpt: bool, steps: int = 
         scaler.scale(loss).backward()
         scaler.unscale_(opt)
         grads_finite = all(torch.isfinite(p.grad).all().item() for p in params if p.grad is not None)
+        scale_before = float(scaler.get_scale()) if use_amp else 1.0
         scaler.step(opt)
         scaler.update()
+        step_log.append({"loss": float(loss.item()), "loss_finite": bool(torch.isfinite(loss).item()),
+                         "grads_finite": grads_finite, "scale": scale_before,
+                         "skipped": bool(use_amp and float(scaler.get_scale()) < scale_before)})
         if dev.startswith("cuda"):
             torch.cuda.synchronize()
         times.append(time.time() - t0)
         losses.append(float(loss.item()))
     out = {"batch": int(len(wav)), "seconds_per_window": round(wav.shape[1] / bb.sr, 2), "amp_fp16": use_amp,
-           "grad_checkpointing": grad_ckpt, "loss_finite": bool(np.isfinite(losses).all()), "grads_finite": grads_finite,
+           "grad_checkpointing": grad_ckpt, "loss_finite": bool(np.isfinite(losses).all()),
+           # GradScaler ilk adımlarda taşan gradyanla adımı atlayabilir (normal); en az bir adım sonlu gradyanla atılmalı
+           "grads_finite": any(s["grads_finite"] for s in step_log), "steps": step_log,
+           "frontend_fp32": bool(bb.info.get("frontend_fp32_under_autocast", False)),
            "param_changed": bool((probe_p.detach() - before).abs().max().item() > 0),
            "step_s": round(float(np.mean(times[1:])) if len(times) > 1 else times[0], 3)}
     if dev.startswith("cuda"):

@@ -129,6 +129,13 @@ def test_units() -> None:
                     check = range(bb.n_store - 1 if stable else bb.n_store)
             for i in check:
                 assert (e[:, i] - official[:, i]).abs().max() < 1e-5, f"P3 {name}: katman {i} kancası resmi ara çıktıdan farklı"
+        if bb.family in {"panns", "beats"}:           # SMK-001: fp16 autocast'ta ön işleme fp32 kalmalı (en son: eğitim modu BN'yi değiştirir)
+            tt = torch.arange(4 * bb.sr) / bb.sr
+            xs = torch.stack([0.89 * torch.sin(2 * np.pi * (150 + 20 * i) * tt) * (tt < 3).float() for i in range(2)])
+            bb.model.train()
+            with torch.autocast("cpu", dtype=torch.float16):
+                assert torch.isfinite(bb.train_features(xs)).all(), f"P3 {name}: fp16 autocast'ta sonlu olmayan çıktı"
+            bb.model.eval()
     print("  P1–P3 geçti", flush=True)
 
 

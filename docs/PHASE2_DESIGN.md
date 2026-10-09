@@ -151,7 +151,7 @@ rec_embedding = E.mean(0)                                   # (n_store, dim)
 | PANNs | Düz sıfır dolgusu; **maske yok** (resmi `forward` maske almaz). Dolgu çerçeveleri log-Mel'de çok düşük değer (≈ −100 dB) olarak modele girer; global max + mean havuzlamaya katılır | Boll'un yaptığı; [FROM OFFICIAL DOCS: PANNs `models.py`] |
 | BEATs | Resmi `padding_mask` (örnek → fbank çerçevesi → yama, `BEATs.forward_padding_mask`); dolgu yamaları dikkatte maskelenir; havuzlama **yalnız gerçek yamalar** üzerinden | Resmi fine-tune sınıflandırıcısı da maskeli ortalama yapar [FROM OFFICIAL DOCS: `BEATs.py`] |
 | WavLM Large | Resmi özellik çıkarıcı **yalnız gerçek kısımla** normalize eder ve sıfırla doldurur; `attention_mask` modele verilir (işlemcide `return_attention_mask=True`); havuzlama yalnız gerçek çerçeveler (`_get_feat_extract_output_lengths`). Sonuç: dolgu **etkisiz** (birim testi: 4 s ve 6 s'ye dolgu aynı gömmeyi verir; zeropad ≈ nopad) | HF önerisi [FROM OFFICIAL DOCS] |
-| WavLM Base+ | Özellik çıkarıcı normalize etmez (`do_normalize=False`), sıfırla doldurur; HF önerisiyle `attention_mask` modele **verilmez** (`return_attention_mask=False`, `feat_extract_norm=group`); havuzlama yalnız gerçek çerçeveler. Ama özellik kodlayıcının GroupNorm'u bütün girdi (dolgu dahil) üzerinden hesaplanır → dolgu gerçek çerçevelerin temsilini de **değiştirir**. Maskeli havuzlama bunu gidermez | HF önerisi [FROM OFFICIAL DOCS]; etki [INFERENCE] (rastgele küçük modelde ölçüldü) |
+| WavLM Base+ | Özellik çıkarıcı normalize etmez (`do_normalize=False`), sıfırla doldurur. **Düzeltme (SMK-001, 1. deneme):** gerçek işlemcide `return_attention_mask=True` → maske modele (transformer dikkatine) **verilir**; havuzlama yalnız gerçek çerçeveler. Özellik kodlayıcı GroupNorm kullanıyorsa (`feat_extract_norm=group`; SMK-001 raporunda yazar) normalizasyon dolgu dahil bütün girdi üzerinden yapılır → dolgunun etkisi kısmen kalır | Resmi işlemci yapılandırması [FROM OFFICIAL DOCS]; etki [INFERENCE] |
 
 `nopad` politikasında üç aile de kaydı gerçek uzunluğunda alır (üçü de değişken uzunluğu destekler).
 
@@ -187,7 +187,7 @@ Bunun bir sorun olup olmadığı, **sürenin etiketle ilişkili olup olmadığı
 | Boll ile birebirlik | Evet (PANNs) | Hayır (17 kayıtta) |
 | Kabul edilmiş D-015 ile | Uyumlu | Sapma |
 | Faz 3 ile tutarlılık | Doğal (batch eğitimi için dolgu gerekir) | Faz 3'te ayrı bir çözüm gerekir (tek satırlık batch → PANNs BatchNorm eğitimde sorunlu) |
-| Yapay içerik | PANNs'te var (maskesiz) · WavLM Base+'ta var (GroupNorm dolguyu görür; yalnız havuzlama maskeli) · BEATs'te çok küçük (resmi maske; fbank sınır çerçeveleri ve yamanın kısmen dolu satırı) · WavLM Large'da yok | Yok |
+| Yapay içerik | PANNs'te var (maskesiz) · WavLM Base+'ta kısmen var (maske modele verilir; GroupNorm kullanılıyorsa dolguyu görür) · BEATs'te çok küçük (resmi maske; fbank sınır çerçeveleri ve yamanın kısmen dolu satırı) · WavLM Large'da yok | Yok |
 | Etkilenen veri | 17 / 2 393 kayıt (%0.7); en çok 17 katılımcı (%5); her biri füzyonda 7 görevden yalnız 1'i | aynı |
 
 İki politikanın etkisinin büyüklüğü önceden bilinemez; bu yüzden ikisi de hesaplanır ve fark EXP-016S'de (tekrar 0) raporlanır. MFCC kolları etkilenmez (dolgu kavramı yok).
@@ -446,6 +446,13 @@ Kalan küçük iyimserlik: iç OOF tahminleri, C'nin seçildiği aynı iç fold'
 - mfcc_lr: aynı LR. mfcc_mlp: D-032 (StandardScaler → SMOTE → MLP). Doğrusal olmayan bir MFCC tabanına karşı doğrusal gömme probu → karşılaştırma gömmeler aleyhine, muhafazakâr.
 
 ### 9.5 SMK-001 kontrolleri (gerçek checkpoint'ler)
+
+**1. deneme (2026-10-09) sonucu ve düzeltmeler** (EXPERIMENTS.md SMK-001):
+- WavLM Base+: S2 FAIL — sözleşmedeki `return_attention_mask: false` beklentisi yanlıştı (gerçek: true). Sözleşme düzeltildi; kod zaten işlemci değerini izliyor.
+- CNN10, CNN14, CNN14_16k, BEATs: S12 FAIL — fp16 autocast altında ilk adımdan itibaren kayıp sonlu değil. Neden: ön işleme fp16'da taşıyor / alt taşıyor (PANNs log-Mel: `amin=1e-10` fp16'da 0'a yuvarlanır → log10(0) = −∞; güç spektrumu fp16 sınırına yakın. BEATs: dalga × 2¹⁵ → fbank güç spektrumu ≫ 65 504). CPU fp16 autocast ile yeniden üretildi. Düzeltme: ön işleme autocast altında da fp32 (`backbones._fp32_forward`; state_dict değişmez; fp32 gömme çıkarımına etkisi yok). S12 artık her adımı ayrı kaydeder (kayıp, gradyan, ölçek, atlanan adım).
+- Diğer bütün kontroller (S3, S5–S11, S14) beş modelde PASS; S9: PANNs'te "Speech" 1. sırada.
+- Eşik gevşetilmedi; SMK-001 baştan çalıştırılacak.
+
 
 S1 sha256 (Zenodo md5'i indirmede) · S2 sözleşme · S3 strict yükleme · S4 parametre sayısı · S5 şekil / dtype / cihaz / sonluluk · S6 eval determinizmi · S7 batch-değişmezlik (başka katılımcılarla) · S8 son kanca = resmi çıktı · S9 PANNs "Speech" ilk 3'te · S10 aynı-kişi benzerliği · S11 kaydet-yükle · S12 Faz 3 eğitim adımı (bellek, süre) · S13 hız · **S14 dolgu yolu** (tam uzunlukta `lengths` sonucu değiştirmez = PASS ölçütü; kısa parça zeropad vs nopad benzerliği INFO).
 

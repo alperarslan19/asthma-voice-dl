@@ -407,6 +407,7 @@ Bunların hepsi D-025'e girdi.
 | Ağırlıklar | PANNs Zenodo 3987831 (md5 doğrulamalı), WavLM HF (revizyon hash'i), BEATs iter3+ AS2M (OneDrive, elle) |
 | Kod / notebook | `scripts/smoke_test_backbones.py`, `notebooks/20_smoke_tests.ipynb` |
 | Sonuç konumu | `reports/phase2/SMK-001_smoke.{md,json}`; checkpoint sha256'ları Drive `models/MANIFEST.json` |
+| 1. deneme (2026-10-09, T4, torch 2.11, transformers 5.18) | **FAIL.** (1) WavLM Base+ S2: sözleşme `return_attention_mask: false` bekliyordu, gerçek değer true → beklenti yanlıştı (bellekten yazılmış, "doğrulanmalı" işaretliydi); sözleşme düzeltildi. (2) CNN10, CNN14, CNN14_16k, BEATs S12: fp16 eğitim adımında kayıp ilk adımdan itibaren sonlu değil → neden: ön işleme fp16'da taşıyor / alt taşıyor (PANNs log-Mel amin=1e-10 → 0 → log(0); BEATs fbank ×2¹⁵ → taşma); CPU'da yeniden üretildi; düzeltme: ön işleme autocast altında fp32. WavLM Large S12 PASS (13.4 GB, 1.07 s/adım, gradient checkpointing'siz). Diğer kontroller beş modelde PASS; S9 PANNs "Speech" 1. sırada. Eşik gevşetilmedi; SMK-001 baştan çalıştırılacak. Rapor git geçmişinde |
 | Başarısızlık protokolü | FAIL varsa gömme çıkarımı ve EXP-016 başlatılmaz; neden incelenir ve buraya yazılır; eşik gevşetilerek geçirilmez; düzeltmeden sonra SMK-001 baştan çalıştırılır; başarısız rapor git geçmişinde kalır (tasarım belgesi 1.1) |
 
 ## EXP-016 — Dondurulmuş gömme + lineer prob (6 backbone vs 2 MFCC tabanı)
