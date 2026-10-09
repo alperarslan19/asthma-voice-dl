@@ -1,0 +1,296 @@
+{
+  "exp": "EXP-014",
+  "features_sha256": "f2ac9f55ccf9d579",
+  "cells": {
+    "early-AM": {
+      "healthy": 12,
+      "asthma": 76
+    },
+    "early-PM": {
+      "healthy": 46,
+      "asthma": 21
+    },
+    "early-unknown": {
+      "healthy": 0,
+      "asthma": 1
+    },
+    "late-AM": {
+      "healthy": 0,
+      "asthma": 120
+    },
+    "late-PM": {
+      "healthy": 0,
+      "asthma": 65
+    },
+    "unknown-unknown": {
+      "healthy": 1,
+      "asthma": 0
+    }
+  },
+  "summary": [
+    {
+      "variant": "V0 sınıf ağırlığı (tüm veri)",
+      "auc_all": 0.7769,
+      "auc_all_ci": [
+        0.7125207756232688,
+        0.8342579700466668
+      ],
+      "auc_early_period_only": 0.7391,
+      "auc_within_cells_early_AM_PM": 0.7061,
+      "auc_early_AM_cell": 0.7818,
+      "auc_early_PM_cell": 0.6346,
+      "context_reliance_patients_late_vs_early": 0.5564,
+      "context_reliance_patients_AM_vs_PM": 0.5238,
+      "context_reliance_healthy_AM_vs_PM": 0.4638,
+      "n_all": 342,
+      "n_early": 156,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          46
+        ]
+      }
+    },
+    {
+      "variant": "V2 hücre-içi SMOTE (tüm veri)",
+      "auc_all": 0.769,
+      "auc_all_ci": [
+        0.7017404495312075,
+        0.8283627125996261
+      ],
+      "auc_early_period_only": 0.7229,
+      "auc_within_cells_early_AM_PM": 0.7093,
+      "auc_early_AM_cell": 0.7664,
+      "auc_early_PM_cell": 0.6553,
+      "context_reliance_patients_late_vs_early": 0.5866,
+      "context_reliance_patients_AM_vs_PM": 0.5255,
+      "context_reliance_healthy_AM_vs_PM": 0.4275,
+      "n_all": 342,
+      "n_early": 156,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          46
+        ]
+      }
+    },
+    {
+      "variant": "V3 hücre-ters-eğilim ağırlığı (tüm veri)",
+      "auc_all": 0.76,
+      "auc_all_ci": [
+        0.6940832879970983,
+        0.8204005187352563
+      ],
+      "auc_early_period_only": 0.7215,
+      "auc_within_cells_early_AM_PM": 0.7178,
+      "auc_early_AM_cell": 0.7774,
+      "auc_early_PM_cell": 0.6615,
+      "context_reliance_patients_late_vs_early": 0.5623,
+      "context_reliance_patients_AM_vs_PM": 0.5211,
+      "context_reliance_healthy_AM_vs_PM": 0.4257,
+      "n_all": 342,
+      "n_early": 156,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          46
+        ]
+      }
+    },
+    {
+      "variant": "V4 yalnız erken dönem + hücre ağırlığı",
+      "auc_all": 0.7071,
+      "auc_all_ci": [
+        0.6341557160475229,
+        0.7771580700778805
+      ],
+      "auc_early_period_only": 0.6731,
+      "auc_within_cells_early_AM_PM": 0.6486,
+      "auc_early_AM_cell": 0.6996,
+      "auc_early_PM_cell": 0.6004,
+      "context_reliance_patients_late_vs_early": 0.5483,
+      "context_reliance_patients_AM_vs_PM": 0.5159,
+      "context_reliance_healthy_AM_vs_PM": 0.5054,
+      "n_all": 342,
+      "n_early": 156,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          46
+        ]
+      }
+    },
+    {
+      "variant": "V5 yalnız erken dönem + hücre-içi SMOTE",
+      "auc_all": 0.7134,
+      "auc_all_ci": [
+        0.6368378225044405,
+        0.7831915383341217
+      ],
+      "auc_early_period_only": 0.6789,
+      "auc_within_cells_early_AM_PM": 0.6502,
+      "auc_early_AM_cell": 0.6908,
+      "auc_early_PM_cell": 0.6118,
+      "context_reliance_patients_late_vs_early": 0.555,
+      "context_reliance_patients_AM_vs_PM": 0.5138,
+      "context_reliance_healthy_AM_vs_PM": 0.5217,
+      "n_all": 342,
+      "n_early": 156,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          46
+        ]
+      }
+    },
+    {
+      "variant": "ref: bağlam (saat+saat²+tarih)",
+      "auc_all": 0.9299,
+      "auc_all_ci": [
+        0.8988734285356457,
+        0.9568902704380858
+      ],
+      "auc_early_period_only": 0.8132,
+      "auc_within_cells_early_AM_PM": 0.5784,
+      "auc_early_AM_cell": 0.5329,
+      "auc_early_PM_cell": 0.6222,
+      "context_reliance_patients_late_vs_early": 0.9395,
+      "context_reliance_patients_AM_vs_PM": 0.7393,
+      "context_reliance_healthy_AM_vs_PM": 1.0,
+      "n_all": 339,
+      "n_early": 154,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          45
+        ]
+      }
+    },
+    {
+      "variant": "ref: yaş",
+      "auc_all": 0.678,
+      "auc_all_ci": [
+        0.6034557421824939,
+        0.754523868392386
+      ],
+      "auc_early_period_only": 0.6663,
+      "auc_within_cells_early_AM_PM": 0.6489,
+      "auc_early_AM_cell": 0.6853,
+      "auc_early_PM_cell": 0.6138,
+      "context_reliance_patients_late_vs_early": 0.5136,
+      "context_reliance_patients_AM_vs_PM": 0.5112,
+      "context_reliance_healthy_AM_vs_PM": 0.4463,
+      "n_all": 339,
+      "n_early": 154,
+      "n_cells": {
+        "early-AM": [
+          76,
+          12
+        ],
+        "early-PM": [
+          21,
+          45
+        ]
+      }
+    }
+  ],
+  "paired_fusion": [
+    {
+      "comparison": "V2 hücre-içi SMOTE (tüm veri) − V0",
+      "set": "tüm test",
+      "delta_auc": -0.007905611786548472,
+      "ci": [
+        -0.03477220986926304,
+        0.018193163284355662
+      ]
+    },
+    {
+      "comparison": "V2 hücre-içi SMOTE (tüm veri) − V0",
+      "set": "yalnız erken dönem",
+      "delta_auc": -0.016185784658691027,
+      "ci": [
+        -0.05260474287307636,
+        0.019802867383512484
+      ]
+    },
+    {
+      "comparison": "V3 hücre-ters-eğilim ağırlığı (tüm veri) − V0",
+      "set": "tüm test",
+      "delta_auc": -0.016949152542372836,
+      "ci": [
+        -0.05458313328165533,
+        0.02045685815085984
+      ]
+    },
+    {
+      "comparison": "V3 hücre-ters-eğilim ağırlığı (tüm veri) − V0",
+      "set": "yalnız erken dönem",
+      "delta_auc": -0.017593244194229363,
+      "ci": [
+        -0.06768730779327937,
+        0.02986479941071521
+      ]
+    },
+    {
+      "comparison": "V4 yalnız erken dönem + hücre ağırlığı − V0",
+      "set": "tüm test",
+      "delta_auc": -0.0698329041145116,
+      "ci": [
+        -0.1177749390029107,
+        -0.02512238107462078
+      ]
+    },
+    {
+      "comparison": "V4 yalnız erken dönem + hücre ağırlığı − V0",
+      "set": "yalnız erken dönem",
+      "delta_auc": -0.0659746657283602,
+      "ci": [
+        -0.12511170253357728,
+        -0.006520365155408019
+      ]
+    },
+    {
+      "comparison": "V5 yalnız erken dönem + hücre-içi SMOTE − V0",
+      "set": "tüm test",
+      "delta_auc": -0.06354434928430253,
+      "ci": [
+        -0.11344855325833576,
+        -0.01716646405065532
+      ]
+    },
+    {
+      "comparison": "V5 yalnız erken dönem + hücre-içi SMOTE − V0",
+      "set": "yalnız erken dönem",
+      "delta_auc": -0.0601688951442646,
+      "ci": [
+        -0.11981248927590958,
+        -0.0007048816568048468
+      ]
+    }
+  ],
+  "runtime_s": 157.5
+}

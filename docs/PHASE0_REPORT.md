@@ -6,7 +6,7 @@
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
-| Son güncelleme | 2026-10-09 (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-09 (11. tur): metodoloji soruları — EXP-013/014/015, `docs/IMBALANCE_AND_SELECTION.md`, D-033 önerildi. Önceki (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -642,29 +642,24 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 ---
 
-## 12. Durum raporu (10. tur — Faz 1 bitti)
+## 12. Durum raporu (11. tur — metodoloji soruları)
 
-- **Ne yaptık?**
-  - EXP-010 ve EXP-011 Colab'da çalıştı.
-  - Sonuçları ayrıştırmak için keşifsel EXP-012 yapıldı (`scripts/analyze_mfcc_results.py`).
+- **Ne yaptık?** Alper'in sorularına üç keşifsel analizle cevap verildi (`docs/IMBALANCE_AND_SELECTION.md`):
+  - EXP-013: etiket dengesizliği yöntemleri;
+  - EXP-014: bağlam dengesizliğini SMOTE / ağırlıkla düzeltme denemesi;
+  - EXP-015: makalenin model seçim prosedürü için iç içe CV.
 - **Ne öğrendik?**
-  - Makalenin sayısı bizim veride yeniden üretiliyor.
-  - Makalenin görevler arası farkları ve "en iyi model" etiketleri split şansı ve seçim düzeyinde.
-  - Dürüst MFCC tabanı:
-    - tek kayıt ≈ yaş (0.64–0.69 vs 0.68);
-    - 7 kaydın füzyonu 0.771 [0.713–0.836];
-    - yaştan farkı +0.095 [+0.008, +0.185], belirsiz;
-    - bağlamın (0.934) belirgin altında.
-  - Harmonizasyon ortalamayı değiştirmedi; ses düzeyi (c0) bilgisini sildi.
-  - SVM / GB eşik metrikleri hatalı (0.5 eşiği; AUC etkilenmez).
-- **Hangi kararları aldık?** D-032 önerildi: güçlü ikinci taban (MLP, EXP-013), iç doğrulama eşiği, birincil birim = füzyon.
+  - Makalenin prosedürü dürüstçe 0.654 veriyor (makale 0.709; EXP-011 LR 0.660). Seçim iyimserliği çıkarılınca bulgularımız makaleyle uyumlu. Seçim kararsız.
+  - SMOTE, sınıf ağırlığı ve hiçbiri aynı AUC'yi veriyor; düzeltmeler kalibrasyonu bozuyor. Eşik iç CV'den seçilince düzeltmeye gerek kalmıyor.
+  - Bağlam dengeleme daha iyi bir taban üretmiyor. Geç dönemde sağlıklı olmadığı için SMOTE dengeleyemez; yalnız örtüşmede eğitim AUC'yi ~0.07 düşürüyor.
+  - MFCC + LR bağlama zayıf bağımlı. Kaba bağlam sabitken füzyon 0.706 (yaş 0.649, bağlam 0.578); bu bir hipotez.
+- **Hangi kararları aldık?** D-033 önerildi: SMOTE yok, eşik iç 5-fold OOF'tan, kalibrasyon raporlanır, bağlam dengeleme eğitimde yok, seçim önceden ya da iç içe. D-032 güncellendi (MLP ≈ LR).
 - **Hangi belirsizlikler kaldı?**
-  - Füzyon kazancının ne kadarı astım, ne kadarı seans / bağlam bilgisi? Değerlendirme aşamasında (D-028).
-  - Tek görevlerde doğrusal olmayan modellerin üstünlüğü bir hipotez (EXP-012 D).
-- **Bir sonraki minimum gerekli adım:**
-  1. D-032 onaylanırsa EXP-013: birkaç dakika, yerelde ya da Colab'da.
-  2. Faz 2 tasarımı: model kaynaklarının doğrulanması, smoke test'ler, dondurulmuş gömme çıkarımı, EXP-011 ile aynı protokolde lineer prob.
+  - Analizler MFCC özellikleriyle yapıldı; derin gömmelerde sonuç farklı olabilir.
+  - Hücre-içi AUC'deki sinyalin ne kadarının yaş olduğu.
+- **Bir sonraki minimum gerekli adım:** D-032 / D-033 onayı → Faz 2 tasarımı.
 
+*Önceki (10. tur):* MFCC sonuçları (EXP-010/011), EXP-012, D-032 önerildi.
 *Önceki (9. tur):* önbellek doğrulandı; MFCC kodu (D-031).
 *Daha önce (7. tur):* confounder ayrı başlık (D-028), D-015/D-016 kabul, split dosyaları (D-029).
 *Daha önce (6. tur):* confounder kontrol yöntemlerinin değerlendirmesi (`docs/CONFOUND_CONTROL_DESIGN.md`), EXP-004/004b, tasarım referans çizgileri, SIM-001, D-025/026/027 önerildi.

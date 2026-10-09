@@ -597,7 +597,8 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçla
   1. **RQ1 için iki MFCC tabanı.**
      - Birincil taban değişmiyor: EXP-011 LR.
      - Önceden belirlenmiş tek bir doğrusal olmayan model eklenir: **MLP**, makale pipeline'ı (StandardScaler → SMOTE → varsayılan MLPClassifier).
-     - Önbellek özellikleri, aynı split dosyaları, görev başına + füzyon, OOF saklanır → **EXP-013**.
+     - Önbellek özellikleri, aynı split dosyaları, görev başına + füzyon, OOF saklanır.
+     - **11. tur notu:** MLP sonuçları EXP-013'te (dengesizlik analizi) hesaplandı. Füzyon AUC'si 0.786–0.790; LR füzyonu 0.776–0.778; fark anlamlı değil. MLP ikinci taban olarak raporlanabilir ama çıtayı pratikte değiştirmiyor.
      - "Derin model MFCC'den iyi" iddiası, ikisini de aynı fold'larda eşleştirilmiş ΔAUC ile geçmeyi gerektirir (D-011).
   2. **Eşik metrikleri iç doğrulamadan.**
      - Bundan sonraki bütün deneylerde eşik, iç doğrulama kümesinde (`is_inner_val`) dengeli doğruluğu en yükselten değer olarak seçilir ve test fold'una uygulanır (D-009'un uygulanışı).
@@ -618,4 +619,27 @@ DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçla
   - İç doğrulamada ~9 sağlıklı var → eşik gürültülü olur. Dengeli doğruluk bu yüzden ikincil metrik kalır.
   - Füzyon, aynı seansın 7 kaydını birleştirdiği için seans / bağlam bilgisini de güçlendirebilir. Değerlendirme aşamasında (D-028) özellikle füzyon skorları test edilmeli.
 - **BİLİMSEL SONUÇ:** RQ1 karşılaştırması zayıf bir tabana karşı yapılmaz. Eşik metrikleri yanıltıcı olmaz. Birincil sonuç katılımcı düzeyindedir.
-- **UYGULAMA:** EXP-013 (`run_mfcc_baselines.py`'ye MLP modeli ve iç doğrulama eşiği eklenir); Faz 2 prob kodu aynı değerlendirme fonksiyonlarını kullanır.
+- **UYGULAMA:** EXP-013'teki MLP sonuçları (`scripts/analyze_imbalance_selection.py`); eşik seçimi D-033'teki iç 5-fold OOF yöntemiyle; Faz 2 prob kodu aynı değerlendirme fonksiyonlarını kullanır.
+
+## D-033 — Dengesizlik ve seçim politikası: SMOTE yok, eşik iç CV'den, kalibrasyon raporlanır, bağlam dengeleme eğitimde yok, seçim önceden ya da iç içe
+DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (11. tur) · Ayrıntı: `docs/IMBALANCE_AND_SELECTION.md` · Kanıt: EXP-013, EXP-014, EXP-015 (keşifsel) · D-032'nin 2. maddesini iyileştirir
+- **KARAR:**
+  1. **Etiket dengesizliği.** SMOTE kullanılmaz; tek istisna EXP-010'daki makale taklidi. Klasik modellerde sınıf ağırlığı, derin modellerde ağırlıklı BCE kullanılır. Focal / LDAM / logit ayarlaması gerekmiyor.
+  2. **Eşik.** Her dış fold'da, eğitim katılımcılarının **iç 5-fold OOF** tahminlerinde dengeli doğruluğu en yükselten eşik seçilir ve teste uygulanır. Bu, D-032'deki "yalnız iç doğrulama kümesi"nden (~9 sağlıklı) daha az gürültülüdür.
+  3. **Kalibrasyon.** Brier, ortalama tahmin − gerçek oran ve kalibrasyon eğimi her deneyde raporlanır. Klinik olasılık gerekirse iç CV'de yeniden kalibre edilir.
+  4. **Kayıt bağlamı.** Eğitim düzeyinde dengeleme (hücre-içi SMOTE, ters eğilim ağırlığı, Group DRO, yalnız örtüşmede eğitim) birincil hatta yapılmaz. Değerlendirme aşamasında yalnız örtüşme bölgesinde ve yalnız duyarlılık analizi olarak yer alabilir (D-026, D-028).
+  5. **Model / backbone / görev seçimi.** Faz 2 ve 3'te seçim ya önceden sabitlenir (D-032: birincil birim füzyon) ya da iç içe CV ile yapılır. Seçilmeyen bütün konfigürasyonlar raporlanır.
+- **NEDEN:**
+  - EXP-013: SMOTE ve sınıf ağırlığı AUC'yi değiştirmiyor, kalibrasyonu bozuyor. Literatürle aynı: van den Goorbergh ve ark. 2022 (AUC iyileşmez, azınlık olasılığı fazla tahmin edilir, eşik kaydırmak aynı etkiyi verir); Blagus & Lusa 2013 (yüksek boyutta sınırlı fayda). [FROM PAPER + FACT]
+  - EXP-014: bağlam dengeleme tüm veride fark yaratmıyor; yalnız örtüşmede eğitim AUC'yi ~0.07 düşürüyor. Geç dönemde sağlıklı olmadığı için tam dengeleme imkânsız (pozitiflik). [FACT]
+  - EXP-015: makalenin seçim prosedürünün iç içe tahmini (sayılar EXP-015 raporunda); seçim iyimserliği Faz 2'de de oluşur. [FACT + FROM PAPER: Cawley & Talbot 2010; Varma & Simon 2006]
+- **ALTERNATİFLER:**
+  - SMOTE'u makaleyle uyum için bütün deneylerde tutmak: kalibrasyon kaybı, sentetik veri, ham seste anlamsız.
+  - Hiç düzeltme yapmayıp yalnız eşiği ayarlamak: klasik modellerde eşdeğer, ama derin modellerde ağırlıksız eğitim azınlık gradyanını zayıflatabilir.
+  - Group DRO'yu birincil yapmak: 12 kişilik grup, aşırı uyum.
+- **RİSK:**
+  - Ağırlıklı BCE de kalibrasyonu kaydırır → raporlanır ve gerekirse düzeltilir.
+  - İç CV eşiği hâlâ ~47 sağlıklıya dayanır.
+  - EXP-013/014/015 keşifseldir; MFCC özelliklerinde geçerli olan sonuç derin gömmelerde farklı olabilir. [HYPOTHESIS]
+- **BİLİMSEL SONUÇ:** Dengesizlik düzeltmesi ayırma iddiası gibi sunulmaz. Seçim iyimserliği ve split şansı bütün aşamalarda kontrol altında tutulur.
+- **UYGULAMA:** Faz 2 prob kodu ve Faz 3 eğitim döngüsü; `scripts/analyze_imbalance_selection.py` (referans uygulama).

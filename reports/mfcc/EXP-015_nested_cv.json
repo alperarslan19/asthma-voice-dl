@@ -1,0 +1,148 @@
+{
+  "exp": "EXP-015",
+  "features_sha256": "b94da5c9712ea8f6",
+  "models": [
+    "AdaBoost",
+    "DecisionTree",
+    "GradientBoosting",
+    "KNN",
+    "LogisticRegression",
+    "MLP",
+    "NaiveBayes",
+    "RandomForest",
+    "SVM",
+    "XGBoost"
+  ],
+  "per_task": [
+    {
+      "task": "aaa",
+      "nested_auc_mean": 0.6929,
+      "nested_auc_sd": 0.0782,
+      "best_fixed_model_25folds": "MLP",
+      "best_fixed_auc_mean": 0.6987,
+      "oracle_per_fold_mean": 0.7263,
+      "selection_frequency": {
+        "LogisticRegression": 14,
+        "MLP": 11
+      },
+      "median_model_auc_mean": 0.6096
+    },
+    {
+      "task": "araba",
+      "nested_auc_mean": 0.5985,
+      "nested_auc_sd": 0.0667,
+      "best_fixed_model_25folds": "XGBoost",
+      "best_fixed_auc_mean": 0.6386,
+      "oracle_per_fold_mean": 0.6863,
+      "selection_frequency": {
+        "LogisticRegression": 8,
+        "XGBoost": 6,
+        "MLP": 4,
+        "KNN": 2,
+        "AdaBoost": 2,
+        "RandomForest": 1,
+        "SVM": 1,
+        "GradientBoosting": 1
+      },
+      "median_model_auc_mean": 0.6008
+    },
+    {
+      "task": "ana",
+      "nested_auc_mean": 0.6298,
+      "nested_auc_sd": 0.0656,
+      "best_fixed_model_25folds": "XGBoost",
+      "best_fixed_auc_mean": 0.6616,
+      "oracle_per_fold_mean": 0.7043,
+      "selection_frequency": {
+        "XGBoost": 7,
+        "SVM": 7,
+        "LogisticRegression": 6,
+        "KNN": 1,
+        "GradientBoosting": 1,
+        "AdaBoost": 1,
+        "MLP": 1,
+        "RandomForest": 1
+      },
+      "median_model_auc_mean": 0.6267
+    },
+    {
+      "task": "ordu",
+      "nested_auc_mean": 0.6441,
+      "nested_auc_sd": 0.0823,
+      "best_fixed_model_25folds": "SVM",
+      "best_fixed_auc_mean": 0.6835,
+      "oracle_per_fold_mean": 0.7292,
+      "selection_frequency": {
+        "SVM": 11,
+        "XGBoost": 5,
+        "RandomForest": 2,
+        "MLP": 2,
+        "AdaBoost": 2,
+        "LogisticRegression": 1,
+        "GradientBoosting": 1,
+        "KNN": 1
+      },
+      "median_model_auc_mean": 0.6414
+    },
+    {
+      "task": "gelecek",
+      "nested_auc_mean": 0.6806,
+      "nested_auc_sd": 0.0891,
+      "best_fixed_model_25folds": "MLP",
+      "best_fixed_auc_mean": 0.7024,
+      "oracle_per_fold_mean": 0.7588,
+      "selection_frequency": {
+        "XGBoost": 9,
+        "MLP": 8,
+        "GradientBoosting": 5,
+        "AdaBoost": 2,
+        "RandomForest": 1
+      },
+      "median_model_auc_mean": 0.682
+    },
+    {
+      "task": "titiz",
+      "nested_auc_mean": 0.6668,
+      "nested_auc_sd": 0.0939,
+      "best_fixed_model_25folds": "SVM",
+      "best_fixed_auc_mean": 0.694,
+      "oracle_per_fold_mean": 0.7423,
+      "selection_frequency": {
+        "SVM": 10,
+        "MLP": 8,
+        "GradientBoosting": 3,
+        "RandomForest": 2,
+        "XGBoost": 1,
+        "NaiveBayes": 1
+      },
+      "median_model_auc_mean": 0.6566
+    },
+    {
+      "task": "ünlem",
+      "nested_auc_mean": 0.6641,
+      "nested_auc_sd": 0.0707,
+      "best_fixed_model_25folds": "MLP",
+      "best_fixed_auc_mean": 0.7041,
+      "oracle_per_fold_mean": 0.7593,
+      "selection_frequency": {
+        "XGBoost": 8,
+        "MLP": 7,
+        "AdaBoost": 7,
+        "LogisticRegression": 1,
+        "SVM": 1,
+        "RandomForest": 1
+      },
+      "median_model_auc_mean": 0.6743
+    }
+  ],
+  "nested_fusion": {
+    "auc_mean": 0.7342803979646084,
+    "auc_sd": 0.08653816237294139,
+    "pooled_auc": 0.7588189495118883,
+    "ci": [
+      0.689985052836485,
+      0.8219451056523935
+    ]
+  },
+  "runtime_s": 1224.4
+}
