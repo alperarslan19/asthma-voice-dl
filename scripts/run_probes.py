@@ -511,6 +511,10 @@ def report_md(exp, rep, summ) -> str:
          f"**Rol:** {rep['role']}  ", "**Üst sınır uyarısı (D-028):** bütün AUC'ler kayıt bağlamı değerlendirilmeden hesaplandı. "
          "Aynı fold'larda yalnız bağlam (saat + saat² + tarih) ve yalnız yaş referansları aşağıda.", "",
          f"Split: {rep['split_files']} · tekrar: {rep['n_repeats']} · test/train oranı (Nadeau–Bengio): {rep['test_train_ratio']:.3f}", "",
+         f"**İstatistik notu:** Bütün Nadeau–Bengio (NB) testleri {rep['n_repeats'] * 5} fold skoruna ({rep['n_repeats']} tekrar × 5 dış fold) "
+         "uygulanır. Bu skorlar **bağımsız değildir**: aynı tekrardaki fold'ların eğitim kümeleri büyük ölçüde örtüşür ve tekrarlar aynı "
+         "katılımcıları yeniden böler. NB düzeltmesi (varyansa n_test/n_train terimi eklenir) bu bağımlılığı kabaca telafi eden sezgisel "
+         f"bir düzeltmedir; df = {rep['n_repeats'] * 5 - 1} yaklaşıktır. Düz t-testi burada fazla iyimser olurdu.", "",
          "Değerlendirme birimi: **katılımcı**. Bütün kollar aynı split dosyalarında, aynı dış test katılımcılarında "
          "değerlendirildi (assert). Kayıt bağlamı / süre gibi meta veri karşılaştırmaları bu raporda yok → META-016.", "",
          "## Füzyon (katılımcı düzeyi; 7 görev olasılığının ortalaması) — betimsel", "",
@@ -524,9 +528,13 @@ def report_md(exp, rep, summ) -> str:
                  f"{r.sens_mean:.2f} / {r.spec_mean:.2f} | {r.brier:.3f} | {r.mean_pred_minus_prev:+.3f} | {r.calib_slope:.2f} |")
     if rep.get("confirmatory"):
         L += ["", "## A. Önceden belirlenmiş onaylayıcı analiz (RQ1; D-034 madde 6) — backbone füzyonu vs iki MFCC tabanı", "",
-              f"Nadeau–Bengio düzeltilmiş t ({rep['n_repeats'] * 5} fold). Yönlü iddia (backbone > MFCC) için **tek yönlü** p; kesişim-birleşim "
-              f"p = max(p_LR, p_MLP); Holm (6); eşik {ALPHA_ONE_SIDED} (iki yönlü 0.05'in pozitif yarısı). "
-              "\"Destekleniyor\" ayrıca iki bootstrap CI'ının da 0'ı dışlamasını gerektirir. Parantez içinde iki yönlü p. "
+              f"NB düzeltilmiş t ({rep['n_repeats'] * 5} bağımsız olmayan fold skoru; yukarıdaki not). Yönlü iddia (backbone > MFCC) için "
+              f"**tek yönlü** p; kesişim-birleşim p = max(p_LR, p_MLP); Holm (6); Holm-düzeltilmiş p **{ALPHA_ONE_SIDED}** ile karşılaştırılır. "
+              f"Bu eşik sonuçlar görülmeden belirlenmiş, muhafazakâr bir karar eşiğidir: altı backbone'dan en az birini yanlışlıkla "
+              f"\"MFCC'den iyi\" ilan etme olasılığını (aile bazında) en çok {ALPHA_ONE_SIDED}'te tutar; tek bir test için iki yönlü 0.05'in "
+              "pozitif kuyruğuna karşılık gelir ve \"daha iyi\" kararları için iki yönlü Holm 0.05'ten hiçbir zaman gevşek değildir "
+              "(docs/PHASE2_DESIGN.md 5.3a). \"Destekleniyor\" ayrıca iki bootstrap CI'ının da 0'ı dışlamasını gerektirir. "
+              "Parantez içinde iki yönlü p (tek yönlü test \"daha kötü\"yü kanıtlayamaz; negatif farklar betimsel olarak korunur). "
               "Destek: havuzlanmış ΔAUC katılımcı bootstrap CI ve tekrar başına DeLong (iki yönlü, medyan p).", "",
               "| backbone | ΔAUC vs mfcc_lr: fold ort. · havuz [%95 CI] · tek yönlü p (iki yönlü) | ΔAUC vs mfcc_mlp: aynı | kesişim-birleşim p | Holm p | DeLong medyan p (LR / MLP) | sonuç |",
               "|---|---|---|---|---|---|---|"]
@@ -539,8 +547,12 @@ def report_md(exp, rep, summ) -> str:
         head = {"EXP-016S": "## Önceden belirlenmiş duyarlılık: kısa kayıtlarda diğer dolgu politikası − birincil (füzyon, tekrar 0)",
                 "EXP-018": "## Önceden listelenmiş keşifsel karşılaştırma: tüm kayıt − 4 s pencere (füzyon)"}.get(
             exp, "## B. Önceden listelenmiş keşifsel karşılaştırmalar (füzyon; Holm aile içinde; yorum keşifsel)")
-        L += ["", head, "",
-              "| a − b | fold ort. Δ ± SD | havuzlanmış Δ [%95 CI] | NB p | Holm p |", "|---|---|---|---|---|"]
+        L += ["", head, ""]
+        if exp == "EXP-016":
+            L += ["Yorum: farklı **hazır ses temsillerinin** karşılaştırması. Modeller ön-eğitim hedefi, etiket kullanımı (BEATs iter3+ "
+                  "AudioSet etiketlerini tokenizer öğretmeni üzerinden dolaylı kullanır), veri alanı, mimari, boyut ve bant genişliğinde aynı "
+                  "anda farklıdır; ön-eğitim yöntemi hakkında çıkarım yapılmaz (docs/PHASE2_DESIGN.md 9.6).", ""]
+        L += ["| a − b | fold ort. Δ ± SD | havuzlanmış Δ [%95 CI] | NB p | Holm p |", "|---|---|---|---|---|"]
         for c in rep["exploratory_pairs"]:
             L.append(f"| {c['a']} − {c['b']} | {c['fold_delta_mean']:+.3f} ± {c['fold_delta_sd']:.3f} | "
                      f"{c['pooled_delta']:+.3f} [{c['boot_ci_low']:+.3f}, {c['boot_ci_high']:+.3f}] | {c['nb_p']:.3f} | {c.get('holm_p', np.nan):.3f} |")

@@ -92,7 +92,7 @@ beats:
   expect: {encoder_layers: 12, encoder_embed_dim: 768, input_patch_size: 16, finetuned_model: false}
   layer_capture: "encoder.layers[i] forward hook → çıktı[0] (T×B×C); katman 0 = layers[0] girdisi (pre-hook). Resmi API ara katmanları yalnız tgt_layer verilince döndürür."   # verified
   output: "(batch, n_patches, 768) -> yalnız geçerli (dolgu olmayan) yamalar üzerinden ortalama; maske extract_features'ın ikinci çıktısı"
-  supervision_note: "iter3+ tokenizer'ı gözetimli (AudioSet etiketli) bir öğretmenden damıtılmış olabilir"   # needs_verification
+  supervision_note: "iter3+ (AS2M): tokenizer, AudioSet etiketleriyle fine-tune edilmiş bir BEATs öğretmeninden damıtıldı → AS-2M etiketleri ön-eğitime dolaylı girer; 'saf öz-gözetimli' değil"   # verified (13. tur): BEATs makalesi arXiv 2212.09058, Bölüm 4.2 ve Tablo 2 dipnotu "We use AS-2M supervised data during pre-training"
   download_note: "OneDrive -> bir kez indir, Drive/models/BEATs_iter3_plus_AS2M.pt, sha256 SMK-001'de kaydedilir"
   torchaudio_note: "torchaudio.compliance.kaldi gerekir; yerelde torchaudio 2.11 ile çalıştı (12. tur). Colab sürümünde SMK-001 import'u doğrular"   # needs_verification (Colab)
 
@@ -112,7 +112,7 @@ wavlm_base_plus:
   padding_note: "feat_extract_norm=group: özellik kodlayıcının GroupNorm'u bütün girdi (dolgu dahil) üzerinden normalize eder; HF önerisiyle maske modele verilmez → dolgu gerçek çerçeveleri de etkiler; yalnız havuzlama maskelidir (D-034 madde 1)"
   layer_capture: "encoder.layers[i] forward hook → çıktı[0] (B×T×C); katman 0 = layers[0] girdisi. transformers sürümleri arasında hidden_states anlamı değişebildiği için (v5 kayıt kancaları) kendi kancalarımız kullanılır"
   training_time_config: {mask_time_prob: 0.05, layerdrop: 0.05}   # needs_verification: SMK-001 config'ten okur; Faz 3'te apply_spec_augment=False (D-016)
-  pretraining: "94k h English speech (Libri-Light, GigaSpeech, VoxPopuli), self-supervised"
+  pretraining: "94k h English speech (~60k Libri-Light, ~10k GigaSpeech, ~24k VoxPopuli), self-supervised: masked speech prediction + denoising; targets = k-means pseudo-labels from HuBERT Base iter-2 layer 9; no transcripts"   # verified (13. tur): WavLM makalesi arXiv 2110.13900
   representation_plan: "Faz 2: katman 1..L'nin z-skorlu eşit ortalaması (D-034); Faz 3: öğrenilmiş ağırlıklı toplam düşünülebilir"
 
 wavlm_large:

@@ -309,7 +309,14 @@ def to_md(rep: dict) -> str:
             c["S9_speech_class"].get("speech_rank", "—"), c["S10_same_person"]["auc_same_vs_diff_person"],
             c["S11_save_load"]["status"], s12v, c["S13_speed"]["windows_per_s"])
                  + f" {c['S14_padding_path']['status']}; {c['S14_padding_path']['short_nopad_vs_zeropad_cos_min']} |")
-    L += ["", "Ayrıntılar (parametre sayısı, sha256, yükleme yöntemi, config) JSON'da. FAIL olan bir backbone için çıkarım başlatılmaz."]
+    L += ["", "Ayrıntılar (parametre sayısı, sha256, yükleme yöntemi, config) JSON'da."]
+    if rep["random_init"]:
+        L += ["", "**Bu bir birim testidir.** Rastgele küçük modeller kod yollarını sınar; resmi ağırlıkların doğruluğunu göstermez. "
+              "SMK-001'in yerine geçmez."]
+    else:
+        L += ["", "**Kural (docs/PHASE2_DESIGN.md 1.1):** FAIL olan bir backbone varsa gömme çıkarımı ve EXP-016 başlatılmaz. "
+              "Önce neden incelenir (JSON'daki değerler), düzeltilir, EXPERIMENTS.md'ye yazılır ve SMK-001 baştan çalıştırılır. "
+              "Eşik gevşetilerek geçirme yapılmaz. Bu rapor birim testlerinden (UNITTEST_random_init_smoke) ayrıdır."]
     return "\n".join(L) + "\n"
 
 

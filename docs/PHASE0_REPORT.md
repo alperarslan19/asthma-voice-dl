@@ -653,8 +653,8 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
   - Meta veri / confounder karşılaştırmaları ayrı rapora (META-016) taşındı.
   - Gerçek checkpoint'li SMK-001 ile rastgele küçük modelli birim testleri ayrıldı (rapor adları farklı).
   - Kilitli kurallar (R1–R12) ve sonuçlara göre yapılabilecek keşifsel analizler ayrı bölümlerde.
-- **Hangi karar onay bekliyor?** D-034 (revize; özellikle madde 1, kısa kayıt politikası).
-- **Bir sonraki minimum gerekli adım:** D-034 onayı → PR birleştir → BEATs ağırlığı → `20_smoke_tests.ipynb` (SMK-001, gerçek checkpoint'ler).
+- **Kararlar:** D-034 KABUL (birincil kısa kayıt politikası zeropad; nopad duyarlılık; süre ipuçlarının ortadan kalktığı varsayılmaz). D-035 KABUL (fold başına seçim). Son ekler: Holm sonrası 0.025 eşiğinin gerekçesi, Nadeau–Bengio'nun bağımsız olmayan 25 fold skoruna uygulandığı, SMK-001 başarısızlık protokolü, ön-eğitim kaynakları (BEATs iter3+ AudioSet etiketlerini dolaylı kullanır → RQ3 hazır temsillerin karşılaştırması).
+- **Bir sonraki minimum gerekli adım:** PR birleştir → BEATs ağırlığı → `20_smoke_tests.ipynb` (SMK-001, gerçek checkpoint'ler) → SMK-001 raporunu birlikte okumak.
 
 *Önceki (12. tur — Faz 2 tasarımı):*
 
