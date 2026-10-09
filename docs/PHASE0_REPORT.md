@@ -6,7 +6,7 @@
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
-| Son güncelleme | 2026-10-09 (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-09 (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -573,6 +573,13 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 ## 8. Baseline yeniden üretimi (MFCC) — plan
 
+**10. tur — sonuçlar** (`reports/mfcc/`, EXPERIMENTS.md EXP-010/011/012):
+- EXP-010 makalenin aralığını yeniden üretti: "en iyi" modellerin ortalaması 0.702 (makale 0.709 / 0.695).
+- Dürüst protokolde (EXP-011) tek kayıt LR 0.64–0.69, yani yaş-only (0.68) düzeyinde. 7 kaydın füzyonu 0.771 [0.713–0.836]. Aynı fold'larda bağlam-only 0.934.
+- Seçim iyimserliği ortalama ~0.02. Tek-split şansı görev başına ±0.05.
+- Harmonizasyon ortalama performansı değiştirmedi.
+- Öneriler: D-032.
+
 **9. tur:** Kod ve sahte veriyle test hazır. Uygulama ayrıntıları D-031'de, önceden yazılmış beklentiler EXPERIMENTS.md'de. Çalıştırma: `notebooks/10_mfcc_baseline.ipynb` (Colab CPU, ~2 saat). EXP-011'in birincil modeli LR: derin gömmelerdeki lineer probla aynı sınıflandırıcı. EXP-011'in girdisi harmonize önbellek: derin modellerle aynı girdi.
 
 - **EXP-010 — Sadık yeniden üretim:** görev başına; 22.05 kHz; enerji tabanlı kırpma (parametre makalede yok → belgelenmiş seçim); 12 MFCC + Δ + ΔΔ (2048/512, Hamming) zaman ortalaması + 8 spektral özet = 44; StratifiedKFold(5, shuffle, seed 42) katılımcı düzeyinde; fold içinde StandardScaler + SMOTE; makaledeki sınıflandırıcılar varsayılan ayarlarla. Hedef: makaledeki AUC aralığına (≈0.65–0.77) fold SD'si içinde ulaşmak. Ulaşılamazsa nedenleri (bilinmeyen detaylar) rapora yazılır — bu da bir sonuçtur.
@@ -635,26 +642,30 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 ---
 
-## 12. Durum raporu (9. tur — Faz 1)
+## 12. Durum raporu (10. tur — Faz 1 bitti)
 
 - **Ne yaptık?**
-  - Ses önbelleği Colab'da üretildi, sha256 ile doğrulandı ve dinlendi (D-030; `reports/audio_cache/`).
-  - MFCC baseline'ları tasarlandı ve yazıldı (D-031):
-    - özellik çıkarımı `scripts/extract_mfcc_features.py` (makale ve önbellek modları);
-    - değerlendirme `scripts/run_mfcc_baselines.py` (EXP-010 / EXP-011);
-    - test `tests/test_mfcc_pipeline.py` (7 kontrol geçti);
-    - notebook `notebooks/10_mfcc_baseline.ipynb`.
-  - EXP-010 ve EXP-011 beklentileriyle birlikte önceden kaydedildi.
+  - EXP-010 ve EXP-011 Colab'da çalıştı.
+  - Sonuçları ayrıştırmak için keşifsel EXP-012 yapıldı (`scripts/analyze_mfcc_results.py`).
 - **Ne öğrendik?**
-  - Önbellek tahminle birebir uyuştu: kalan süre medyan 10.26 s, en kısa 2.28 s, 17 kayıt < 4 s, 4.6 GB.
-  - Filtre, bant genişliğinden zincir ayrımını 0.865'ten 0.486'ya indirdi; filtre sonrası bütün kayıtlar 11.07–11.13 kHz.
-  - Normalizasyon kazancı medyan +6.3 dB, en fazla +28 dB (çok sessiz birkaç kayıt).
-- **Hangi kararları aldık?** D-031 (uygulama ayrıntısı; EXP-011 birincil modeli LR).
+  - Makalenin sayısı bizim veride yeniden üretiliyor.
+  - Makalenin görevler arası farkları ve "en iyi model" etiketleri split şansı ve seçim düzeyinde.
+  - Dürüst MFCC tabanı:
+    - tek kayıt ≈ yaş (0.64–0.69 vs 0.68);
+    - 7 kaydın füzyonu 0.771 [0.713–0.836];
+    - yaştan farkı +0.095 [+0.008, +0.185], belirsiz;
+    - bağlamın (0.934) belirgin altında.
+  - Harmonizasyon ortalamayı değiştirmedi; ses düzeyi (c0) bilgisini sildi.
+  - SVM / GB eşik metrikleri hatalı (0.5 eşiği; AUC etkilenmez).
+- **Hangi kararları aldık?** D-032 önerildi: güçlü ikinci taban (MLP, EXP-013), iç doğrulama eşiği, birincil birim = füzyon.
 - **Hangi belirsizlikler kaldı?**
-  - Makaledeki kırpma eşiği ve fold atamaları bilinmiyor → birebir aynı sayı beklenmiyor.
-  - Kütüphane sürümleri makaleden farklı.
-- **Bir sonraki minimum gerekli adım:** Colab'da `10_mfcc_baseline.ipynb` (CPU, ~2 saat; kaldığı yerden devam eder) → sonuç PR'ı → sonuçların yorumu. Ardından Faz 2: smoke test'ler ve dondurulmuş gömmeler.
+  - Füzyon kazancının ne kadarı astım, ne kadarı seans / bağlam bilgisi? Değerlendirme aşamasında (D-028).
+  - Tek görevlerde doğrusal olmayan modellerin üstünlüğü bir hipotez (EXP-012 D).
+- **Bir sonraki minimum gerekli adım:**
+  1. D-032 onaylanırsa EXP-013: birkaç dakika, yerelde ya da Colab'da.
+  2. Faz 2 tasarımı: model kaynaklarının doğrulanması, smoke test'ler, dondurulmuş gömme çıkarımı, EXP-011 ile aynı protokolde lineer prob.
 
+*Önceki (9. tur):* önbellek doğrulandı; MFCC kodu (D-031).
 *Daha önce (7. tur):* confounder ayrı başlık (D-028), D-015/D-016 kabul, split dosyaları (D-029).
 *Daha önce (6. tur):* confounder kontrol yöntemlerinin değerlendirmesi (`docs/CONFOUND_CONTROL_DESIGN.md`), EXP-004/004b, tasarım referans çizgileri, SIM-001, D-025/026/027 önerildi.
 *Önceki (5. tur):* kayıt bağlamı analizi (EXP-003), D-021 kesimi 11.0 kHz, D-023, D-024.

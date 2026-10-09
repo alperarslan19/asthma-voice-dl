@@ -196,7 +196,7 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (planlandı) |
-| DURUM | Planlandı — kod ve test hazır; Colab'da `notebooks/10_mfcc_baseline.ipynb` |
+| DURUM | **Tamamlandı** (2026-10-09, Colab CPU; scikit-learn 1.6.1, librosa 0.11.0) |
 | Araştırma sorusu | RQ1 tabanı — Makalenin tarifi ve protokolü bizim veride aynı AUC aralığını (≈0.65–0.77) veriyor mu? |
 | Beklenti (önceden) | Makale kuralıyla seçilen "en iyi" modeller 0.65–0.77 aralığında. 14 modelin medyanı bundan ~0.03–0.06 düşük (seçim iyimserliği). Fold SD ~0.05–0.10 [HYPOTHESIS] |
 | Veri | Orijinal `.m4a` → 22.05 kHz → `librosa.effects.trim(top_db=60)` → 44 özellik (D-031); 342 katılımcı, görev başına 342 (görev 4: 341) |
@@ -210,13 +210,33 @@ Bunların hepsi D-025'e girdi.
 - Ulaşılamazsa: farkın olası nedenleri yazılır (bilinmeyen kırpma eşiği, 2 eksik katılımcı, kütüphane sürümleri). Bu da bir sonuçtur.
 - Her durumda sonuç bir **üst sınırdır** (D-028).
 
+**Sonuçlar** (342 katılımcı; görev başına 342, görev 4: 341; tam tablo `reports/mfcc/EXP-010_mfcc.md`):
+
+| görev | makale kuralıyla "en iyi" (AUC ort ± SD) | 14 modelin medyanı | makale Tablo 4 / Tablo 2 |
+|---|---|---|---|
+| aaa | MLP 0.725 ± 0.051 | 0.614 | 0.700 / 0.649 |
+| araba | LR 0.686 ± 0.036 | 0.663 | 0.656 / 0.704 |
+| ana | XGBoost 0.687 ± 0.088 | 0.664 | 0.690 / 0.650 |
+| ordu | SVM 0.677 ± 0.078 | 0.622 | 0.674 / 0.686 |
+| gelecek | Stacking 0.719 ± 0.086 | 0.684 | 0.769 / 0.717 |
+| titiz | MLP 0.695 ± 0.074 | 0.642 | 0.723 / 0.736 |
+| ünlem | MLP 0.723 ± 0.049 | 0.682 | 0.749 / 0.726 |
+| **ortalama** | **0.702** | 0.653 | 0.709 / 0.695 |
+
+**Yorum.**
+- **Yeniden üretim başarılı.** "En iyi" modellerin ortalaması 0.702; makalede 0.709 (Tablo 4) ve 0.695 (Tablo 2). Görev başına değerler makalenin aralığında. Veri ve özellik tarifi makaleyle tutarlı. [FACT]
+- **Kazanan modeller makaledekilerden farklı:** makalede çoğunlukla Voting, bizde MLP (3 görev), Stacking, XGBoost, LR ve SVM. Bu, "en iyi model" etiketinin kararsız olduğunu gösteriyor. [FACT]
+- **Duyarlılık / özgüllük örüntüsü makaleyle aynı:** eşik 0.5'te yüksek duyarlılık, düşük özgüllük (ör. SVM 0.96 / 0.08). Dengesiz veride 0.5 eşiğinin sonucu.
+- EXP-012'ye göre seçim iyimserliği ortalama ~0.02. Tek bir 5-fold bölünmesinin şansı ise görev başına ±0.05 (2 SD).
+- **Üst sınır (D-028):** Aynı katılımcılarda yalnız bağlam AUC 0.93.
+
 ---
 
 ## EXP-011 — MFCC: aynı özellikler, bizim protokolümüz (RQ1 tabanı)
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (planlandı) |
-| DURUM | Planlandı — kod ve test hazır |
+| DURUM | **Tamamlandı** (2026-10-09, Colab CPU) |
 | Araştırma sorusu | RQ1, RQ4, RQ5, RQ6 — Seçim iyimserliği ve tek-split şansı olmadan MFCC özellikleri ne kadar ayırıyor? Hangi görev, ve görev füzyonu yardımcı oluyor mu? |
 | Beklenti (önceden) | [HYPOTHESIS] Bu deneyde makalenin iki iyimserlik kaynağı yok (tek split, test sonucuna göre seçim). Beklenenler: LR görev başına EXP-010'un "en iyi"sinden düşük (~0.60–0.70); füzyon tek görevlerden yüksek; hepsi bağlam referansının (~0.93) belirgin altında; yaş referansı ~0.68 |
 | Veri | Harmonize önbellek (D-030) → 22.05 kHz → 44 özellik (D-031) |
@@ -229,6 +249,70 @@ Bunların hepsi D-025'e girdi.
 **Yorum kuralı (önceden):**
 - Derin modellerle karşılaştırma bu deneyin **LR füzyon** ve **LR görev başına** sonuçlarıyla yapılır. Yöntem: aynı fold'larda eşleştirilmiş ΔAUC (D-011).
 - Bütün sayılar üst sınırdır. Bağlamın etkisi değerlendirme aşamasında aynı OOF tahminleri üzerinde ölçülür (D-028).
+
+**Sonuçlar** (fold AUC ort ± SD, 25 fold; havuzlanmış OOF AUC [%95 CI]; tam tablo `reports/mfcc/EXP-011_mfcc.md`):
+
+| | LR (birincil) | SVM-RBF | GradientBoosting |
+|---|---|---|---|
+| aaa | 0.647 ± 0.087 · 0.648 [0.575–0.718] | 0.541 ± 0.133 | 0.580 ± 0.083 |
+| araba | 0.691 ± 0.059 · 0.698 [0.619–0.770] | 0.674 ± 0.065 | 0.638 ± 0.064 |
+| ana | 0.681 ± 0.075 · 0.690 [0.615–0.762] | 0.666 ± 0.074 | 0.635 ± 0.044 |
+| ordu | 0.649 ± 0.092 · 0.649 [0.576–0.723] | 0.664 ± 0.073 | 0.614 ± 0.081 |
+| gelecek | 0.647 ± 0.066 · 0.645 [0.566–0.720] | 0.672 ± 0.061 | 0.624 ± 0.089 |
+| titiz | 0.665 ± 0.075 · 0.671 [0.588–0.748] | 0.702 ± 0.077 | 0.670 ± 0.077 |
+| ünlem | 0.639 ± 0.065 · 0.644 [0.575–0.712] | 0.679 ± 0.083 | 0.611 ± 0.079 |
+| **füzyon (7 görev)** | **0.771 ± 0.078 · 0.778 [0.713–0.836]** | 0.773 ± 0.061 | 0.728 ± 0.068 |
+| *referans: yaş* | 0.682 ± 0.046 · 0.679 [0.601–0.750] | | |
+| *referans: bağlam (saat + tarih)* | 0.934 ± 0.022 · 0.931 [0.899–0.958] | | |
+
+**Yorum.**
+- **Tek kayıt ≈ yaş.** Tek bir kaydın MFCC özellikleri (LR 0.64–0.69) etiketi, yalnız yaşı bilmekten (0.68) daha iyi ayırmıyor. [FACT]
+- **Füzyon belirgin biçimde daha iyi.** Yedi kaydın ortalaması her tek görevden +0.08 ile +0.13 daha iyi; bütün bootstrap CI'ları 0'ı dışlıyor (EXP-012 E).
+  - Ama bir kişinin 7 kaydı aynı seansta alınıyor. Ortalama almak hem hastalık bilgisini hem seans / bağlam bilgisini ve konuşmacı özelliklerini güçlendirir. Füzyonun kazancı tek başına "daha fazla astım bilgisi" anlamına gelmez. [INFERENCE]
+- **Füzyon yaştan biraz iyi, ama belirsiz:** +0.095 [+0.008, +0.185]; Nadeau–Bengio p = 0.06.
+- **Bağlam açık ara önde:** füzyondan 0.15 daha iyi [0.09, 0.22]. Bütün sayılar üst sınırdır (D-028).
+- **Görevler arasında anlamlı sıralama yok.** CI'lar büyük ölçüde örtüşüyor. EXP-012'ye göre görev sıralaması girdi ve protokolle yer değiştiriyor (ör. aaa EXP-010'da en iyi, burada en düşüklerden). RQ4 / RQ5 bu örneklemle tek-görev sayılarından cevaplanamaz. [FACT + INFERENCE]
+- **İkincil modeller:** SVM-RBF ve GB tek görevlerde LR'yi tutarlı biçimde geçmedi. SVM-RBF aaa'da kararsız çıktı (0.541 ± 0.133; fold'larda 0.28–0.71).
+- **Uygulama hatası (yalnız eşik metrikleri):** SVM'de dengeli doğruluk 0.50 çıktı (duyarlılık 1.00 / özgüllük 0.00). Platt olasılıkları sınıf ağırlığını yok sayıp eğitimdeki %83 astım oranına göre kalibre ediliyor; 0.5 eşiği bu yüzden anlamsız. GB'de de kısmen aynı sorun var. **AUC etkilenmez.** D-031'deki "eşik 0.5 doğal karar sınırı" varsayımı yalnız LR için doğru çıktı. Düzeltme önerisi: D-032.
+- **Beklentiyle karşılaştırma:** Önceden yazılan beklenti (LR görev başına ~0.60–0.70; füzyon tek görevlerden yüksek; hepsi bağlamın belirgin altında; yaş ~0.68) tuttu.
+
+---
+
+## EXP-012 — MFCC sonuçlarının keşifsel ayrıştırması (post hoc)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-09 |
+| DURUM | Tamamlandı — **önceden kaydedilmedi, sonuçlar görüldükten sonra tasarlandı** (hipotez üretir) |
+| Soru | EXP-010 → EXP-011 farkı girdiden mi protokolden mi? Tek split ne kadar şanslı olabilir? Seçilen "en iyi" model yeni split'lerde ne alıyor? Füzyon tek görevlerden ve referanslardan ne kadar farklı? |
+| Veri / kod | Colab'daki özellik dosyalarıyla aynı (sha256 `b94da5c9…`, `f2ac9f55…`); `scripts/analyze_mfcc_results.py` → `reports/mfcc/EXP-012_mfcc_analysis.{md,json}` (yerelde, scikit-learn 1.9.1) |
+
+**Sonuçlar ve yorum.**
+- **A. Yeniden üretilebilirlik:** EXP-011 LR başka bir makinede ve scikit-learn sürümünde çalıştırıldı; görev başına en büyük fark 4×10⁻⁵. [FACT]
+- **B. Girdi mi, protokol mü?** (LR, 7 görev ortalaması)
+  - Makale özellik + makale protokol: 0.665.
+  - Makale özellik + bizim protokol: 0.664.
+  - Önbellek özellik + bizim protokol: 0.660.
+  - Füzyon: makale özellikleriyle 0.781, önbellekle 0.771.
+  
+  Yorum: **Harmonizasyon ortalamada performansı değiştirmedi**; görev başına ±0.07'ye varan kaymalar iki yönde de var ve gürültü düzeyinde. [FACT + INFERENCE]
+- **C. Split şansı:** Aynı veri ve aynı model, 50 farklı 5-fold bölünmesiyle değerlendirildi.
+  - Görev başına ortalama AUC'nin SD'si 0.019–0.027; en düşük ile en yüksek arası 0.08–0.14 (ordu: 0.545–0.685).
+  - Makaledeki tohum 42, dört görevde dağılımın üst çeyreğine (%76–96. yüzdelik), üç görevde alt kısmına (%10–22) düştü.
+  - Sonuç: tek bir 5-fold'dan gelen görev başına sayı yaklaşık ±0.05 belirsizlik taşır. [FACT]
+- **D. Kazananın laneti:** Tohum 42'de seçilen kazanan aynı pipeline'la 25 fold'da yeniden değerlendirildi.
+  - Ortalama düşüş 0.018; en büyüğü araba / LR, 0.061.
+  - 7 kazananın 5'i 25 fold'da da (değerlendirilen 10–11 model arasında) en iyi kaldı.
+  - Makale pipeline'ında MLP ve Stacking 25 fold'da 0.69–0.72 aldı.
+  - Sonuç: **seçim iyimserliği mevcut ama küçük. Doğrusal olmayan modeller (SMOTE + MLP / Stacking) tek görevde LR'den biraz daha iyi olabilir.** [FACT + HYPOTHESIS]
+- **E. Eşleştirilmiş karşılaştırmalar** (EXP-011 LR):
+  - Füzyon − tek görev: +0.08 ile +0.13, hepsinde CI 0'ı dışlıyor.
+  - Füzyon − yaş: +0.095 [+0.008, +0.185], NB p = 0.06.
+  - Füzyon − bağlam: −0.154 [−0.224, −0.089].
+- **F. Özellik uyumu (aynı kayıt, iki girdi):**
+  - Statik MFCC 1–11 ve spektral özetlerde r ≥ 0.8.
+  - **c0 (genel ses düzeyi) r = 0.23:** tepe normalizasyonu düzey bilgisini siliyor (beklenen; D-015 riski).
+  - Δ ve ΔΔ ortalamaları r = 0.48–0.78: zaman ortalaması neredeyse sıfır ve kırpma sınırlarına duyarlı, yani pratikte kenar gürültüsü (A4 doğrulandı).
+  - aaa'daki düşüş (0.692 → 0.647) ses düzeyi bilgisinin kaybıyla ilişkili olabilir [HYPOTHESIS]. Düzey hem hastalık hem kayıt koşulu bilgisi taşıyabilir. Kazanç `index.csv`'de saklı; değerlendirme aşamasında bakılabilir.
 
 ---
 

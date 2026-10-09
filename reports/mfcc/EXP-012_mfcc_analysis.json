@@ -1,0 +1,328 @@
+{
+  "note": "KEŞİFSEL (post hoc) analiz; önceden kaydedilmedi",
+  "A_reproduction_max_abs_diff": 3.869142553358795e-05,
+  "B_decomposition_lr_auc": {
+    "P1 makale özellik + makale protokol (EXP-010 LR)": {
+      "aaa": 0.7129,
+      "araba": 0.6861,
+      "ana": 0.686,
+      "ordu": 0.6022,
+      "gelecek": 0.6435,
+      "titiz": 0.6266,
+      "ünlem": 0.6983,
+      "fusion (7 görev)": NaN
+    },
+    "P4 önbellek özellik + makale protokol": {
+      "aaa": 0.6942,
+      "araba": 0.6938,
+      "ana": 0.6831,
+      "ordu": 0.5736,
+      "gelecek": 0.5897,
+      "titiz": 0.6587,
+      "ünlem": 0.6536,
+      "fusion (7 görev)": NaN
+    },
+    "P2 makale özellik + bizim protokol": {
+      "aaa": 0.6921,
+      "araba": 0.6228,
+      "ana": 0.6485,
+      "ordu": 0.662,
+      "gelecek": 0.6897,
+      "titiz": 0.6338,
+      "ünlem": 0.6986,
+      "fusion (7 görev)": 0.7807
+    },
+    "P3 önbellek özellik + bizim protokol (EXP-011 LR)": {
+      "aaa": 0.6471,
+      "araba": 0.6912,
+      "ana": 0.6814,
+      "ordu": 0.6487,
+      "gelecek": 0.6466,
+      "titiz": 0.6652,
+      "ünlem": 0.6393,
+      "fusion (7 görev)": 0.771
+    }
+  },
+  "C_split_luck_lr": {
+    "aaa": {
+      "seed42": 0.7129,
+      "mean": 0.6956,
+      "sd": 0.0235,
+      "min": 0.631,
+      "max": 0.7357,
+      "seed42_percentile": 78.0
+    },
+    "araba": {
+      "seed42": 0.6861,
+      "mean": 0.657,
+      "sd": 0.0193,
+      "min": 0.6113,
+      "max": 0.6923,
+      "seed42_percentile": 92.0
+    },
+    "ana": {
+      "seed42": 0.686,
+      "mean": 0.6427,
+      "sd": 0.0234,
+      "min": 0.5766,
+      "max": 0.6907,
+      "seed42_percentile": 96.0
+    },
+    "ordu": {
+      "seed42": 0.6022,
+      "mean": 0.6238,
+      "sd": 0.0274,
+      "min": 0.5451,
+      "max": 0.6846,
+      "seed42_percentile": 18.0
+    },
+    "gelecek": {
+      "seed42": 0.6435,
+      "mean": 0.6706,
+      "sd": 0.0186,
+      "min": 0.6301,
+      "max": 0.7141,
+      "seed42_percentile": 10.0
+    },
+    "titiz": {
+      "seed42": 0.6266,
+      "mean": 0.6466,
+      "sd": 0.0205,
+      "min": 0.6084,
+      "max": 0.7055,
+      "seed42_percentile": 22.0
+    },
+    "ünlem": {
+      "seed42": 0.6983,
+      "mean": 0.6784,
+      "sd": 0.0258,
+      "min": 0.6205,
+      "max": 0.7286,
+      "seed42_percentile": 76.0
+    }
+  },
+  "D_winners_curse": [
+    {
+      "task": "aaa",
+      "winner_seed42": "MLP",
+      "auc_seed42": 0.7246,
+      "auc_25folds": 0.6987,
+      "drop": 0.0259,
+      "rank_among_evaluated_on_25folds": 1,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "MLP",
+      "best_auc_25folds": 0.6987
+    },
+    {
+      "task": "ünlem",
+      "winner_seed42": "MLP",
+      "auc_seed42": 0.7231,
+      "auc_25folds": 0.7041,
+      "drop": 0.019,
+      "rank_among_evaluated_on_25folds": 1,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "MLP",
+      "best_auc_25folds": 0.7041
+    },
+    {
+      "task": "gelecek",
+      "winner_seed42": "StackingEnsemble",
+      "auc_seed42": 0.7191,
+      "auc_25folds": 0.7202,
+      "drop": -0.0011,
+      "rank_among_evaluated_on_25folds": 1,
+      "n_models_evaluated": 11,
+      "best_on_25folds": "StackingEnsemble",
+      "best_auc_25folds": 0.7202
+    },
+    {
+      "task": "titiz",
+      "winner_seed42": "MLP",
+      "auc_seed42": 0.6947,
+      "auc_25folds": 0.6908,
+      "drop": 0.0039,
+      "rank_among_evaluated_on_25folds": 2,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "SVM",
+      "best_auc_25folds": 0.694
+    },
+    {
+      "task": "ana",
+      "winner_seed42": "XGBoost",
+      "auc_seed42": 0.6866,
+      "auc_25folds": 0.6616,
+      "drop": 0.025,
+      "rank_among_evaluated_on_25folds": 1,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "XGBoost",
+      "best_auc_25folds": 0.6616
+    },
+    {
+      "task": "araba",
+      "winner_seed42": "LogisticRegression",
+      "auc_seed42": 0.6861,
+      "auc_25folds": 0.6253,
+      "drop": 0.0608,
+      "rank_among_evaluated_on_25folds": 4,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "XGBoost",
+      "best_auc_25folds": 0.6386
+    },
+    {
+      "task": "ordu",
+      "winner_seed42": "SVM",
+      "auc_seed42": 0.6769,
+      "auc_25folds": 0.6835,
+      "drop": -0.0066,
+      "rank_among_evaluated_on_25folds": 1,
+      "n_models_evaluated": 10,
+      "best_on_25folds": "SVM",
+      "best_auc_25folds": 0.6835
+    }
+  ],
+  "E_paired_comparisons": [
+    {
+      "comparison": "LR füzyon − aaa",
+      "delta_fold_mean": 0.124,
+      "nb_t": 3.09,
+      "nb_p": 0.005,
+      "delta_pooled": 0.1301,
+      "boot_ci": [
+        0.0646,
+        0.2004
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − araba",
+      "delta_fold_mean": 0.0798,
+      "nb_t": 2.1,
+      "nb_p": 0.046,
+      "delta_pooled": 0.0805,
+      "boot_ci": [
+        0.0251,
+        0.1368
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − ana",
+      "delta_fold_mean": 0.0897,
+      "nb_t": 2.07,
+      "nb_p": 0.0498,
+      "delta_pooled": 0.0878,
+      "boot_ci": [
+        0.0226,
+        0.1546
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − ordu",
+      "delta_fold_mean": 0.1223,
+      "nb_t": 2.87,
+      "nb_p": 0.0084,
+      "delta_pooled": 0.1292,
+      "boot_ci": [
+        0.07,
+        0.1861
+      ],
+      "n": 341
+    },
+    {
+      "comparison": "LR füzyon − gelecek",
+      "delta_fold_mean": 0.1244,
+      "nb_t": 2.86,
+      "nb_p": 0.0087,
+      "delta_pooled": 0.1335,
+      "boot_ci": [
+        0.0659,
+        0.2015
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − titiz",
+      "delta_fold_mean": 0.1058,
+      "nb_t": 2.62,
+      "nb_p": 0.0149,
+      "delta_pooled": 0.1069,
+      "boot_ci": [
+        0.0187,
+        0.197
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − ünlem",
+      "delta_fold_mean": 0.1317,
+      "nb_t": 3.78,
+      "nb_p": 0.0009,
+      "delta_pooled": 0.1341,
+      "boot_ci": [
+        0.0683,
+        0.1977
+      ],
+      "n": 342
+    },
+    {
+      "comparison": "LR füzyon − age",
+      "delta_fold_mean": 0.0887,
+      "nb_t": 1.98,
+      "nb_p": 0.0597,
+      "delta_pooled": 0.0952,
+      "boot_ci": [
+        0.0077,
+        0.1852
+      ],
+      "n": 340
+    },
+    {
+      "comparison": "LR füzyon − context (hour+hour²+date)",
+      "delta_fold_mean": -0.1625,
+      "nb_t": -3.47,
+      "nb_p": 0.002,
+      "delta_pooled": -0.1544,
+      "boot_ci": [
+        -0.2239,
+        -0.0889
+      ],
+      "n": 340
+    }
+  ],
+  "F_feature_agreement": {
+    "n_recordings": 2393,
+    "median_r": 0.75,
+    "min_r": 0.226,
+    "features_r_below_0.8": {
+      "mfcc00_mean": 0.226,
+      "d1_mfcc00_mean": 0.699,
+      "d1_mfcc01_mean": 0.622,
+      "d1_mfcc02_mean": 0.707,
+      "d1_mfcc03_mean": 0.758,
+      "d1_mfcc04_mean": 0.742,
+      "d1_mfcc05_mean": 0.782,
+      "d1_mfcc06_mean": 0.743,
+      "d1_mfcc07_mean": 0.771,
+      "d1_mfcc08_mean": 0.742,
+      "d1_mfcc09_mean": 0.74,
+      "d1_mfcc10_mean": 0.721,
+      "d1_mfcc11_mean": 0.724,
+      "d2_mfcc00_mean": 0.632,
+      "d2_mfcc01_mean": 0.535,
+      "d2_mfcc02_mean": 0.517,
+      "d2_mfcc03_mean": 0.593,
+      "d2_mfcc04_mean": 0.479,
+      "d2_mfcc05_mean": 0.585,
+      "d2_mfcc06_mean": 0.594,
+      "d2_mfcc07_mean": 0.52,
+      "d2_mfcc08_mean": 0.547,
+      "d2_mfcc09_mean": 0.584,
+      "d2_mfcc10_mean": 0.56,
+      "d2_mfcc11_mean": 0.501
+    },
+    "kept_s_paper_median": 10.43,
+    "kept_s_cache_median": 10.26
+  },
+  "runtime_s": 1217.4
+}

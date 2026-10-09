@@ -590,3 +590,32 @@ DURUM: KABUL (uygulama ayrıntısı; Colab'da çalıştırmadan önce itiraz edi
   - Süre: EXP-010 ~35 dk, EXP-011 ~60 dk (Colab CPU).
 - **BİLİMSEL SONUÇ:** Makalenin sayısı, aynı veri üzerinde yeniden üretilebilirlik ve seçim iyimserliği açısından sınanır. Derin modellerin geçmesi gereken taban, bağlamdan etkilenmiş üst sınır olduğu açıkça yazılarak sabitlenir.
 - **UYGULAMA:** `scripts/extract_mfcc_features.py`, `scripts/run_mfcc_baselines.py`, `tests/test_mfcc_pipeline.py`, `notebooks/10_mfcc_baseline.ipynb`, `reports/mfcc/`.
+
+## D-032 — MFCC sonuçlarından çıkan üç düzeltme: güçlü ikinci taban, eşik seçimi, birincil birim = füzyon
+DURUM: ÖNERİLDİ · Tarih: 2026-10-09 (10. tur) · EXP-011 ve EXP-012 sonuçlarına dayanır (sonuçlar görüldükten sonra; gerekçeler aşağıda)
+- **KARAR:**
+  1. **RQ1 için iki MFCC tabanı.**
+     - Birincil taban değişmiyor: EXP-011 LR.
+     - Önceden belirlenmiş tek bir doğrusal olmayan model eklenir: **MLP**, makale pipeline'ı (StandardScaler → SMOTE → varsayılan MLPClassifier).
+     - Önbellek özellikleri, aynı split dosyaları, görev başına + füzyon, OOF saklanır → **EXP-013**.
+     - "Derin model MFCC'den iyi" iddiası, ikisini de aynı fold'larda eşleştirilmiş ΔAUC ile geçmeyi gerektirir (D-011).
+  2. **Eşik metrikleri iç doğrulamadan.**
+     - Bundan sonraki bütün deneylerde eşik, iç doğrulama kümesinde (`is_inner_val`) dengeli doğruluğu en yükselten değer olarak seçilir ve test fold'una uygulanır (D-009'un uygulanışı).
+     - EXP-011'de SVM-RBF ve GB'nin dengeli doğruluk / duyarlılık / özgüllük sütunları **geçersiz** sayılır; AUC'ler geçerli.
+  3. **Birincil karşılaştırma birimi katılımcı düzeyinde füzyon** (7 görev olasılığının ortalaması).
+     - Görev başına sonuçlar raporlanır ama keşifseldir (RQ4 / RQ5).
+     - Derin modeller de aynı füzyonla raporlanır.
+- **NEDEN:**
+  - EXP-012 D: makale pipeline'ında MLP / Stacking tek görevde 0.69–0.72; önceden seçtiğimiz LR ise ~0.66. Taban yalnız LR olursa derin modellerin "geçtiği" çıta yapay olarak alçak olabilir. MLP'yi sonuçları gördükten sonra seçmek iyimser bir seçimdir; ama bu iyimserlik tabanı **güçlendirir**, yani iddiamız aleyhine çalışır. Bu yüzden kabul edilebilir. [INFERENCE]
+  - EXP-011: SVM'de duyarlılık 1.00 / özgüllük 0.00. Platt kalibrasyonu sınıf ağırlığını yok sayıyor, sabit 0.5 eşiği anlamsızlaşıyor. [FACT]
+  - EXP-011 / EXP-012: tek görev AUC'leri yaş-only düzeyinde ve görev sıralaması kararsız. Füzyon her görevden +0.08–0.13 iyi. Anlamlı birim katılımcı (D-003). [FACT]
+- **ALTERNATİFLER:**
+  - Yalnız LR tabanı: zayıf taban riski.
+  - Makalenin 14 modelinin hepsi: seçim iyimserliği geri gelir.
+  - Stacking: 25 fold'da ~20 dk ve karmaşık; MLP'den belirgin farkı yok (gelecek: 0.720 vs MLP diğer görevlerde 0.69–0.70).
+  - Eşik için Youden veya sabit önceliğe göre eşik: iç doğrulamada dengeli doğruluk, birincil ikincil metrikle tutarlı.
+- **RİSK:**
+  - İç doğrulamada ~9 sağlıklı var → eşik gürültülü olur. Dengeli doğruluk bu yüzden ikincil metrik kalır.
+  - Füzyon, aynı seansın 7 kaydını birleştirdiği için seans / bağlam bilgisini de güçlendirebilir. Değerlendirme aşamasında (D-028) özellikle füzyon skorları test edilmeli.
+- **BİLİMSEL SONUÇ:** RQ1 karşılaştırması zayıf bir tabana karşı yapılmaz. Eşik metrikleri yanıltıcı olmaz. Birincil sonuç katılımcı düzeyindedir.
+- **UYGULAMA:** EXP-013 (`run_mfcc_baselines.py`'ye MLP modeli ve iç doğrulama eşiği eklenir); Faz 2 prob kodu aynı değerlendirme fonksiyonlarını kullanır.
