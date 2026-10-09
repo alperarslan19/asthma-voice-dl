@@ -407,12 +407,13 @@ Bunların hepsi D-025'e girdi.
 | Ağırlıklar | PANNs Zenodo 3987831 (md5 doğrulamalı), WavLM HF (revizyon hash'i), BEATs iter3+ AS2M (OneDrive, elle) |
 | Kod / notebook | `scripts/smoke_test_backbones.py`, `notebooks/20_smoke_tests.ipynb` |
 | Sonuç konumu | `reports/phase2/SMK-001_smoke.{md,json}`; checkpoint sha256'ları Drive `models/MANIFEST.json` |
+| Başarısızlık protokolü | FAIL varsa gömme çıkarımı ve EXP-016 başlatılmaz; neden incelenir ve buraya yazılır; eşik gevşetilerek geçirilmez; düzeltmeden sonra SMK-001 baştan çalıştırılır; başarısız rapor git geçmişinde kalır (tasarım belgesi 1.1) |
 
 ## EXP-016 — Dondurulmuş gömme + lineer prob (6 backbone vs 2 MFCC tabanı)
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (tasarım; **sonuçlardan önce**) |
-| DURUM | Planlandı — D-034 onayı ve SMK-001 PASS bekliyor |
+| DURUM | Planlandı — D-034 ve D-035 KABUL; SMK-001 PASS bekliyor |
 | Araştırma sorusu | RQ1 (onaylayıcı, füzyon): backbone temsili MFCC'den fazla doğrusal çözülebilir bilgi taşıyor mu? RQ3 / RQ4 / RQ5 keşifsel |
 | Beklenti (önceden) [HYPOTHESIS] | B1: füzyon AUC'leri 0.70–0.85; en az biri MFCC-LR'yi (0.77) sayısal olarak geçebilir ama onaylayıcı testi geçen olmaması daha olası (kaba güç hesabı: saptanabilir fark ≈ 0.06–0.09; eşik değil, varsayımlar tasarım belgesi Bölüm 5.5). B2: bağlam izleme göstergeleri MFCC'den yüksek. B3: |cnn14 − cnn14_16k| < 0.03. B5: görevler arasında güvenilir sıralama yok. B7: Large, Base+'tan anlamlı biçimde iyi değil |
 | Veri sürümü | CSV sha256 + önbellek index sha256 (D-030) + gömme sha256'ları (`embeddings_v1/*/MANIFEST.sha256`) |
@@ -429,6 +430,8 @@ Bunların hepsi D-025'e girdi.
 | İstatistik | Fold düzeyinde eşleştirilmiş ΔAUC; NB düzeltilmiş t, **tek yönlü** (H1: Δ > 0); kesişim-birleşim (LR ve MLP); Holm (6), eşik 0.025; ayrıca iki bootstrap CI'ının alt sınırı > 0; DeLong destekleyici. Keşifsel aileler içinde Holm |
 | D-035 | Fold başına seçim, yalnız o fold'un eğitim verisindeki iç OOF füzyon AUC'si → `d035_selection.csv`; prosedürün dürüst tahmini ayrıca |
 | Meta veri | Bağlam / süre karşılaştırmaları bu deneyde YOK → META-016 (ayrı rapor) |
+| Yorum sınırı | Farklı **hazır ses temsillerinin** karşılaştırması; ön-eğitim yöntemlerinin (gözetimli / öz-gözetimli) saf karşılaştırması değil. BEATs iter3+ AudioSet etiketlerini dolaylı kullanır; modeller hedef, veri alanı, mimari, boyut ve bant genişliğinde aynı anda farklı (tasarım belgesi 9.6) |
+| Kısa kayıt politikası | D-034 KABUL: birincil `zeropad`; bunun süre ipuçlarını ortadan kaldırdığı varsayılmaz (META-016, EXP-016S) |
 | Regresyon testi | mfcc_lr füzyonu EXP-011 LR füzyonunu (0.771) ±0.01 içinde yeniden üretmeli |
 | Kod / notebook | `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `notebooks/21_frozen_embeddings.ipynb` |
 | Sonuç konumu | `reports/frozen/EXP-016_frozen.{md,json}`; Drive `experiments/frozen_probe/`, `data_derived/embeddings_v1/` |
@@ -479,7 +482,7 @@ Bunların hepsi D-025'e girdi.
 | 1d | ~~Harmonize ses önbelleği~~ → Colab'da üretildi ve doğrulandı (D-030; rapor `reports/audio_cache/`) | altyapı | 1c |
 | 2 | ~~MFCC sadık yeniden üretim (EXP-010)~~ → tamamlandı | RQ1 | 1d |
 | 3 | ~~MFCC, ortak protokol (EXP-011)~~ → tamamlandı; EXP-012–015 keşifsel analizler | RQ1, RQ4, RQ5, RQ6 | 1c, 1d |
-| 4 | **Dondurulmuş gömme + lineer prob → SMK-001, EXP-016 / 016S / 017 / 018, META-016 (ayrı)** (tasarım `docs/PHASE2_DESIGN.md`; D-034 önerildi, 13. turda revize; D-035 kabul); gömmeler saklanır (D-028) | RQ1, RQ3, RQ4, RQ5 | Ses önbelleği, D-034 onayı, SMK-001 PASS |
+| 4 | **Dondurulmuş gömme + lineer prob → SMK-001, EXP-016 / 016S / 017 / 018, META-016 (ayrı)** (tasarım `docs/PHASE2_DESIGN.md`; D-034 ve D-035 kabul); gömmeler saklanır (D-028) | RQ1, RQ3, RQ4, RQ5 | Ses önbelleği, SMK-001 PASS |
 | 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
 | 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü **Faz 2 sonuçlarından önce yazıldı: D-035 (KABUL)** — CNN10 + CNN14 sabit; PANNs dışı backbone **her dış fold'da**, yalnız o fold'un eğitim verisindeki iç doğrulamayla | RQ2, RQ3 | 4 ve 5 tamam |
 | 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ8, RQ9 | OOF tahminleri |
