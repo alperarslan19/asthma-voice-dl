@@ -26,8 +26,8 @@ Ses kayıtlarından astım / sağlıklı ayrımı: MFCC + klasik ML'den, pretrai
 | 1 | Split dosyaları (`make_splits.py`, D-029): 5 tekrar × 5 fold, manifest `reports/splits/` | ✅ Colab'da aynı sha256 ile teyit edildi |
 | 1 | Harmonize ses önbelleği (`build_audio_cache.py`, D-030): 2 393 kayıt, rapor `reports/audio_cache/` | ✅ Colab'da üretildi, doğrulandı, dinlendi |
 | 1 | MFCC baseline'ları (EXP-010 sadık yeniden üretim, EXP-011 bizim protokol, EXP-012 keşifsel ayrıştırma) | ✅ makale aralığı yeniden üretildi (en iyi ort. 0.702 vs 0.709); dürüst taban: LR füzyon 0.771 [0.713–0.836], tek görev ≈ yaş (0.68), bağlam 0.93 |
-| 1 | Metodoloji soruları (`docs/IMBALANCE_AND_SELECTION.md`): EXP-013 dengesizlik (SMOTE ≈ ağırlık ≈ hiçbiri; düzeltmeler kalibrasyonu bozuyor), EXP-014 bağlam dengeleme (işe yaramıyor; pozitiflik), EXP-015 iç içe CV (makale prosedürü dürüstçe 0.654) | ✅ keşifsel; D-032, D-033 önerildi |
-| 2 | **Smoke test'ler, dondurulmuş gömme + lineer prob (6 backbone)** | ⏳ sıradaki faz (tasarım) |
+| 1 | Metodoloji soruları (`docs/IMBALANCE_AND_SELECTION.md`): EXP-013 dengesizlik (SMOTE ≈ ağırlık ≈ hiçbiri; düzeltmeler kalibrasyonu bozuyor), EXP-014 bağlam dengeleme (işe yaramıyor; pozitiflik), EXP-015 iç içe CV (makale prosedürü dürüstçe 0.654) | ✅ keşifsel; D-032, D-033 kabul |
+| 2 | **Smoke test'ler (SMK-001), dondurulmuş gömme + lineer prob (EXP-016/017/018)** — tasarım `docs/PHASE2_DESIGN.md`; kod ve testler hazır (`tests/test_phase2.py` P1–P9) | ⏳ D-034 / D-035 onayı + BEATs ağırlığı → `20_smoke_tests.ipynb` |
 | 3 | Sıfırdan CNN10, ham dalga formundan uçtan uca fine-tune, füzyon, alt gruplar | ⏸ |
 | 4 | **Kayıt bağlamı değerlendirmesi** (D-023, D-028): kaydedilmiş tahminler üzerinde T1, E-tasarımları, negatif kontroller | ⏸ model geliştirme bitince |
 
@@ -40,8 +40,9 @@ docs/                 Faz raporları ve iş akışı
 scripts/              tüm mantık (notebook'lar bunları çağırır)
 notebooks/            ince orkestrasyon notebook'ları (Colab)
 configs/              model girdi sözleşmeleri, slot→görev eşlemesi
+third_party/          resmi model kodu kopyaları (PANNs, BEATs; değiştirilmez, sha256 testli; kaynaklar third_party/README.md)
 reports/              yalnız agrega denetim çıktıları
-tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py, tests/test_make_splits.py, tests/test_build_audio_cache.py, tests/test_mfcc_pipeline.py
+tests/                script testleri (gerçek veri gerektirmez): python tests/test_audit_audio.py, tests/test_make_splits.py, tests/test_build_audio_cache.py, tests/test_mfcc_pipeline.py, tests/test_phase2.py
 ```
 
 ## Değişmez kurallar

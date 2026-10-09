@@ -10,4 +10,9 @@ imbalanced-learn    # SMOTE (EXP-010, makale protokolü)
 xgboost
 catboost
 # Değerlendirme aşamasında (D-028): mlconfound (Spisak testleri)
-# Faz 2'de eklenecek: torchlibrosa, transformers (+ third_party/panns, third_party/beats resmi kod kopyaları)
+# Faz 2 (D-034): resmi model kodu third_party/ altında (PANNs, BEATs); burada yalnız bağımlılıkları
+torchlibrosa==0.1.0 # PANNs STFT / log-Mel katmanları (yerelde 0.1.0 ile test edildi)
+transformers>=4.40  # WavLM; Colab'da kuruluysa değiştirilmez, sürüm SMK-001 raporuna yazılır
+pyyaml              # configs/model_input_contracts.yaml
+huggingface_hub     # WavLM indirme (revizyon hash'i kaydedilir)
+# torchaudio.compliance.kaldi BEATs için gerekli: Colab'daki torchaudio kullanılır, notebook import'u doğrular

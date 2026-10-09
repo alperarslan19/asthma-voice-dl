@@ -261,7 +261,7 @@ Değerlendirme dört ölçütle yapıldı:
 
 ## 6. Önerilen kararlar
 
-D-033'te ÖNERİLDİ olarak kayıtlı:
+D-033'te kayıtlı (**KABUL**, 2026-10-09, 12. tur):
 1. Etiket dengesizliği için **SMOTE kullanılmaz** (EXP-010'daki makale taklidi hariç). Klasik modellerde sınıf ağırlığı, derin modellerde ağırlıklı BCE.
 2. Eşik **iç 5-fold OOF** tahminlerinden seçilir. D-032'deki "iç doğrulama kümesi" ifadesinin daha az gürültülü hâli: bütün eğitim katılımcıları kullanılır, yalnız ~9 kişi değil.
 3. Kalibrasyon her deneyde raporlanır.

@@ -6,7 +6,7 @@
 | Veri | `clinical_data.csv` (sha256 `cab18a35…a3af9b`), XLSX ile hücre hücre aynı (Data Report 2026-03-14) |
 | Ses verisi | Veri ekibi (düzeltilmiş bildirim): iPhone 14, ağızdan 10 cm, hep aynı yer, mono, **48 kHz**, `.m4a`, adlandırma `<ID>_<slot>.m4a`, son dosya `101344_7.m4a`. **Denetlendi (Colab, 2026-10-08):** 2 393 dosya, 342 katılımcı (283 astım / 59 sağlıklı); sonuçlar Bölüm 2.3 ve 6.7. |
 | Durum | Faz 0 tamam (literatür, klinik ve ses denetimi, eşleme, girdi sözleşmeleri, protokol, kayıt bağlamı analizi). Faz 1 sürüyor: split dosyaları → ses önbelleği → MFCC baseline |
-| Son güncelleme | 2026-10-09 (11. tur): metodoloji soruları — EXP-013/014/015, `docs/IMBALANCE_AND_SELECTION.md`, D-033 önerildi. Önceki (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
+| Son güncelleme | 2026-10-09 (12. tur): D-032 / D-033 kabul; Faz 2 tasarımı (`docs/PHASE2_DESIGN.md`), D-034 ve D-035 önerildi; smoke test, gömme çıkarımı ve prob kodu + testleri. Önceki (11. tur): metodoloji soruları — EXP-013/014/015, `docs/IMBALANCE_AND_SELECTION.md`, D-033 önerildi. Önceki (10. tur): MFCC sonuçları (EXP-010/011) ve keşifsel ayrıştırma (EXP-012); D-032 önerildi. Önceki (9. tur): önbellek Colab'da üretildi ve doğrulandı; MFCC baseline kodu (D-031). Önceki (8. tur): split'ler Colab'da teyit edildi; ses önbelleği kodu ve testi (D-030). Önceki (7. tur): confounder ayrı araştırma başlığı, değerlendirme model geliştirme sonuna (D-028); D-015 ve D-016 kabul; Faz 1 başladı (split dosyaları). Önceki (6. tur): confounder kontrol yöntemlerinin değerlendirmesi ve deney tasarımı (`docs/CONFOUND_CONTROL_DESIGN.md`, D-025/026/027 önerildi); EXP-004/004b, tasarım referans çizgileri, SIM-001. Önceki (5. tur): kayıt bağlamı analizi (EXP-003) — günün saati en güçlü confounder; birincil test revize edildi (D-023); kesim 11.0 kHz; dosya tarihi önceliği (D-024). Önceki (4. tur): ses denetimi sonuçları, günün saati confounder'ı, iki kodlama zinciri, harmonizasyon kararı (D-021, D-022). Önceki (3. tur): eşleme düzeltildi (2 = araba, 3 = ana), 48 kHz ve `.m4a` teyit edildi; gün düzeyi kanıt, tarih alanının geçerliliği, EXP-002 ve negatif kontrol tasarımı (D-020) eklendi |
 
 Etiketler: **[FACT]** veri/literatürle doğrudan destekli · **[FROM PAPER]** belirli makaleden · **[FROM OFFICIAL DOCS]** resmi kod/doküman · **[INFERENCE]** çıkarım · **[HYPOTHESIS]** test edilmemiş · **[DECISION]** bilinçli karar · **[NEEDS VERIFICATION]** kod/deneyden önce doğrulanmalı
 
@@ -642,7 +642,24 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
 
 ---
 
-## 12. Durum raporu (11. tur — metodoloji soruları)
+## 12. Durum raporu (12. tur — Faz 2 tasarımı)
+
+- **Ne yaptık?**
+  - D-032 ve D-033 kabul edildi.
+  - Faz 2 tasarımı sonuçlardan önce yazıldı (`docs/PHASE2_DESIGN.md`): SMK-001 smoke test, EXP-016 (onaylayıcı), EXP-017 / 018 (keşifsel), önceden yazılmış beklentiler B1–B7.
+  - Resmi model kodu `third_party/`'ye kopyalandı (PANNs d2f4b8c, BEATs unilm 31c5b90; sha256 testle korunuyor). Sözleşmedeki CNN14_16k notu düzeltildi: resmi kodda ayrı sınıf.
+  - Kod: `backbones.py` (tek yükleyici, katman kancaları), `smoke_test_backbones.py`, `extract_embeddings.py`, `run_probes.py`; `tests/test_phase2.py` (P1–P9, ağırlıksız küçük modellerle; hepsi geçti). Notebook'lar 20 ve 21.
+- **Ne öğrendik?** Henüz sonuç yok (bilerek). Tasarım aşamasında: güç sınırlı; füzyon düzeyinde %80 güçle saptanabilir fark ≈ 0.08–0.10 (Holm ile). 0.02–0.05'lik backbone farkları bu örneklemde çözülemez. [INFERENCE]
+- **Hangi kararlar onay bekliyor?**
+  - D-034: dondurulmuş gömme protokolü (D-015'ten sapma: kısa kayıtlar dolgusuz; katman ortalaması; onaylayıcı aile; bağlam izleme göstergeleri).
+  - D-035: Faz 3 seçim kuralı (CNN10 + CNN14 sabit; PANNs dışı bir backbone iç doğrulama skoruyla). CONFOUND belgesindeki "T1'e göre seç" alternatifi açıkça tartışıldı.
+- **Hangi belirsizlikler kaldı?**
+  - BEATs iter3+'ın tokenizer öğretmeni gözetimli mi? (RQ3 yorumu) [NEEDS VERIFICATION]
+  - Colab'daki torch / torchaudio / transformers sürümleriyle uyum (SMK-001 doğrular).
+  - WavLM Large'ın Faz 3'te T4'e sığıp sığmadığı (SMK-001 S12).
+- **Bir sonraki minimum gerekli adım:** D-034 / D-035 onayı + BEATs ağırlığının Drive'a indirilmesi → `20_smoke_tests.ipynb` → SMK-001 raporunu birlikte okumak.
+
+*Önceki (11. tur — metodoloji soruları):*
 
 - **Ne yaptık?** Alper'in sorularına üç keşifsel analizle cevap verildi (`docs/IMBALANCE_AND_SELECTION.md`):
   - EXP-013: etiket dengesizliği yöntemleri;
@@ -653,11 +670,11 @@ Tam değerlendirme, gerekçeler ve deney tasarımı: **`docs/CONFOUND_CONTROL_DE
   - SMOTE, sınıf ağırlığı ve hiçbiri aynı AUC'yi veriyor; düzeltmeler kalibrasyonu bozuyor. Eşik iç CV'den seçilince düzeltmeye gerek kalmıyor.
   - Bağlam dengeleme daha iyi bir taban üretmiyor. Geç dönemde sağlıklı olmadığı için SMOTE dengeleyemez; yalnız örtüşmede eğitim AUC'yi ~0.07 düşürüyor.
   - MFCC + LR bağlama zayıf bağımlı. Kaba bağlam sabitken füzyon 0.706 (yaş 0.649, bağlam 0.578); bu bir hipotez.
-- **Hangi kararları aldık?** D-033 önerildi: SMOTE yok, eşik iç 5-fold OOF'tan, kalibrasyon raporlanır, bağlam dengeleme eğitimde yok, seçim önceden ya da iç içe. D-032 güncellendi (MLP ≈ LR).
+- **Hangi kararları aldık?** D-033 önerildi (12. turda kabul): SMOTE yok, eşik iç 5-fold OOF'tan, kalibrasyon raporlanır, bağlam dengeleme eğitimde yok, seçim önceden ya da iç içe. D-032 güncellendi (MLP ≈ LR).
 - **Hangi belirsizlikler kaldı?**
   - Analizler MFCC özellikleriyle yapıldı; derin gömmelerde sonuç farklı olabilir.
   - Hücre-içi AUC'deki sinyalin ne kadarının yaş olduğu.
-- **Bir sonraki minimum gerekli adım:** D-032 / D-033 onayı → Faz 2 tasarımı.
+- **Bir sonraki minimum gerekli adım (o turda):** D-032 / D-033 onayı → Faz 2 tasarımı. (12. turda ikisi de kabul edildi.)
 
 *Önceki (10. tur):* MFCC sonuçları (EXP-010/011), EXP-012, D-032 önerildi.
 *Önceki (9. tur):* önbellek doğrulandı; MFCC kodu (D-031).
