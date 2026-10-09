@@ -1,0 +1,690 @@
+{
+  "exp": "SMK-001",
+  "date": "2026-10-09",
+  "device": "cuda",
+  "gpu": "Tesla T4",
+  "random_init": false,
+  "env": {
+    "python": "3.13.15",
+    "torch": "2.11.0+cu130",
+    "torchaudio": "2.11.0+cu130",
+    "transformers": "5.18.0",
+    "numpy": "2.1.3"
+  },
+  "cache_index_sha256": "e41ed32ab435f3f79772491957c2869c64a940e2fea511740dc0ecf990cc7be9",
+  "results": [
+    {
+      "backbone": "cnn10",
+      "checks": {
+        "S1_sha256": {
+          "status": "PASS",
+          "sha256": "5240bdc47444e331bbeb54fd741d2b3f933a4526e84b0c17bf3593df94b13962",
+          "previous": null
+        },
+        "S2_contract": {
+          "status": "PASS",
+          "note": "sözleşme alanları yükleyicide assert edildi",
+          "sr": 32000,
+          "n_store": 1,
+          "dim": 512
+        },
+        "S3_strict_load": {
+          "status": "PASS",
+          "missing": 0,
+          "unexpected": 0
+        },
+        "S4_params": {
+          "status": "INFO",
+          "n_params": 6302735
+        },
+        "S5_forward": {
+          "status": "PASS",
+          "in_shape": [
+            5,
+            128000
+          ],
+          "out_shape": [
+            5,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "model_device": "cuda:0",
+          "peak_gpu_gb": 0.163
+        },
+        "S6_determinism": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S7_batch_invariance": {
+          "status": "PASS",
+          "max_abs_diff": 1.9818544387817383e-06,
+          "rel": 1.0754915497733594e-06
+        },
+        "S8_hook_vs_official": {
+          "status": "INFO",
+          "note": "PANNs: resmi 'embedding' doğrudan kullanılıyor"
+        },
+        "S9_speech_class": {
+          "status": "PASS",
+          "speech_rank": 1,
+          "top5": [
+            "Speech",
+            "Inside, small room",
+            "Narration, monologue",
+            "Female speech, woman speaking",
+            "Male speech, man speaking"
+          ],
+          "n_recordings": 48
+        },
+        "S10_same_person": {
+          "status": "PASS",
+          "auc_same_vs_diff_person": 0.6689848558471008,
+          "mean_sim_same": 0.13209332525730133,
+          "mean_sim_diff": -0.04526112601161003,
+          "n_pairs_same": 168,
+          "n_pairs_diff": 1176
+        },
+        "S11_save_load": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S13_speed": {
+          "status": "INFO",
+          "windows_per_s": 419.1,
+          "est_minutes_12k_windows": 0.5
+        },
+        "S14_padding_path": {
+          "status": "PASS",
+          "full_length_max_abs_diff": 0.0,
+          "short_nopad_vs_zeropad_cos_min": 0.8593,
+          "short_nopad_vs_zeropad_cos_mean": 0.8593,
+          "mask": "yok (PANNs resmi API)"
+        },
+        "S12_train_step": {
+          "status": "FAIL",
+          "batch": 16,
+          "seconds_per_window": 4.0,
+          "amp_fp16": true,
+          "grad_checkpointing": false,
+          "loss_finite": false,
+          "grads_finite": false,
+          "param_changed": false,
+          "step_s": 0.059,
+          "peak_gpu_gb": 0.59
+        }
+      },
+      "info": {
+        "class": "Cnn10",
+        "constructor": {
+          "sample_rate": 32000,
+          "window_size": 1024,
+          "hop_size": 320,
+          "mel_bins": 64,
+          "fmin": 50,
+          "fmax": 14000,
+          "classes_num": 527
+        },
+        "checkpoint": "Cnn10_mAP=0.380.pth",
+        "checkpoint_sha256": "5240bdc47444e331bbeb54fd741d2b3f933a4526e84b0c17bf3593df94b13962",
+        "load": "weights_only=True",
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "backbone": "cnn10",
+        "n_params": 6302735,
+        "random_init": false,
+        "torch": "2.11.0+cu130",
+        "n_store": 1,
+        "dim": 512,
+        "primary_layers": [
+          0
+        ]
+      },
+      "load_s": 2.2,
+      "status": "FAIL",
+      "elapsed_s": 10.0
+    },
+    {
+      "backbone": "cnn14",
+      "checks": {
+        "S1_sha256": {
+          "status": "PASS",
+          "sha256": "0dc499e40e9761ef5ea061ffc77697697f277f6a960894903df3ada000e34b31",
+          "previous": null
+        },
+        "S2_contract": {
+          "status": "PASS",
+          "note": "sözleşme alanları yükleyicide assert edildi",
+          "sr": 32000,
+          "n_store": 1,
+          "dim": 2048
+        },
+        "S3_strict_load": {
+          "status": "PASS",
+          "missing": 0,
+          "unexpected": 0
+        },
+        "S4_params": {
+          "status": "INFO",
+          "n_params": 81837071
+        },
+        "S5_forward": {
+          "status": "PASS",
+          "in_shape": [
+            5,
+            128000
+          ],
+          "out_shape": [
+            5,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "model_device": "cuda:0",
+          "peak_gpu_gb": 0.497
+        },
+        "S6_determinism": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S7_batch_invariance": {
+          "status": "PASS",
+          "max_abs_diff": 5.424022674560547e-06,
+          "rel": 3.1871650412106227e-06
+        },
+        "S8_hook_vs_official": {
+          "status": "INFO",
+          "note": "PANNs: resmi 'embedding' doğrudan kullanılıyor"
+        },
+        "S9_speech_class": {
+          "status": "PASS",
+          "speech_rank": 1,
+          "top5": [
+            "Speech",
+            "Inside, small room",
+            "Music",
+            "Narration, monologue",
+            "Male speech, man speaking"
+          ],
+          "n_recordings": 48
+        },
+        "S10_same_person": {
+          "status": "PASS",
+          "auc_same_vs_diff_person": 0.6904761904761904,
+          "mean_sim_same": 0.06900199502706528,
+          "mean_sim_diff": -0.04761272296309471,
+          "n_pairs_same": 168,
+          "n_pairs_diff": 1176
+        },
+        "S11_save_load": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S13_speed": {
+          "status": "INFO",
+          "windows_per_s": 247.9,
+          "est_minutes_12k_windows": 0.8
+        },
+        "S14_padding_path": {
+          "status": "PASS",
+          "full_length_max_abs_diff": 0.0,
+          "short_nopad_vs_zeropad_cos_min": 0.8043,
+          "short_nopad_vs_zeropad_cos_mean": 0.8043,
+          "mask": "yok (PANNs resmi API)"
+        },
+        "S12_train_step": {
+          "status": "FAIL",
+          "batch": 16,
+          "seconds_per_window": 4.0,
+          "amp_fp16": true,
+          "grad_checkpointing": false,
+          "loss_finite": false,
+          "grads_finite": false,
+          "param_changed": false,
+          "step_s": 0.087,
+          "peak_gpu_gb": 1.17
+        }
+      },
+      "info": {
+        "class": "Cnn14",
+        "constructor": {
+          "sample_rate": 32000,
+          "window_size": 1024,
+          "hop_size": 320,
+          "mel_bins": 64,
+          "fmin": 50,
+          "fmax": 14000,
+          "classes_num": 527
+        },
+        "checkpoint": "Cnn14_mAP=0.431.pth",
+        "checkpoint_sha256": "0dc499e40e9761ef5ea061ffc77697697f277f6a960894903df3ada000e34b31",
+        "load": "weights_only=True",
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "backbone": "cnn14",
+        "n_params": 81837071,
+        "random_init": false,
+        "torch": "2.11.0+cu130",
+        "n_store": 1,
+        "dim": 2048,
+        "primary_layers": [
+          0
+        ]
+      },
+      "load_s": 5.3,
+      "status": "FAIL",
+      "elapsed_s": 13.0
+    },
+    {
+      "backbone": "cnn14_16k",
+      "checks": {
+        "S1_sha256": {
+          "status": "PASS",
+          "sha256": "e2ee543a27919542c2ea03eabaa70b24dcd4e6c8e05621de6b67a94e4c5058e6",
+          "previous": null
+        },
+        "S2_contract": {
+          "status": "PASS",
+          "note": "sözleşme alanları yükleyicide assert edildi",
+          "sr": 16000,
+          "n_store": 1,
+          "dim": 2048
+        },
+        "S3_strict_load": {
+          "status": "PASS",
+          "missing": 0,
+          "unexpected": 0
+        },
+        "S4_params": {
+          "status": "INFO",
+          "n_params": 81033231
+        },
+        "S5_forward": {
+          "status": "PASS",
+          "in_shape": [
+            5,
+            64000
+          ],
+          "out_shape": [
+            5,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "model_device": "cuda:0",
+          "peak_gpu_gb": 0.493
+        },
+        "S6_determinism": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S7_batch_invariance": {
+          "status": "PASS",
+          "max_abs_diff": 7.62939453125e-06,
+          "rel": 3.887849631581743e-06
+        },
+        "S8_hook_vs_official": {
+          "status": "INFO",
+          "note": "PANNs: resmi 'embedding' doğrudan kullanılıyor"
+        },
+        "S9_speech_class": {
+          "status": "PASS",
+          "speech_rank": 1,
+          "top5": [
+            "Speech",
+            "Narration, monologue",
+            "Female speech, woman speaking",
+            "Male speech, man speaking",
+            "Conversation"
+          ],
+          "n_recordings": 48
+        },
+        "S10_same_person": {
+          "status": "PASS",
+          "auc_same_vs_diff_person": 0.7122003563330095,
+          "mean_sim_same": 0.08338738232851028,
+          "mean_sim_diff": -0.050774283707141876,
+          "n_pairs_same": 168,
+          "n_pairs_diff": 1176
+        },
+        "S11_save_load": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S13_speed": {
+          "status": "INFO",
+          "windows_per_s": 286.3,
+          "est_minutes_12k_windows": 0.7
+        },
+        "S14_padding_path": {
+          "status": "PASS",
+          "full_length_max_abs_diff": 0.0,
+          "short_nopad_vs_zeropad_cos_min": 0.639,
+          "short_nopad_vs_zeropad_cos_mean": 0.639,
+          "mask": "yok (PANNs resmi API)"
+        },
+        "S12_train_step": {
+          "status": "FAIL",
+          "batch": 16,
+          "seconds_per_window": 4.0,
+          "amp_fp16": true,
+          "grad_checkpointing": false,
+          "loss_finite": false,
+          "grads_finite": false,
+          "param_changed": false,
+          "step_s": 0.08,
+          "peak_gpu_gb": 1.17
+        }
+      },
+      "info": {
+        "class": "Cnn14_16k",
+        "constructor": {
+          "sample_rate": 16000,
+          "window_size": 512,
+          "hop_size": 160,
+          "mel_bins": 64,
+          "fmin": 50,
+          "fmax": 8000,
+          "classes_num": 527
+        },
+        "checkpoint": "Cnn14_16k_mAP=0.438.pth",
+        "checkpoint_sha256": "e2ee543a27919542c2ea03eabaa70b24dcd4e6c8e05621de6b67a94e4c5058e6",
+        "load": "weights_only=False",
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "backbone": "cnn14_16k",
+        "n_params": 81033231,
+        "random_init": false,
+        "torch": "2.11.0+cu130",
+        "n_store": 1,
+        "dim": 2048,
+        "primary_layers": [
+          0
+        ]
+      },
+      "load_s": 5.6,
+      "status": "FAIL",
+      "elapsed_s": 12.3
+    },
+    {
+      "backbone": "beats",
+      "checks": {
+        "S1_sha256": {
+          "status": "PASS",
+          "sha256": "d43cbfad4d7b56381c061d7a24774f908d4d94c72961f6eb1d9090ff18cd8d34",
+          "previous": null
+        },
+        "S2_contract": {
+          "status": "PASS",
+          "note": "sözleşme alanları yükleyicide assert edildi",
+          "sr": 16000,
+          "n_store": 13,
+          "dim": 768
+        },
+        "S3_strict_load": {
+          "status": "PASS",
+          "missing": 0,
+          "unexpected": 0
+        },
+        "S4_params": {
+          "status": "INFO",
+          "n_params": 90311792
+        },
+        "S5_forward": {
+          "status": "PASS",
+          "in_shape": [
+            5,
+            64000
+          ],
+          "out_shape": [
+            5,
+            13,
+            768
+          ],
+          "dtype": "torch.float32",
+          "model_device": "cuda:0",
+          "peak_gpu_gb": 0.541
+        },
+        "S6_determinism": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S7_batch_invariance": {
+          "status": "PASS",
+          "max_abs_diff": 4.76837158203125e-07,
+          "rel": 1.7408175140162094e-07
+        },
+        "S8_hook_vs_official": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S9_speech_class": {
+          "status": "INFO",
+          "note": "sınıflandırıcısı yok (öz-gözetimli)"
+        },
+        "S10_same_person": {
+          "status": "PASS",
+          "auc_same_vs_diff_person": 0.8338597343699384,
+          "mean_sim_same": 0.20469534397125244,
+          "mean_sim_diff": -0.08331602811813354,
+          "n_pairs_same": 168,
+          "n_pairs_diff": 1176
+        },
+        "S11_save_load": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S13_speed": {
+          "status": "INFO",
+          "windows_per_s": 76.6,
+          "est_minutes_12k_windows": 2.6
+        },
+        "S14_padding_path": {
+          "status": "PASS",
+          "full_length_max_abs_diff": 1.1920928955078125e-07,
+          "short_nopad_vs_zeropad_cos_min": 0.9829,
+          "short_nopad_vs_zeropad_cos_mean": 0.9907,
+          "mask": "resmi maske + maskeli ortalama"
+        },
+        "S12_train_step": {
+          "status": "FAIL",
+          "batch": 16,
+          "seconds_per_window": 4.0,
+          "amp_fp16": true,
+          "grad_checkpointing": false,
+          "loss_finite": false,
+          "grads_finite": false,
+          "param_changed": false,
+          "step_s": 0.237,
+          "peak_gpu_gb": 3.31
+        }
+      },
+      "info": {
+        "checkpoint": "BEATs_iter3_plus_AS2M.pt",
+        "checkpoint_sha256": "d43cbfad4d7b56381c061d7a24774f908d4d94c72961f6eb1d9090ff18cd8d34",
+        "load": "weights_only=True",
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "backbone": "beats",
+        "n_params": 90311792,
+        "random_init": false,
+        "torch": "2.11.0+cu130",
+        "n_store": 13,
+        "dim": 768,
+        "primary_layers": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "load_s": 12.6,
+      "status": "FAIL",
+      "elapsed_s": 23.3
+    },
+    {
+      "backbone": "wavlm_base_plus",
+      "status": "FAIL",
+      "error": "AssertionError: return_attention_mask True ≠ sözleşme False (dolgulu girdide maskenin modele verilip verilmeyeceğini belirler; D-034 madde 1)"
+    },
+    {
+      "backbone": "wavlm_large",
+      "checks": {
+        "S1_sha256": {
+          "status": "PASS",
+          "sha256": "fe757212dd86c5bb9dbc316df586b089c2e2b8fe6cc59b65af0d5346fe3191de",
+          "previous": null
+        },
+        "S2_contract": {
+          "status": "PASS",
+          "note": "sözleşme alanları yükleyicide assert edildi",
+          "sr": 16000,
+          "n_store": 25,
+          "dim": 1024
+        },
+        "S3_strict_load": {
+          "status": "PASS",
+          "missing": 0,
+          "unexpected": 0
+        },
+        "S4_params": {
+          "status": "INFO",
+          "n_params": 315453120
+        },
+        "S5_forward": {
+          "status": "PASS",
+          "in_shape": [
+            5,
+            64000
+          ],
+          "out_shape": [
+            5,
+            25,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "model_device": "cuda:0",
+          "peak_gpu_gb": 1.728
+        },
+        "S6_determinism": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S7_batch_invariance": {
+          "status": "PASS",
+          "max_abs_diff": 0.001495361328125,
+          "rel": 2.409358459631244e-06
+        },
+        "S8_hook_vs_official": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S9_speech_class": {
+          "status": "INFO",
+          "note": "sınıflandırıcısı yok (öz-gözetimli)"
+        },
+        "S10_same_person": {
+          "status": "PASS",
+          "auc_same_vs_diff_person": 0.6963830174927114,
+          "mean_sim_same": 0.05518064647912979,
+          "mean_sim_diff": -0.09567085653543472,
+          "n_pairs_same": 168,
+          "n_pairs_diff": 1176
+        },
+        "S11_save_load": {
+          "status": "PASS",
+          "max_abs_diff": 0.0
+        },
+        "S13_speed": {
+          "status": "INFO",
+          "windows_per_s": 22.6,
+          "est_minutes_12k_windows": 8.8
+        },
+        "S14_padding_path": {
+          "status": "PASS",
+          "full_length_max_abs_diff": 3.0517578125e-05,
+          "short_nopad_vs_zeropad_cos_min": 1.0,
+          "short_nopad_vs_zeropad_cos_mean": 1.0,
+          "mask": "resmi maske + maskeli ortalama"
+        },
+        "S12_train_step": {
+          "status": "PASS",
+          "batch": 16,
+          "seconds_per_window": 4.0,
+          "amp_fp16": true,
+          "grad_checkpointing": false,
+          "loss_finite": true,
+          "grads_finite": true,
+          "param_changed": true,
+          "step_s": 1.07,
+          "peak_gpu_gb": 13.35
+        }
+      },
+      "info": {
+        "checkpoint": "wavlm-large",
+        "checkpoint_sha256": "fe757212dd86c5bb9dbc316df586b089c2e2b8fe6cc59b65af0d5346fe3191de",
+        "load": "from_pretrained",
+        "hf_revision": "c1423ed94bb01d80a3f5ce5bc39f6026a0f4828c",
+        "unexpected_keys": [],
+        "config": {
+          "do_stable_layer_norm": true,
+          "feat_extract_norm": "layer",
+          "mask_time_prob": 0.075,
+          "mask_feature_prob": 0.0,
+          "layerdrop": 0.1,
+          "apply_spec_augment": true
+        },
+        "do_normalize": true,
+        "padding_handling": {
+          "fe_return_attention_mask": true,
+          "feat_extract_norm": "layer",
+          "mask_passed_to_model_when_padded": true,
+          "pooling": "yalnız gerçek çerçeveler"
+        },
+        "backbone": "wavlm_large",
+        "n_params": 315453120,
+        "random_init": false,
+        "torch": "2.11.0+cu130",
+        "n_store": 25,
+        "dim": 1024,
+        "primary_layers": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      "load_s": 13.2,
+      "status": "PASS",
+      "elapsed_s": 45.4
+    }
+  ]
+}
