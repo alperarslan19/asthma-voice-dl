@@ -23,7 +23,7 @@ KISA KAYITLAR VE DOLGU (D-015, D-034 madde 1)
         BEATs   resmi padding_mask (örnek → fbank çerçevesi → yama; BEATs.forward_padding_mask) + yalnız dolu
                 yamalar üzerinden ortalama (resmi fine-tune sınıflandırıcısının yaptığı gibi)
         WavLM   resmi özellik çıkarıcı yalnız gerçek kısımla normalize eder; attention_mask yalnız işlemci
-                return_attention_mask=True ise (Large) modele verilir (HF önerisi: Base+'ya verilmez); havuzlama
+                return_attention_mask=True ise modele verilir (SMK-001: Large ve Base+ ikisinde de true); havuzlama
                 yalnız gerçek çerçeveler üzerinden (_get_feat_extract_output_lengths)
 
 ŞEKİLLER
@@ -159,6 +159,22 @@ def torch_load(path: Path) -> tuple[dict, str]:
         return torch.load(path, map_location="cpu", weights_only=False), "weights_only=False"
 
 
+def _fp32_forward(obj, attr: str) -> None:
+    """obj.attr metodunu autocast KAPALI ve float32 girdiyle çalışacak biçimde örnek düzeyinde sarar.
+    Neden (SMK-001, 13. tur): fp16 autocast altında ön işleme taşıyor / alt taşıyor → kayıp NaN/Inf:
+      PANNs  log-Mel: güç spektrumu fp16 üst sınırına (65504) yakın; amin=1e-10 fp16'da 0'a yuvarlanır → log10(0) = -inf
+             (11 kHz alçak geçiren nedeniyle üst bantlar ve sessiz çerçeveler ~0 güçte)
+      BEATs  fbank: dalga × 2^15 → güç spektrumu ≫ 65504
+    Çözüm: ön işleme her zaman fp32, ağın geri kalanı autocast'e tabi. Parametre adları ve state_dict DEĞİŞMEZ.
+    fp32 çıkarımda (Faz 2) etkisi yoktur; Faz 3'ün fp16 eğitimi için gereklidir."""
+    orig = getattr(obj, attr)
+
+    def wrapped(x, *a, **k):
+        with torch.autocast(device_type=x.device.type, enabled=False):
+            return orig(x.float(), *a, **k)
+    setattr(obj, attr, wrapped)
+
+
 # ----------------------------------------------------------------------------- ortak sınıf
 class Backbone:
     """Bir modelin etrafında ince sarmalayıcı: yükleme bilgisi + embed()."""
@@ -229,6 +245,9 @@ class PannsBackbone(Backbone):
     def __init__(self, name, contract, model, device, info):
         super().__init__(name, contract, model, device, info)
         self.n_store, self.dim, self.primary_layers = 1, int(model.fc1.out_features), [0]
+        _fp32_forward(model.spectrogram_extractor, "forward")   # log-Mel her zaman fp32 (bkz. _fp32_forward)
+        _fp32_forward(model.logmel_extractor, "forward")
+        self.info["frontend_fp32_under_autocast"] = True
 
     def _embed(self, wav, lengths):
         # lengths yok sayılır: PANNs'in resmi forward'ında maske yok; sıfır dolgusu (varsa) Boll'daki gibi girdiye dahil
@@ -270,6 +289,8 @@ def _build_panns(name, contract, model_dir, device, random_init):
 class BeatsBackbone(Backbone):
     def __init__(self, name, contract, model, device, info):
         super().__init__(name, contract, model, device, info)
+        _fp32_forward(model, "preprocess")                       # fbank her zaman fp32 (bkz. _fp32_forward)
+        self.info["frontend_fp32_under_autocast"] = True
         layers = model.encoder.layers
         self.L = len(layers)
         self.n_store, self.dim, self.primary_layers = self.L + 1, int(model.cfg.encoder_embed_dim), list(range(1, self.L + 1))
@@ -335,6 +356,7 @@ def _build_beats(name, contract, model_dir, device, random_init):
                 "cfg": {k: v for k, v in cfg.__dict__.items() if isinstance(v, (int, float, str, bool))},
                 "missing_keys": list(res.missing_keys), "unexpected_keys": list(res.unexpected_keys)}
     assert model.predictor is None, "fine-tune edilmemiş (predictor'sız) BEATs bekleniyordu"
+
     bb = BeatsBackbone(name, contract, model, device, info)
     if not random_init:
         assert bb.L == contract["n_layers"] and bb.dim == contract["embedding_dim"]
