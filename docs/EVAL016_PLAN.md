@@ -133,6 +133,8 @@ Hastalarda `ŝ ~ cr(days, 4) + cr(start_hour, 4)`: tarih terimlerinin HC3-dayan�
 
 ## 3. Aşama 2 — yalnız T1'i (L2) Holm sonrası pozitif olan backbone'lar için
 
+**Kesin tasarım:** `docs/EVAL016_STAGE2_PLAN.md` (D-039, ÖNERİLDİ; Aşama 1 sonrası yazıldı). Aşağıdaki metin özgün plandır.
+
 C1 iddiası ancak bunlarla tamamlanır; negatif T1'de gerekmez.
 - **N3 — yalnız arka plan:**
   - Her kaydın en düşük enerjili %20 karesinden oluşturulan sinyalden gömme (yalnız o backbone).
