@@ -278,6 +278,7 @@ DURUM: **KABUL** (2026-10-10, 15. tur — Alper: "içeriği değiştirmeden kabu
   - (S11) N5, gerçek sinyal + bağlam birlikteyken yapısal yanlış alarm veriyor → yalnız betimsel;
   - (S12) E2h-KLR tabaka içi ayrışmada çöküyor → Jeffreys-cezalı koşullu logit;
   - (K2) C1 koşul 3 boş bir koşul → "gün-kümeli p < 0.05 ve OR > 1" önerisi.
+  - **16. tur:** S9–S12 ve K2 **KABUL → D-038**. K2, Alper'in koşulu (geçerlilik teyidi) gereği sandviç (CR1) yerine gün-kümeli jackknife (CV3) ile uygulanıyor: CR1 bu veri yapısında geçerli bulunmadı (SIM-002). Analiz ayarları sabitlendi.
 - **15. tur notu (2026-10-10):** D-037 kapsamında EVAL-016 için **içerik değişmeden KABUL** önerildi. "O aşamada kesinleştirilir" denen ayrıntılar (ŝ tanımı, bootstrap B, E2h tabakaları, Spisak ayarları) ve önceden yazılmış metinden sapmalar (S1–S7) `docs/EVAL016_PLAN.md`'de, testler çalıştırılmadan önce sabitlendi.
 - **KARAR:**
   1. **T1 (birincil):** tek lojistik regresyon `y ~ spline(saat, 4 df) + spline(tarih, 4 df) + yaş + ŝ`.
@@ -763,3 +764,66 @@ DURUM: **KABUL** (2026-10-10, 15. tur — Alper: "revize edilmiş önerini kabul
   1. CONFOUND 5.9 / 5.11'e göre onaylayıcı cevap dondurulmuş aileden geliyor, Faz 3 keşifsel; Faz 3'ü T1'den korumanın değeri sınırlı.
   2. D-027 kol B'nin koşulu G1'e bağlı; (C)'de Faz 3 bu bilgi olmadan kilitlenirdi.
   3. Alper'in önceliği gereksiz GPU harcamasını önlemek.
+
+## D-038 — EVAL-016 uygulama protokolü v1.2: S9–S12 kabul; K2 gün-kümeli jackknife (CV3) ile; analiz ayarları sabit
+DURUM: **KABUL** (2026-10-10, 16. tur — Alper: "S9, S10, S11 ve S12 önerilerini kabul ediyorum. K2'yi de, gün-kümeli testin mevcut veri yapısında geçerli biçimde uygulanabildiğini ve protokol değişikliğinin açıkça kaydedildiğini teyit etmen koşuluyla kabul ediyorum.") · **Hiçbir EVAL-016 testi gerçek veride çalıştırılmadan önce** yazıldı · D-025'in **uygulanışını** değiştirir; birincil soru, onaylayıcı aile, Holm ve α aynı · Ayrıntı: `docs/EVAL016_PLAN.md` Bölüm 7, 9, 10; SIM-002 (`reports/context/SIM-002_k2_validity.md`)
+- **K2 kabul koşulu nasıl karşılandı (açık kayıt):**
+  - Koşul: "gün-kümeli test bu veri yapısında geçerli biçimde uygulanabiliyor".
+  - Planın ilk metnindeki gün-kümeli test (Firth sandviç, CR1, G/(G−1)) bu koşulu **sağlamadı**. SIM-002'de (gerçek etiket + gerçek bağlam yapısı, yapay sinyalsiz skor) doğru belirtilmiş modelde bile p < 0.05 oranı 0.090 [Wilson %95: 0.074, 0.109] (nominal 0.05); ölçülmemiş gün etkisinde 0.144 (T1-PLR 0.138), yani düzeltmiyor. [FACT, simülasyon; 1000 simülasyon / senaryo]
+  - Gün-kümeli **jackknife (CV3)** koşulu sağladı: p < 0.05 oranı S1 0.027 [0.019, 0.039], S2 0.026 [0.018, 0.038], S3 0.044 [0.033, 0.059]; 6000 jackknife fit'inin hiçbiri başarısız olmadı. [FACT, simülasyon]
+  - Bu yüzden K2, CR1 ile değil CV3 ile uygulanıyor. Bu değişiklik **16. turda, gerçek sonuçlardan önce**, Alper'in koşulunun gereği olarak yapıldı. Onay PR'ı birleştirilmeden önce itiraz edilirse koşul 3 D-025 metnine (yön; boş koşul) döner; bu da gerçek veriden önce yapılmalıdır. Gerçek sonuçlar görüldükten sonra koşul 3'te yapılacak her değişiklik post hoc olur.
+- **KARAR:**
+  1. **S9:** T1'in tahmini, testi (PLR), bootstrap'ı ve gün-kümeli çıkarımı Firth cezalı olabilirlikle. Klasik ML LRT ikincil.
+  2. **S10:** C2'nin kısmi testi etiket-içi tam permütasyon testi; C = cr(saat, 4) + cr(tarih, 4). Yaşlı sürüm ve `mlconfound` kısmi testi yalnız rapor.
+  3. **S11:** N5 betimsel; C1'de veto değil.
+  4. **S12:** E2h-KLR Jeffreys-cezalı koşullu logit; klasik koşullu logit ikincil.
+  5. **K2:** C1 koşul 3 = **gün-kümeli jackknife (CV3) p < 0.05 ve OR > 1**.
+     - CV3: her kayıt günü dışarıda bırakılarak Firth T1 tam modeli yeniden fit edilir; V = (G−1)/G · Σ (b₍g₎ − b̂)²; p, t(G−1) referansıyla.
+     - CR1 raporda betimsel kalır (olumsuz sonuç korunur).
+  6. **K2 geçerlilik kuralı (çalıştırma anında, önceden yazıldı):**
+     - Kalibrasyon tanılamasında (gerçek etiket + Drive'daki gerçek bağlam, yapay sinyalsiz skor, senaryo başına 500 simülasyon), CV3'ün p < 0.05 ret oranının Wilson %95 alt sınırı S1 ve S3'te ≤ 0.075 olmalı (Bradley'nin liberal ölçütü, 1.5α) ve hiçbir jackknife fit'i başarısız olmamalı.
+     - Değilse koşul 3 "geçersiz": diğer Aşama-1 koşulları sağlansa bile C1 **"kurulamadı (K2)"** yazılır. Yerine başka test konmaz; karar gerekir.
+     - Kural yalnız kısıtlayıcı yönde çalışır; C1'i hiçbir zaman kolaylaştırmaz.
+  7. **Sabit analiz ayarları:** 5 tekrar, bootstrap B = 2000, permütasyon 1000, kalibrasyon 500 / senaryo, G1 5 tekrar, tohum 0, 6 backbone, spline df 4 (duyarlılık 6).
+     - Gerçek veri kipinde farklı bir değer verilirse script çalışmayı reddeder.
+     - `--allow-unapproved` yalnız testler ve simülasyon içindir; o raporlara "karar için kullanılamaz" yazılır.
+  8. **Sayısal uygulama notu (tahminci değişmez):** Yarı-tam ayrışmada bilgi-matrisli Firth adımları çok yavaş yakınsayabiliyor (sentetik bir jackknife alt örnekleminde 3000 adımda bitmedi; R brglm2 6105 iterasyon gerektirdi). Bu durumda fit, Newton-CG ile cilalanır: U cezalı log-olabilirliğin tam gradyanıdır, Hessian U'nun merkezi farklarıyla alınır. Sonuç R brglm2 ile 6 ondalığa kadar aynı (E17).
+- **NEDEN:**
+  - S9–S12: sentetik testlerde görülen mekanik başarısızlıklar (`docs/EVAL016_PLAN.md` Bölüm 7 ve 9). Alper kabul etti.
+  - K2, yön yerine p: yön koşulu boştu; kümeli SE nokta tahminini değiştirmez (K2).
+  - CR1 yerine CV3:
+    - SIM-002 sonuçları yukarıda. Olası neden [INFERENCE]: 65 günün 53'ü tek etiketli; bilgi az sayıda günden geliyor. Az ve dengesiz kümede sandviç varyansı küçümser.
+    - Az / dengesiz kümede CV3 + t(G−1) önerisi literatürde var (MacKinnon, Nielsen & Webb 2023, *J. Econometrics*, küme-dayanıklı çıkarım rehberi) [FROM PAPER]. Karar bizim simülasyonumuza dayanıyor.
+  - Sabit ayarlar: sonuçtan sonra ayar değiştirme riskini kapatır (K17).
+- **ALTERNATİFLER:**
+  - (a) CR1, planlandığı gibi: SIM-002'ye göre geçersiz.
+  - (b) CR1 + t(G−1): doğru modelde ret oranı hâlâ ~0.09 (16. tur ön simülasyonu, 2000 tekrar) — yetmiyor.
+  - (c) D-025 metni (yön): boş koşul; Aşama 1'de gün etkisine karşı koruma yok.
+  - (d) Yabani küme (skor) bootstrap: daha güçlü olabilir, ama Firth ile pahalı ve burada doğrulanmadı.
+  - (e) Koşul 3'ü kaldırıp yalnız Aşama 2'ye (N3, gün-gruplu CV) güvenmek: bunlar başka mekanizmaları sınar; Aşama 1 korumasız kalır.
+- **RİSK:**
+  - **Güç maliyeti** (SIM-002, doğru belirtilmiş model; tek yönlü, OR > 1). Koşul 1 tek başına → koşul 1 ∧ CV3:
+    - aynı-bağlam AUC ≈ 0.70 (γ = 0.75): Holm'un en sıkı eşiğinde (0.0083) 0.52 → 0.44; α = 0.05 eşiğinde 0.82 → 0.56;
+    - aynı-bağlam AUC ≈ 0.64 (γ = 0.5): Holm düzeyinde 0.18 → 0.15;
+    - aynı-bağlam AUC ≈ 0.76 (γ = 1.0): Holm düzeyinde 0.88 → 0.77; AUC ≈ 0.81 (γ = 1.25): 0.98 → 0.91;
+    - yani Holm düzeyinde %80 güç için gereken aynı-bağlam AUC'si ≈ 0.74'ten ≈ 0.77'ye çıkıyor [INFERENCE: hücreler arası doğrusal ara değer];
+    - Bu bedel K2 kabul edilirken bilinmiyordu; açıkça işaretlenmiştir.
+  - CV3 S1 ve S2'de tutucu (0.027 / 0.026): zayıf bir gerçek sinyal kaçabilir. Olumsuz sonuç güç sınırıyla okunur.
+  - Simülasyondaki skorlar tek boyutlu ve normal; gerçek ŝ'nin dağılımı farklı olabilir.
+  - SIM-002 Faz 0'daki özel yerel kopyayla yapıldı (aynı kohort sayıları: 339, 282 / 57, 65 gün, 53 tek etiketli). Çalıştırma anındaki kalibrasyon aynı kontrolü Drive'daki dosyayla tekrarlar.
+  - Gerçek veride K2 kuralı tutmazsa C1 "kurulamadı" kalır ve yeni bir karar gerekir.
+- **BİLİMSEL SONUÇ:**
+  - C1 koşul 3 artık boş değil ve geçerli bir test. Ölçülmemiş gün etkisi senaryosunda (S3) koşul 1 ∧ koşul 3'ün yanlış pozitif oranı (tek yönlü):
+    - Holm'un en sıkı eşiğinde 0.015 → 0.012: etkisi **küçük**;
+    - α = 0.05 eşiğinde 0.075 → 0.017: etkisi büyük.
+  - Yani gün etkisine karşı Aşama-1 koruması sınırlı kalıyor; asıl koruma Aşama 2'de (N3, gün-gruplu CV).
+  - Üç katman ayrı kalır:
+    - istatistiksel anlamlılık (koşul 1);
+    - bağlamdan bağımsız ses sinyali kanıtı (C1'in bütün koşulları + Aşama 2 N3);
+    - klinik yorum (bu analizin kapsamı dışında).
+- **UYGULAMA:**
+  - `scripts/evaluate_context.py`: `PROTOCOL` v1.2 KABUL, `FIXED`, `protocol_gate`, `cluster_jackknife`, kalibrasyon (PLR / CR1 / CV3 + K2 kuralı), `verdicts` (K2 fail-safe), Firth cilası.
+  - `scripts/simulate_k2_validity.py` → `reports/context/SIM-002_k2_validity.{md,json}`.
+  - `tests/test_eval016.py`: E12 güncellendi; E14–E17 eklendi.
+  - `notebooks/22_context_eval_frozen.ipynb`: kapı protokolü ve D-038'i doğrular.
+  - `docs/EVAL016_PLAN.md` Bölüm 0–4, 6, 7, 9, 10.

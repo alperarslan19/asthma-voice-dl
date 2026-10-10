@@ -5,7 +5,8 @@ BİLİMSEL AMAÇ
     Projenin birincil sorusu (D-023): ses, ölçülen kayıt bağlamı (saat, tarih) ve yaşın ötesinde astım bilgisi taşıyor mu?
     EXP-016'nın kaydedilmiş dış-test tahminleri üzerinde, önceden belirlenmiş testler (yeniden eğitim YOK):
       L2  T1 (birincil): y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ; ŝ için Firth cezalı olabilirlik oranı testi (S9); Holm (6)
-          + SD başına OR (katılımcı bootstrap CI) + gün-kümeli SE + cr df 6 + tekrar başına T1 + ikinci düzey CV ΔAUC (betimsel)
+          + SD başına OR (katılımcı bootstrap CI) + gün-kümeli jackknife CV3 (C1 koşul 3; D-038) + gün-kümeli sandviç CR1
+          (betimsel) + cr df 6 + tekrar başına T1 + ikinci düzey CV ΔAUC (betimsel)
       L4  E2h-KLR: zaman penceresi içinde 1 saatlik tabakalara göre Jeffreys-cezalı koşullu lojistik regresyon (S12)
       L1  E1 / E1h / E2 / E2h / E3 / E3h tabakalı AUC'leri + yalnız-bağlam referans çizgileri (betimsel)
       L3  C2 kısmi testi: etiket-içi tam permütasyon (S10); Spisak tam testi (mlconfound, 'linear'; C = bağlam eğilim skoru)
@@ -15,9 +16,11 @@ BİLİMSEL AMAÇ
       N5  bağlam-vekili kontrolü (yalnız G1+ backbone'larda; S11: betimsel, C1'de veto değil)
       L7  codec zinciri: katılımcı içi skor farkı + kayıt düzeyi zincir probu
       L8  fold / tekrar oynaklığı
-      Kalibrasyon tanılaması: gerçek bağlam + yapay (sinyalsiz) skorlarla T1-LRT'nin yanlış pozitif oranı
+      Kalibrasyon tanılaması: gerçek bağlam + yapay (sinyalsiz) skorlarla PLR / CR1 / CV3 yanlış pozitif oranı; K2 geçerlilik
+          kuralı (D-038) buradan değerlendirilir
     C1 / C2 kararları önceden yazılmış kurallarla (docs/CONFOUND_CONTROL_DESIGN.md 6; EVAL016_PLAN 4), PROTOCOL ayarlarıyla.
-    N3 Aşama 2'dedir. PROTOCOL["status"] "KABUL" değilse gerçek veri kipinde çalışmaz (--allow-unapproved yalnız testler için).
+    N3 Aşama 2'dedir. Gerçek veri kipi yalnız PROTOCOL["status"] == "KABUL" ve analiz ayarları FIXED ile aynıyken çalışır
+    (D-038); --allow-unapproved yalnız testler / simülasyon içindir ve rapora "karar için kullanılamaz" uyarısı yazılır.
 
 VERİ / BİRİM
     Birim katılımcı. ŝ = 5 tekrarın dış-test füzyon olasılığının (görev olasılıklarının ortalaması) logit'lerinin ortalaması.
@@ -66,16 +69,24 @@ BACKBONES = RP.BACKBONES
 MFCC = ["mfcc_lr", "mfcc_mlp"]
 TASK_SLOT = {v: k for k, v in RP.TASKS.items()}
 ALPHA = 0.05
-# Uygulama kararları (docs/EVAL016_PLAN.md Bölüm 7 ve 9). Gerçek veride çalıştırma yalnız status == "KABUL" iken mümkün;
-# testler ve simülasyon --allow-unapproved kullanır. Değerler Alper'in onayıyla güncellenir ve git'te izlenir.
+# Uygulama kararları (docs/EVAL016_PLAN.md Bölüm 7 ve 9; DECISIONS.md D-038). Gerçek veride çalıştırma yalnız
+# status == "KABUL" iken ve FIXED ayarlarıyla mümkün; testler ve simülasyon --allow-unapproved kullanır (rapora uyarı yazılır).
 PROTOCOL = {
-    "version": "EVAL-016 uygulama v1.1 (15. tur)",
-    "status": "ONAY BEKLİYOR",               # → "KABUL" (onaydan sonra)
+    "version": "EVAL-016 uygulama v1.2 (D-038)",
+    "status": "KABUL",                       # D-038: S9–S12 kabul; K2 kabul (gün-kümeli test CV3 ile; aşağıda)
     "t1_fit": "firth",                       # S9: Firth + cezalı LRT (D-025 metni: klasik ML LRT; ayrışmada çöküyor)
     "c2_partial": "within_label_permutation",  # S10: etiket-içi tam permütasyon (mlconfound kısmi yalnız bilgi)
-    "c1_cond3": "cluster_p",                 # K2: "cluster_p" = gün-kümeli p < 0.05 ve OR > 1 (öneri) | "direction" (kabul edilen metin, boş koşul)
-    "c1_n5_veto": False,                     # S11: N5 betimsel (öneri) | True (kabul edilen metin: N5 anlamlıysa C1 düşer)
+    "c1_cond3": "cluster_cv3",               # K2 (D-038): gün-kümeli jackknife (CV3, t(G−1)) p < 0.05 ve OR > 1.
+                                             #   "cluster_p" = Firth sandviç CR1 (planın ilk metni; gerçek bağlam yapısında
+                                             #   anti-konservatif bulundu, yalnız betimsel) | "direction" = D-025 metni (boş koşul)
+    "c1_n5_veto": False,                     # S11: N5 betimsel | True (D-025 metni: N5 anlamlıysa C1 düşer)
+    "k2_validity": "kalibrasyon tanılamasında CV3'ün iki yönlü p < 0.05 ret oranının Wilson %95 alt sınırı S1 ve S3'te "
+                   "≤ 0.075 (Bradley'nin liberal ölçütü, 1.5α); değilse koşul 3 geçersiz → C1 'kurulamadı (K2)'",
 }
+# Sabitlenmiş analiz ayarları (D-038). Gerçek veri kipinde farklı bir değer verilirse script çalışmayı reddeder.
+FIXED = {"n_repeats": 5, "n_boot": 2000, "n_perms": 1000, "n_sim": 500, "g1_repeats": 5, "seed": 0,
+         "backbones": ",".join(RP.BACKBONES), "spline_df": 4}
+K2_BRADLEY = 0.075
 CLINICAL_PERIOD_REF = 0.855      # klinik profilin erken/geç dönemi ayırma AUC'si (EXP-002; CONFOUND 6, EXP-020 b)
 EPS = 1e-6
 
@@ -160,14 +171,74 @@ def firth_fit(X, y, fixed: int | None = None, maxiter: int = 200, tol: float = 1
         if np.max(np.abs(step)) < tol:
             conv = True
             break
+    polished = False
+    if not conv:
+        # Yarı-tam ayrışmada (W → 0) bilgi matrisiyle yapılan Firth adımları, cezalı olabilirlik yüzeyinin düz yönünde çok
+        # yavaş (alt-doğrusal) yakınsıyor (sentetik testte 3000 adımda bile bitmedi). Değiştirilmiş skor U, cezalı
+        # log-olabilirliğin TAM gradyanıdır; Hessian'ı U'nun merkezi farklarıyla alıp Newton-CG ile cilalarız.
+        # Yakınsama: serbest koordinatlarda max |U| < 1e-6 ve cezalı olabilirlik azalmamış.
+        from scipy.optimize import minimize
+
+        def _grad(bb):
+            v, pp, WW, II = _pll(X, y, bb)
+            hh = np.einsum("ij,jk,ik->i", X, np.linalg.pinv(II), X) * WW
+            return v, X.T @ (y - pp + hh * (0.5 - pp))
+
+        def _full(bf):
+            bb = b.copy()
+            bb[free] = bf
+            return bb
+
+        def _fg(bf):
+            v, U_ = _grad(_full(bf))
+            return -v, -U_[free]
+
+        def _hess(bf, eps=1e-6):
+            m = len(bf)
+            H = np.empty((m, m))
+            for jj in range(m):
+                e = np.zeros(m)
+                e[jj] = eps
+                H[:, jj] = (_fg(bf + e)[1] - _fg(bf - e)[1]) / (2 * eps)
+            return (H + H.T) / 2
+
+        res = minimize(_fg, b[free], jac=True, hess=_hess, method="Newton-CG", options={"xtol": 1e-10, "maxiter": 500})
+        bb = _full(res.x)
+        v, U_ = _grad(bb)
+        if v >= cur - 1e-12:
+            b = bb
+            cur, p, W, I = _pll(X, y, b)
+            conv = bool(np.max(np.abs(U_[free])) < 1e-6)
+        polished = True
     Iinv = np.linalg.pinv(I)
     h = np.einsum("ij,jk,ik->i", X, Iinv, X) * W
-    return {"coef": b, "pll": cur, "converged": conv, "cov": Iinv, "p": p, "W": W, "h": h}
+    return {"coef": b, "pll": cur, "converged": conv, "cov": Iinv, "p": p, "W": W, "h": h, "polished": polished}
 
 
-def t1(y: np.ndarray, Xc: np.ndarray, s: np.ndarray, groups: np.ndarray | None = None, ml: bool = True) -> dict:
+def cluster_jackknife(X1: np.ndarray, y: np.ndarray, groups: np.ndarray, b: float) -> dict:
+    """Gün-kümeli jackknife (CV3; MacKinnon, Nielsen & Webb 2023): her kayıt günü dışarıda bırakılarak Firth T1 tam modeli
+    yeniden fit edilir; V = (G−1)/G · Σ_g (b_(g) − b̂)², tam örneklem tahminine merkezli; p, t(G−1) referansıyla.
+    ŝ sütunu tam örneklemde standardize edildiği gibi kalır (katsayı ölçeği sabit). Yakınsamayan fit varsa p = NaN
+    (koşul 3 sağlanmaz; fail-safe)."""
+    g_codes = pd.Series(groups).astype("category").cat.codes.to_numpy()
+    G = int(g_codes.max() + 1)
+    bj, fails = np.empty(G), 0
+    for g in range(G):
+        keep = g_codes != g
+        f = firth_fit(X1[keep], y[keep])
+        fails += int(not f["converged"])
+        bj[g] = f["coef"][-1]
+    v = (G - 1) / G * float(np.sum((bj - b) ** 2))
+    se = float(np.sqrt(v))
+    p = float(2 * stats.t.sf(abs(b) / se, G - 1)) if se > 0 and fails == 0 else float("nan")
+    return {"p_cv3": p, "se_cv3": se, "n_clusters": G, "cv3_fails": fails}
+
+
+def t1(y: np.ndarray, Xc: np.ndarray, s: np.ndarray, groups: np.ndarray | None = None, ml: bool = True,
+       jackknife: bool = False) -> dict:
     """T1: bağlam modeline ŝ (z) eklemenin testi. BİRİNCİL: Firth cezalı olabilirlik oranı testi (PLR, 1 sd; EVAL016_PLAN
-    S9). İkincil: Firth Wald, klasik ML LRT (yakınsarsa), gün-kümeli dayanıklı SE (Firth skor katkılarıyla sandviç)."""
+    S9). İkincil: Firth Wald, klasik ML LRT (yakınsarsa), gün-kümeli dayanıklı SE (Firth skor katkılarıyla sandviç, CR1;
+    betimsel) ve gün-kümeli jackknife (CV3; C1 koşul 3, D-038)."""
     y = np.asarray(y, float)
     sz = zstd(s)
     X1 = np.column_stack([Xc, sz])
@@ -193,6 +264,8 @@ def t1(y: np.ndarray, Xc: np.ndarray, s: np.ndarray, groups: np.ndarray | None =
         sec = float(np.sqrt(max(V[j, j], 0)))
         out.update({"p_cluster": float(2 * stats.norm.sf(abs(b) / sec)) if sec > 0 else float("nan"), "se_cluster": sec,
                     "or_sd_cluster": float(np.exp(b)), "n_clusters": int(ng)})
+        if jackknife:
+            out.update(cluster_jackknife(X1, y, np.asarray(groups), b))
     return out
 
 
@@ -594,53 +667,85 @@ def l7_paired(rec: pd.DataFrame, arm: str, chain: pd.Series, Ct: pd.DataFrame, a
 
 
 # ----------------------------------------------------------------------------- kalibrasyon tanılaması
-def calibration_diagnostic(Ct: pd.DataFrame, Xc: np.ndarray, n_sim: int, seed: int) -> dict:
-    """Gerçek etiket + gerçek bağlam, sinyalsiz yapay skor (SIM-001 senaryoları, gamma = 0): T1-LRT yanlış pozitif oranı."""
+def wilson_ci(k: int, n: int, z: float = 1.96) -> list[float]:
+    p = k / n
+    c = (p + z * z / (2 * n)) / (1 + z * z / n)
+    h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return [float(c - h), float(c + h)]
+
+
+def _calib_one(y, Xc, day, z_smooth, z_step, scen, seed):
+    rng = np.random.default_rng(seed)
+    z = z_smooth if scen == "S1_smooth" else z_step if scen == "S2_step" else zstd(rng.normal(0, 1, day.max() + 1)[day])
+    r = t1(y, Xc, z + rng.normal(0, 1, len(y)), groups=day, ml=False, jackknife=True)
+    return r["p_lrt"], r["p_cluster"], r["p_cv3"]
+
+
+def calibration_diagnostic(Ct: pd.DataFrame, Xc: np.ndarray, n_sim: int, seed: int, n_jobs: int = 1) -> dict:
+    """Gerçek etiket + gerçek bağlam, sinyalsiz yapay skor (SIM-001 senaryoları, gamma = 0). Ses / model skoru KULLANILMAZ.
+    T1-PLR, gün-kümeli CR1 ve gün-kümeli jackknife CV3 için yanlış pozitif oranı (iki yönlü). K2 geçerlilik kuralı (D-038):
+    CV3'ün p < 0.05 ret oranının Wilson %95 alt sınırı S1 ve S3'te ≤ 0.075 olmalı."""
+    from joblib import Parallel, delayed
     y = Ct.label.to_numpy()
     q = np.column_stack([zstd(Ct.age), zstd(Ct.start_hour), zstd(Ct.start_hour ** 2), zstd(Ct.days)])
     z_smooth = zstd(sm.add_constant(q) @ firth_fit(sm.add_constant(q), y)["coef"])
     z_step = zstd((Ct.start_hour < 12).astype(float).to_numpy() + (Ct.period == "late").astype(float).to_numpy())
     day = Ct.recording_date.astype("category").cat.codes.to_numpy()
-    rng = np.random.default_rng(seed)
     out = {}
-    for scen in ["S1_smooth", "S2_step", "S3_day"]:
-        p, pc = [], []
-        for _ in range(n_sim):
-            z = z_smooth if scen == "S1_smooth" else z_step if scen == "S2_step" else zstd(rng.normal(0, 1, day.max() + 1)[day])
-            s = z + rng.normal(0, 1, len(y))
-            r = t1(y, Xc, s, groups=day if scen == "S3_day" else None, ml=False)
-            p.append(r["p_lrt"])
-            if scen == "S3_day":
-                pc.append(r.get("p_cluster", np.nan))
-        p = np.array(p)
-        out[scen] = {"reject_05": float(np.mean(p < 0.05)), "reject_01": float(np.mean(p < 0.01)), "n_sim": n_sim}
-        if pc:
-            pc = np.array(pc)
-            out[scen].update({"reject_05_cluster": float(np.nanmean(pc < 0.05)), "reject_01_cluster": float(np.nanmean(pc < 0.01))})
+    for k, scen in enumerate(["S1_smooth", "S2_step", "S3_day"]):
+        seeds = np.random.SeedSequence([seed, k]).generate_state(n_sim)       # n_jobs'tan bağımsız, tekrarlanabilir
+        res = np.array(Parallel(n_jobs=n_jobs)(delayed(_calib_one)(y, Xc, day, z_smooth, z_step, scen, int(s)) for s in seeds))
+        p, pc, p3 = res.T
+        out[scen] = {"reject_05": float(np.mean(p < 0.05)), "reject_01": float(np.mean(p < 0.01)), "n_sim": n_sim,
+                     "reject_05_cluster": float(np.mean(pc < 0.05)), "reject_01_cluster": float(np.mean(pc < 0.01)),
+                     "reject_05_cv3": float(np.mean(p3 < 0.05)), "reject_01_cv3": float(np.mean(p3 < 0.01)),
+                     "cv3_nan": int(np.isnan(p3).sum()),
+                     "wilson_05": {"plr": wilson_ci(int((p < 0.05).sum()), n_sim),
+                                   "cluster": wilson_ci(int((pc < 0.05).sum()), n_sim),
+                                   "cv3": wilson_ci(int((p3 < 0.05).sum()), n_sim)}}
+    lows = {s: out[s]["wilson_05"]["cv3"][0] for s in ("S1_smooth", "S3_day")}
+    valid = all(v <= K2_BRADLEY for v in lows.values()) and all(out[s]["cv3_nan"] == 0 for s in ("S1_smooth", "S3_day"))
+    out["k2_validity"] = {"valid": bool(valid), "rule": PROTOCOL["k2_validity"], "cv3_wilson_lower": lows,
+                          "threshold": K2_BRADLEY}
     return out
 
 
 # ----------------------------------------------------------------------------- karar kuralları
-def verdicts(T, holm_p, boot, df6, e2h, g1, n5) -> dict:
-    """C1 Aşama-1 koşulları (CONFOUND 6 / EVAL016_PLAN 4; D-025 madde 5), PROTOCOL ayarlarıyla. N3 Aşama 2'de."""
+def verdicts(T, holm_p, boot, df6, e2h, g1, n5, k2_valid: bool = True) -> dict:
+    """C1 Aşama-1 koşulları (CONFOUND 6 / EVAL016_PLAN 4; D-025 madde 5), PROTOCOL ayarlarıyla. N3 Aşama 2'de.
+    K2 (D-038): koşul 3 = gün-kümeli jackknife (CV3) p < 0.05 ve OR > 1. Kalibrasyon tanılaması CV3'ü bu veri yapısında
+    geçersiz bulursa (k2_valid False) koşul 3 değerlendirilemez; diğer koşullar sağlansa bile C1 "kurulamadı (K2)" olur
+    (fail-safe; yerine başka test konmaz)."""
     out = {}
+    mode = PROTOCOL["c1_cond3"]
     for b in holm_p:
         t = T[b]
         g1pos = g1.get(b, {}).get("g1_positive", False)
-        if PROTOCOL["c1_cond3"] == "cluster_p":
+        if mode == "cluster_cv3":
+            c3 = bool(t.get("p_cv3", np.nan) < ALPHA and t["or_sd"] > 1)
+        elif mode == "cluster_p":
             c3 = bool(t.get("p_cluster", 1.0) < ALPHA and t["or_sd"] > 1)
         else:
             c3 = bool(t.get("or_sd_cluster", np.nan) > 1)
+        c3_valid = k2_valid or mode == "direction"
         c = {"1_t1_holm": bool(holm_p[b] < ALPHA and t["or_sd"] > 1),
              "2_boot_ci_excludes_1": bool(boot[b]["lo"] > 1),
-             "3_cluster": c3,
+             "3_cluster": c3 if c3_valid else None,
              "4_e2h_direction": bool(e2h[b].get("or_sd", np.nan) > 1),
              "5_df4_df6_same_direction": bool(t["or_sd"] > 1 and df6[b]["or_sd"] > 1),
              "7_n5_not_significant": (bool(n5[b]["p_lrt"] >= ALPHA) if g1pos and b in n5 else None)}
-        stage1 = [v for k, v in c.items() if v is not None and (k != "7_n5_not_significant" or PROTOCOL["c1_n5_veto"])]
-        all_ok = all(stage1)
-        out[b] = {"conditions": c, "g1_positive": g1pos, "stage1_all_met": bool(all_ok),
-                  "c1_status": "Aşama 2 bekliyor (N3)" if all_ok else "sağlanmadı",
+        stage1 = [v for k, v in c.items()
+                  if v is not None and k != "3_cluster" and (k != "7_n5_not_significant" or PROTOCOL["c1_n5_veto"])]
+        others_ok = all(stage1)
+        all_ok = others_ok and c3_valid and c["3_cluster"]
+        if all_ok:
+            status = "Aşama 2 bekliyor (N3)"
+        elif others_ok and not c3_valid:
+            status = "kurulamadı (K2: gün-kümeli test bu veri yapısında geçersiz; karar gerekli)"
+        else:
+            status = "sağlanmadı"
+        out[b] = {"conditions": c, "g1_positive": g1pos, "stage1_all_met": bool(all_ok), "k2_valid": bool(c3_valid),
+                  "c1_status": status,
                   "stage2_triggered": c["1_t1_holm"]}     # kabul edilen kural: T1 Holm sonrası pozitif
     return out
 
@@ -667,24 +772,38 @@ def report_md(R: dict) -> str:
          f"Bootstrap B = {R['n_boot']}; Spisak permütasyon = {R['n_perms']}; spline df = {R['spline_df']} (duyarlılık 6).", "",
          f"**Uygulama protokolü:** {R['protocol']['version']} — durum **{R['protocol']['status']}** · T1 fit: {R['protocol']['t1_fit']} · "
          f"C2 kısmi test: {R['protocol']['c2_partial']} · C1 koşul 3: {R['protocol']['c1_cond3']} · N5 C1'de: {R['protocol']['c1_n5_veto']}"
-         + (" · **UYARI: onaylanmamış protokol (yalnız test / simülasyon)**" if R['protocol']['status'] != 'KABUL' else ""), ""]
+         + (" · **UYARI: onaylanmamış protokol (yalnız test / simülasyon)**" if R['protocol']['status'] != 'KABUL' else ""), "",
+         (f"**Çalıştırma kipi:** {R['run_mode']}" + ("" if R.get("settings_fixed") else
+          " · **UYARI: --allow-unapproved (test / simülasyon) — bu rapor karar için KULLANILAMAZ**")), ""]
     cal = R["calibration"]
-    L += ["## 0. Kalibrasyon tanılaması (betimsel; gerçek bağlam, sinyalsiz yapay skor, γ = 0)", "",
-          "T1-PLR'nin (Firth) bu kohortta yanlış pozitif oranı. İdeal: 0.05 / 0.01. S3 (ölçülmemiş gün etkisi) bilinen kalıntı risktir (SIM-001).", "",
-          "| senaryo | p < 0.05 | p < 0.01 | gün-kümeli p < 0.05 | n_sim |", "|---|---|---|---|---|"]
-    for k, v in cal.items():
-        L.append(f"| {k} | {f3(v['reject_05'])} | {f3(v['reject_01'])} | {f3(v.get('reject_05_cluster'))} | {v['n_sim']} |")
+    kv = cal["k2_validity"]
+    L += ["## 0. Kalibrasyon tanılaması (gerçek etiket + gerçek bağlam, sinyalsiz yapay skor, γ = 0; ses skoru kullanılmaz)", "",
+          "Yanlış pozitif oranları (iki yönlü). İdeal: 0.05 / 0.01. T1-PLR birincil test; CR1 = Firth sandviç (G/(G−1); betimsel); "
+          "CV3 = gün-kümeli jackknife, t(G−1) (C1 koşul 3, D-038). S2 (basamak) ve S3 (ölçülmemiş gün etkisi) yanlış belirtilmiş "
+          "model senaryolarıdır (SIM-001).", "",
+          "| senaryo | PLR p < 0.05 [Wilson %95] | PLR p < 0.01 | CR1 p < 0.05 | CV3 p < 0.05 [Wilson %95] | CV3 p < 0.01 | n_sim |",
+          "|---|---|---|---|---|---|---|"]
+    for k in ("S1_smooth", "S2_step", "S3_day"):
+        v = cal[k]
+        w, w3 = v["wilson_05"]["plr"], v["wilson_05"]["cv3"]
+        L.append(f"| {k} | {f3(v['reject_05'])} [{f3(w[0])}, {f3(w[1])}] | {f3(v['reject_01'])} | {f3(v['reject_05_cluster'])} | "
+                 f"{f3(v['reject_05_cv3'])} [{f3(w3[0])}, {f3(w3[1])}] | {f3(v['reject_01_cv3'])} | {v['n_sim']} |")
+    L += ["", f"**K2 geçerlilik kuralı (önceden yazıldı, D-038):** {kv['rule']}. Sonuç: CV3 Wilson alt sınırları "
+          + ", ".join(f"{s} {f3(x)}" for s, x in kv["cv3_wilson_lower"].items())
+          + (" → **koşul 3 geçerli**." if kv["valid"] else " → **koşul 3 GEÇERSİZ; C1 bu raporda kurulamaz (karar gerekli).**")]
     L += ["", "## 1. T1 (L2, birincil) — onaylayıcı aile: 6 backbone, Holm; MFCC yalnız referans", "",
           "Karar istatistiği: **Firth cezalı olabilirlik oranı testi** (PLR; EVAL016_PLAN S9 — tarih bağlamı etiketi neredeyse "
           "ayırdığı için klasik ML fit'i yakınsamayabilir). Klasik ML LRT yalnız karşılaştırma için.", "",
-          "| kol | PLR χ² | p (PLR) | Holm p | OR / SD [bootstrap %95 CI] | Firth Wald p | gün-kümeli p | OR df 6 (p) | ML LRT p (yakınsadı) | tekrar başına PLR aralığı | CV ΔAUC (betimsel) |",
-          "|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| kol | PLR χ² | p (PLR) | Holm p | OR / SD [bootstrap %95 CI] | Firth Wald p | gün-kümeli CR1 p (betimsel) | "
+          "**gün-kümeli CV3 p** (koşul 3) | OR df 6 (p) | ML LRT p (yakınsadı) | tekrar başına PLR aralığı | CV ΔAUC (betimsel) |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for a in arms:
         t, b, d6 = R["t1"][a], R["boot"][a], R["t1_df6"][a]
         hp = R["holm"].get(a)
         rr = R["t1_per_repeat"][a]
         L.append(f"| {a} | {f3(t['lr'])} | {fp(t['p_lrt'])} | {fp(hp) if hp is not None else 'referans'} | "
                  f"{f3(t['or_sd'])} [{f3(b['lo'])}, {f3(b['hi'])}] (başarısız {b['n_fail']}) | {fp(t['p_wald'])} | {fp(t.get('p_cluster'))} | "
+                 f"{fp(t.get('p_cv3'))} | "
                  f"{f3(d6['or_sd'])} ({fp(d6['p_lrt'])}) | {fp(t.get('ml_p_lrt'))} ({'evet' if t.get('ml_converged') else 'hayır'}) | "
                  f"{f3(min(rr))}–{f3(max(rr))} | {R['cv_delta_auc'][a]['mean']:+.4f} ± {R['cv_delta_auc'][a]['sd']:.4f} |")
     L += ["", "## 2. E2h-KLR (L4) ve tabakalı AUC'ler (L1, betimsel)", "",
@@ -741,7 +860,8 @@ def report_md(R: dict) -> str:
         L.append(f"| {a} | {v['fold_auc_mean']:.3f} ± {v['fold_auc_sd']:.3f} | {v['repeat_auc_min']:.3f}–{v['repeat_auc_max']:.3f} |")
     L += ["", "## 7. Önceden yazılmış kurallara göre Aşama 1 kararları", "",
           "C1 koşulları: 1 Holm-T1 (PLR) p < 0.05 ve OR > 1 · 2 bootstrap CI 1'i dışlıyor · 3 gün-kümeli: "
-          + ("p < 0.05 ve OR > 1 (K2)" if PROTOCOL["c1_cond3"] == "cluster_p" else "yön (boş koşul; K2)")
+          + {"cluster_cv3": "jackknife (CV3) p < 0.05 ve OR > 1 (K2, D-038)", "cluster_p": "CR1 p < 0.05 ve OR > 1",
+             "direction": "yön (boş koşul; D-025 metni)"}[PROTOCOL["c1_cond3"]]
           + " · 4 E2h-KLR OR > 1 · 5 df 4 ve df 6 aynı yön · 6 N3 (Aşama 2) · 7 G1+ ise N5 anlamlı değil "
           + ("(C1'e dahil)" if PROTOCOL["c1_n5_veto"] else "(S11: yalnız betimsel, C1'e dahil değil)") + ".", "",
           "| backbone | 1 | 2 | 3 | 4 | 5 | 7 | Aşama-1 koşulları | C1 | Aşama 2 (kabul edilen kural: Holm-T1 pozitif) | C2 (bağlam kullanımı) |",
@@ -755,15 +875,23 @@ def report_md(R: dict) -> str:
                  f"{'hepsi ✓' if v['stage1_all_met'] else 'eksik'} | {v['c1_status']} | {'evet' if v['stage2_triggered'] else 'hayır'} | "
                  f"{R['c2'][b]} |")
     any_c1 = any(v["stage1_all_met"] for v in R["verdicts"].values())
+    blocked = [b for b, v in R["verdicts"].items() if v["c1_status"].startswith("kurulamadı")]
     L += ["", "## 8. Bu rapor neyi gösterebilir, neyi gösteremez (önceden yazılmış metin)", ""]
-    if not any_c1:
-        L += ["- **Hiçbir backbone C1'in Aşama-1 koşullarını sağlamadı.** Önceden yazılmış ifade: \"Bu veriyle bağlamdan bağımsız bir ses "
-              "sinyali gösterilemedi.\" Bu, \"seste astım bilgisi yok\" demek değildir: SIM-001'e göre %80 güç ancak aynı-bağlam AUC'si "
-              "≈ 0.69'da (α 0.05) / ≈ 0.74'te (Holm düzeyi) vardı; bu değerler iyimserdi."]
-    else:
+    if blocked:
+        L += [f"- **C1 kurulamadı ({', '.join(blocked)}):** diğer Aşama-1 koşulları sağlandı ama gün-kümeli test (koşul 3) bu "
+              "veri yapısında önceden yazılmış kalibrasyon kuralını geçemedi. Yerine başka bir test konmaz; karar gerekli (D-038)."]
+    if any_c1:
         L += ["- Aşama-1 koşullarını sağlayan backbone(lar) için C1 **henüz kurulmadı**: N3 (Aşama 2) bekleniyor."]
-    L += ["- T1 yalnız **ölçülmüş** bağlamı (saat, tarih) ve yaşı ayarlar. Ölçülmemiş, güne özgü bağlamda yanlış pozitif ~%12 "
-          "(p < 0.05) olabilir (SIM-001 S3; yukarıdaki kalibrasyon tablosu). Gün-kümeli SE bunu düzeltmez.",
+    elif not blocked:
+        L += ["- **Hiçbir backbone C1'in Aşama-1 koşullarını sağlamadı.** Önceden yazılmış ifade: \"Bu veriyle bağlamdan bağımsız bir ses "
+              "sinyali gösterilemedi.\" Bu, \"seste astım bilgisi yok\" demek değildir. Güç (iyimser): T1 tek başına %80 güce "
+              "aynı-bağlam AUC'si ≈ 0.69'da (α 0.05) / ≈ 0.74'te (Holm düzeyi) ulaşıyor (SIM-001); Aşama-1 kuralıyla (koşul 1 ∧ "
+              "koşul 3, CV3) Holm düzeyinde ≈ 0.77'de (SIM-002)."]
+    L += ["- T1 yalnız **ölçülmüş** bağlamı (saat, tarih) ve yaşı ayarlar. Ölçülmemiş, güne özgü bağlamda T1-PLR'nin yanlış "
+          "pozitif oranı ~%11 (p < 0.05) olabilir (SIM-001 S3; Bölüm 0). Sandviç CR1 bunu düzeltmez; C1 koşul 3 (CV3) "
+          "simülasyonda bu senaryoyu sınırlıyor, ama yalnız **sentetik** gün etkisi için gösterildi.",
+          "- İstatistiksel anlamlılık (koşul 1) tek başına \"bağlamdan bağımsız ses sinyali\" kanıtı değildir; o iddia yalnız "
+          "C1'in bütün koşulları ve Aşama 2 (N3) ile kurulabilir. Klinik yorum bu raporun kapsamı dışındadır.",
           "- Pozitiflik sınırı: sabah kaydedilen sağlıklı sayısı çok küçük, geç dönemde sağlıklı yok; bilgi yalnız örtüşme bölgesinden gelir.",
           "- Spirometri / bronkodilatör sonrası kayıt olasılığı (S13) saat kontrolüyle ayrılamaz; veri ekibinden cevap bekleniyor.",
           "- Pozitif bir C1 bile klinik tanı aracı anlamına gelmez (vaka-kontrol, tek merkez, dış doğrulama yok).",
@@ -772,6 +900,27 @@ def report_md(R: dict) -> str:
 
 
 # ----------------------------------------------------------------------------- ana akış
+def current_settings(args) -> dict:
+    return {"n_repeats": args.n_repeats, "n_boot": args.n_boot, "n_perms": args.n_perms, "n_sim": args.n_sim,
+            "g1_repeats": args.g1_repeats, "seed": args.seed,
+            "backbones": ",".join(sorted(b for b in args.backbones.split(",") if b)), "spline_df": args.spline_df}
+
+
+def protocol_gate(args) -> None:
+    """Gerçek veri kipi: PROTOCOL KABUL ve bütün analiz ayarları FIXED ile aynı olmalı; değilse çalışma reddedilir.
+    --allow-unapproved yalnız testler / simülasyon içindir ve rapora 'karar için kullanılamaz' uyarısı yazılır."""
+    if args.allow_unapproved:
+        return
+    if PROTOCOL["status"] != "KABUL":
+        raise SystemExit(f"EVAL-016 uygulama protokolü onay bekliyor ({PROTOCOL['version']}; docs/EVAL016_PLAN.md Bölüm 9). "
+                         "Gerçek veride çalıştırılmadı.")
+    want = dict(FIXED, backbones=",".join(sorted(FIXED["backbones"].split(","))))
+    cur = current_settings(args)
+    bad = {k: (cur[k], want[k]) for k in want if cur[k] != want[k]}
+    if bad:
+        raise SystemExit(f"Sabitlenmiş analiz ayarlarından sapma (D-038): {bad} (verilen, sabit). Gerçek veride çalıştırılmadı.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe-dir", required=True, type=Path)
@@ -792,11 +941,9 @@ def main() -> None:
     ap.add_argument("--skip-spisak", action="store_true", help="yalnız mlconfound kurulamazsa; raporda açıkça yazılır")
     ap.add_argument("--allow-unapproved", action="store_true", help="yalnız sentetik testler / simülasyon")
     args = ap.parse_args()
-    if PROTOCOL["status"] != "KABUL" and not args.allow_unapproved:
-        raise SystemExit(f"EVAL-016 uygulama protokolü onay bekliyor ({PROTOCOL['version']}; docs/EVAL016_PLAN.md Bölüm 9). "
-                         "Gerçek veride çalıştırılmadı.")
-    t0 = time.time()
     args.spline_df = 4                     # birincil spline df (D-025); df 6 duyarlılık olarak ayrıca hesaplanır
+    protocol_gate(args)
+    t0 = time.time()
 
     splits = {r: pd.read_csv(args.splits_dir / f"outer_r{r}.csv") for r in range(args.n_repeats)}
     cohort = set(splits[0].participant_id)
@@ -816,20 +963,25 @@ def main() -> None:
 
     R = {"exp": "EVAL-016", "stage": 1, "date": time.strftime("%Y-%m-%d"), "cohort": cinfo, "arms": arms, "backbones": bbs,
          "n_repeats": args.n_repeats, "n_boot": args.n_boot, "n_perms": args.n_perms, "spline_df": args.spline_df,
-         "plan": "docs/EVAL016_PLAN.md", "protocol": dict(PROTOCOL)}
-    print("kalibrasyon tanılaması …", flush=True)
-    R["calibration"] = calibration_diagnostic(Ct, Xc4, args.n_sim, args.seed)
+         "plan": "docs/EVAL016_PLAN.md", "protocol": dict(PROTOCOL), "fixed_settings": dict(FIXED),
+         "settings": current_settings(args), "settings_fixed": not args.allow_unapproved,
+         "run_mode": ("gerçek veri kipi (protokol KABUL, ayarlar sabit)" if not args.allow_unapproved
+                      else "test / simülasyon (--allow-unapproved)")}
+    print(f"kalibrasyon tanılaması ({args.n_sim} × 3 senaryo; PLR, CR1, CV3) …", flush=True)
+    R["calibration"] = calibration_diagnostic(Ct, Xc4, args.n_sim, args.seed, n_jobs=args.n_jobs)
+    k2_valid = R["calibration"]["k2_validity"]["valid"]
+    print(f"  K2 geçerlilik: {R['calibration']['k2_validity']}", flush=True)
 
     print("T1 …", flush=True)
     T, boot, df6, cvd, prep = {}, {}, {}, {}, {}
     for a in arms:
         s = S[a].to_numpy()
-        T[a] = t1(y, Xc4, s, groups=day)
+        T[a] = t1(y, Xc4, s, groups=day, jackknife=True)
         df6[a] = t1(y, Xc6, s, ml=False)
         boot[a] = boot_or(y, Xc4, s, args.n_boot, args.seed)
         cvd[a] = cv_delta_auc(y, Xc4, s, args.seed)
         prep[a] = [t1(y, Xc4, per_rep[a][r].reindex(Ct.index).to_numpy(), ml=False)["lr"] for r in per_rep[a].columns]
-        print(f"  {a}: LR {T[a]['lr']:.2f} p {T[a]['p_lrt']:.4f} OR {T[a]['or_sd']:.2f} "
+        print(f"  {a}: LR {T[a]['lr']:.2f} p {T[a]['p_lrt']:.4f} CV3 p {T[a]['p_cv3']:.4f} OR {T[a]['or_sd']:.2f} "
               f"[{boot[a]['lo']:.2f}, {boot[a]['hi']:.2f}]", flush=True)
     holm_p = RP.holm({b: T[b]["p_lrt"] for b in bbs})
     R.update({"t1": T, "t1_df6": df6, "boot": boot, "cv_delta_auc": cvd, "t1_per_repeat": prep, "holm": holm_p})
@@ -901,7 +1053,7 @@ def main() -> None:
         R["l8"][a] = {"fold_auc_mean": float(np.mean(fa)), "fold_auc_sd": float(np.std(fa, ddof=1)),
                       "repeat_auc_min": float(min(ra)), "repeat_auc_max": float(max(ra))}
 
-    R["verdicts"] = verdicts(T, holm_p, boot, df6, R["e2h"], R["g1"], R["n5"])
+    R["verdicts"] = verdicts(T, holm_p, boot, df6, R["e2h"], R["g1"], R["n5"], k2_valid=k2_valid)
     R["c2"] = {}
     for b in bbs:
         pc = R["l5"][b]["patients_pm_coef"]["ci"]
