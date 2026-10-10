@@ -192,6 +192,35 @@ Bunların hepsi D-025'e girdi.
 
 ---
 
+## SIM-002 — K2 geçerlilik çalışması: gün-kümeli test bu veri yapısında geçerli mi? (ses kullanmadan, gerçek bağlamla)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-10 (16. tur; **EVAL-016 gerçek veride çalıştırılmadan önce**) |
+| DURUM | Tamamlandı (tasarım simülasyonu; model deneyi değil) → D-038 |
+| Soru | C1 koşul 3'ün gün-kümeli testi (K2) bu veri yapısında geçerli mi? Planlanan sandviç (CR1) ile gün-kümeli jackknife (CV3) karşılaştırması; koşul 3'ün güç maliyeti |
+| Veri | Gerçek etiket, saat, tarih, yaş, kayıt günü (Faz 0 özel kopyası; 339 kişi: 282/57; 65 gün, 53'ü tek etiketli). Ses skoru yapay (SIM-001 ile aynı model) |
+| Senaryolar | S1 düzgün, S2 basamak, S3 ölçülmemiş gün etkisi; γ = 0 (yanlış pozitif) ve γ = 0.5–1.25 (güç) |
+| Testler | T1-PLR (Firth); CR1 sandviç (G/(G−1), normal); CV3 jackknife (t(G−1)) |
+| Simülasyon | γ = 0'da 1000, γ > 0'da 400 / hücre; tohum 2026 |
+| Script / sonuç | `scripts/simulate_k2_validity.py` → `reports/context/SIM-002_k2_validity.{md,json}` |
+
+| Bulgu | Sayı (iki yönlü p < 0.05 oranı) |
+|---|---|
+| CR1, doğru belirtilmiş model (S1) | **0.090** [0.074, 0.109] → geçersiz (anti-konservatif) |
+| CR1, gün etkisi (S3) | **0.144** (PLR 0.138) → gün etkisini düzeltmiyor |
+| CV3, S1 / S2 / S3 | 0.027 / 0.026 / 0.044 → geçerli |
+| C1 biçimi, S3, Holm'un en sıkı eşiği: koşul 1 → koşul 1 ∧ CV3 | 0.015 → 0.012 (koruma küçük) |
+| Güç, AUC ≈ 0.70, Holm düzeyi: koşul 1 → koşul 1 ∧ CV3 | 0.52 → 0.44 |
+| %80 güç için aynı-bağlam AUC'si, Holm düzeyi | T1 tek başına ≈ 0.74 → C1 Aşama-1 kuralıyla ≈ 0.77 [ara değer] |
+
+**Yorum.** K2'nin planlanan biçimi (CR1) Alper'in geçerlilik koşulunu sağlamıyor; CV3 sağlıyor. Koşul 3 geçerli ama Holm düzeyinde gün etkisine karşı koruması küçük ve güç maliyeti var. Ayrıntı: `docs/EVAL016_PLAN.md` Bölüm 10.
+
+**Olumsuz sonuç (korunuyor):** CR1 sandviç bu veri yapısında kullanılamaz; raporda yalnız betimsel.
+
+**Bilinen kısıtlar.** Yapay tek boyutlu skor; yerel kopya (çalıştırma anındaki kalibrasyon Drive dosyasıyla tekrarlar); gün etkisi normal ve etiketten bağımsız varsayıldı.
+
+---
+
 ## EXP-010 — MFCC: yayınlanmış çalışmanın sadık yeniden üretimi
 | Alan | Değer |
 |---|---|
@@ -515,19 +544,19 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-10 (plan; **E1 sonuçlarından sonra, bağlam testlerinden önce**) |
-| DURUM | **Kod hazır, gerçek veride ÇALIŞTIRILMADI** (2026-10-10). D-025 ve D-037 KABUL. Gerçek veriden önce onay bekleyen uygulama değişiklikleri: S9 Firth/PLR, S10 etiket-içi permütasyon kısmi testi, S11 N5 betimsel, S12 cezalı koşullu logit, K2 (C1 koşul 3) — `docs/EVAL016_PLAN.md` Bölüm 7 ve 9. Script onaysız protokolle gerçek veride çalışmaz |
+| DURUM | **Kod hazır, protokol onaylı (D-038), gerçek veride ÇALIŞTIRILMADI — sonuç yok** (2026-10-10). D-025, D-037, D-038 KABUL: S9 Firth/PLR, S10 etiket-içi permütasyon kısmi testi, S11 N5 betimsel, S12 cezalı koşullu logit, K2 (C1 koşul 3 = gün-kümeli jackknife CV3; SIM-002). Analiz ayarları sabit; script farklı ayarla ya da onaysız protokolle gerçek veride çalışmaz |
 | Araştırma sorusu | D-023 / RQ7 (onaylayıcı): ses, ölçülen bağlam (saat, tarih) ve yaşın ötesinde astım bilgisi taşıyor mu? Ayrıca C2: model bağlamı kullanıyor mu? |
 | Beklenti (önceden) [HYPOTHESIS] | Bağlamın etiketi neredeyse belirlemesi ve sağlıklı n'in küçük olması nedeniyle T1'in gücü sınırlı (SIM-001: %80 güç için aynı-bağlam AUC'si ≈ 0.69 / Holm düzeyinde ≈ 0.74). SSL backbone'larının en az birinde T1 pozitif çıkması da, hiçbirinde çıkmaması da makul. META-016'nın zayıf işareti nedeniyle C2'nin (bağlam kullanımı) en az bir backbone'da pozitif çıkması daha olası |
 | Veri | EXP-016 `partial/` dış-test tahminleri (8 kol × 5 tekrar), `participant_context.csv`, `embeddings_v1` (G1 / N5) |
 | Kohort | EXP-016 kohortu ∩ saat, tarih ve yaşı tam (beklenen 339; çalıştırmada sayılır) |
-| Birincil test | T1: `y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ`, ŝ için Firth cezalı olabilirlik oranı testi (S9, onay bekliyor; ML LRT ikincil); Holm (6 backbone), α 0.05, OR > 1 |
-| Destekleyici | Bootstrap OR CI (B 2000); gün-kümeli SE; cr df 6; E2h-KLR; L1 tabakalı AUC'ler + referanslar; Spisak tam (`mlconfound`, linear); C2 kısmi testi etiket-içi permütasyon (S10); L5 karşıt hücreler; N2; EXP-020 G1 (hastalarda AM/PM ve dönem probu); N5 (G1+ ise); L7 codec zinciri (S8); L8; kalibrasyon tanılaması |
-| Doğrulama | `tests/test_eval016.py` E1–E13 (sentetik, doğrusu bilinen; Firth R brglm2 ile, cezalı koşullu logit R survival ile); notebook 22 simüle Colab'da uçtan uca |
+| Birincil test | T1: `y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ`, ŝ için Firth cezalı olabilirlik oranı testi (S9; ML LRT ikincil); Holm (6 backbone), α 0.05, OR > 1 |
+| Destekleyici | Bootstrap OR CI (B 2000); gün-kümeli jackknife CV3 (C1 koşul 3) ve sandviç CR1 (betimsel); cr df 6; E2h-KLR; L1 tabakalı AUC'ler + referanslar; Spisak tam (`mlconfound`, linear); C2 kısmi testi etiket-içi permütasyon (S10); L5 karşıt hücreler; N2; EXP-020 G1 (hastalarda AM/PM ve dönem probu); N5 (G1+ ise); L7 codec zinciri (S8); L8; kalibrasyon tanılaması (PLR / CR1 / CV3; K2 geçerlilik kuralı) |
+| Doğrulama | `tests/test_eval016.py` E1–E17 (sentetik, doğrusu bilinen; Firth R brglm2 ile — düz yüzey dahil, cezalı koşullu logit R survival ile, CR1 / CV3 statsmodels ile; kapı ve K2 kuralı); notebook 22 simüle Colab'da uçtan uca (gerçek veri kipi, sabit ayarlar); SIM-002 |
 | Aşama 2 (koşullu) | Yalnız Holm-T1-pozitif backbone'larda: N3 (arka plan; GPU dakikalar), gün-gruplu CV |
 | Karar kuralları | C1 / C2 (CONFOUND 6; `docs/EVAL016_PLAN.md` Bölüm 4) |
 | Faz 3'e etkisi | Backbone seçimi (D-035) ve C3 ölçütü değişmez; D-027 kol B yalnız G1+ ya da L3 kısmi pozitifse; Faz 3 tasarımı "T1 sonrası" etiketli |
 | Kod / notebook | `scripts/evaluate_context.py`, `notebooks/22_context_eval_frozen.ipynb` |
-| Sonuç konumu | `reports/context/EVAL-016_context.{md,json}`, `reports/context/EXP-020_g1.{md,json}` |
+| Sonuç konumu | `reports/context/EVAL-016_context.{md,json}` (EXP-020 G1 ve N5 bu raporun 4. bölümünde) |
 
 ---
 
