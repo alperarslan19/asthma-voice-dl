@@ -1,0 +1,305 @@
+{
+  "exp": "META-016",
+  "date": "2026-10-10",
+  "role": "ayrı meta veri / confounder izleme raporu (betimsel)",
+  "context_monitors": {
+    "cnn10": {
+      "patients_late_vs_early": 0.5241588527302813,
+      "patients_AM_vs_PM": 0.4735999050783104,
+      "healthy_AM_vs_PM": 0.605072463768116,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "cnn14": {
+      "patients_late_vs_early": 0.4836183121897407,
+      "patients_AM_vs_PM": 0.4705742762221168,
+      "healthy_AM_vs_PM": 0.6521739130434783,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "cnn14_16k": {
+      "patients_late_vs_early": 0.48383894098179814,
+      "patients_AM_vs_PM": 0.5025510204081632,
+      "healthy_AM_vs_PM": 0.6666666666666667,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "beats": {
+      "patients_late_vs_early": 0.548703805846663,
+      "patients_AM_vs_PM": 0.49780493592785957,
+      "healthy_AM_vs_PM": 0.6974637681159421,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "wavlm_base_plus": {
+      "patients_late_vs_early": 0.5460562603419746,
+      "patients_AM_vs_PM": 0.5046274323682962,
+      "healthy_AM_vs_PM": 0.6141304347826086,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "wavlm_large": {
+      "patients_late_vs_early": 0.5368450082735797,
+      "patients_AM_vs_PM": 0.49365211200759374,
+      "healthy_AM_vs_PM": 0.588768115942029,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "mfcc_lr": {
+      "patients_late_vs_early": 0.5568119139547711,
+      "patients_AM_vs_PM": 0.5249169435215947,
+      "healthy_AM_vs_PM": 0.463768115942029,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "mfcc_mlp": {
+      "patients_late_vs_early": 0.5541092112520685,
+      "patients_AM_vs_PM": 0.49780493592785946,
+      "healthy_AM_vs_PM": 0.46739130434782605,
+      "n_patients": 283,
+      "n_healthy": 58
+    },
+    "ref_context": {
+      "patients_late_vs_early": 0.9389802173307329,
+      "patients_AM_vs_PM": 0.7399738965353584,
+      "healthy_AM_vs_PM": 1.0,
+      "n_patients": 282,
+      "n_healthy": 58
+    },
+    "ref_age": {
+      "patients_late_vs_early": 0.5103695532266961,
+      "patients_AM_vs_PM": 0.5111532985287138,
+      "healthy_AM_vs_PM": 0.4481481481481482,
+      "n_patients": 283,
+      "n_healthy": 57
+    }
+  },
+  "duration_by_task_label": [
+    {
+      "task": "aaa",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.065,
+      "dur_q1": 9.242,
+      "dur_q3": 10.499,
+      "n_short_lt4s": 7
+    },
+    {
+      "task": "aaa",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.33,
+      "dur_q1": 9.777,
+      "dur_q3": 10.558,
+      "n_short_lt4s": 10
+    },
+    {
+      "task": "araba",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.285,
+      "dur_q1": 9.91,
+      "dur_q3": 10.449,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "araba",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.225,
+      "dur_q1": 9.914,
+      "dur_q3": 10.444,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ana",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.265,
+      "dur_q1": 9.866,
+      "dur_q3": 10.5,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ana",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.275,
+      "dur_q1": 9.965,
+      "dur_q3": 10.453,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ordu",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.355,
+      "dur_q1": 9.938,
+      "dur_q3": 10.512,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ordu",
+      "label": "astım",
+      "n": 282,
+      "dur_median": 10.17,
+      "dur_q1": 9.883,
+      "dur_q3": 10.411,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "gelecek",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.275,
+      "dur_q1": 9.89,
+      "dur_q3": 10.505,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "gelecek",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.251,
+      "dur_q1": 9.999,
+      "dur_q3": 10.453,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "titiz",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.275,
+      "dur_q1": 9.981,
+      "dur_q3": 10.504,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "titiz",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.24,
+      "dur_q1": 9.928,
+      "dur_q3": 10.432,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ünlem",
+      "label": "sağlıklı",
+      "n": 59,
+      "dur_median": 10.345,
+      "dur_q1": 9.995,
+      "dur_q3": 10.555,
+      "n_short_lt4s": 0
+    },
+    {
+      "task": "ünlem",
+      "label": "astım",
+      "n": 283,
+      "dur_median": 10.295,
+      "dur_q1": 9.97,
+      "dur_q3": 10.475,
+      "n_short_lt4s": 0
+    }
+  ],
+  "n_short_recordings_total": 17,
+  "duration_reference": {
+    "auc_fold_mean": 0.49689412926255033,
+    "auc_fold_sd": 0.08048887293595848,
+    "pooled_auc": 0.44888303288015813,
+    "ci": [
+      0.3543303147616727,
+      0.5429440672246644
+    ],
+    "n_folds": 25
+  },
+  "short_exclusion_sensitivity": {
+    "n_excluded_participants": 17,
+    "n_excluded_by_label": {
+      "astım": 10,
+      "sağlıklı": 7
+    },
+    "by_arm": {
+      "cnn10": {
+        "tümü": {
+          "auc_fold_mean": 0.8547630439735703,
+          "pooled_auc": 0.8578187698388932
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.8527126146763108,
+          "pooled_auc": 0.8540433925049309
+        }
+      },
+      "cnn14": {
+        "tümü": {
+          "auc_fold_mean": 0.7914679691653376,
+          "pooled_auc": 0.8114631370904953
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.7764065931556101,
+          "pooled_auc": 0.796632854325162
+        }
+      },
+      "cnn14_16k": {
+        "tümü": {
+          "auc_fold_mean": 0.7292008430166323,
+          "pooled_auc": 0.7331257112056057
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.7273375081536392,
+          "pooled_auc": 0.7304874612566921
+        }
+      },
+      "beats": {
+        "tümü": {
+          "auc_fold_mean": 0.9205460621250094,
+          "pooled_auc": 0.9228005030843863
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.9221204737888752,
+          "pooled_auc": 0.9244857706396169
+        }
+      },
+      "wavlm_base_plus": {
+        "tümü": {
+          "auc_fold_mean": 0.883986196551986,
+          "pooled_auc": 0.8856680840869616
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.8856113360356361,
+          "pooled_auc": 0.8886306001690617
+        }
+      },
+      "wavlm_large": {
+        "tümü": {
+          "auc_fold_mean": 0.9087955684666211,
+          "pooled_auc": 0.9092651374498412
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.9084769609700336,
+          "pooled_auc": 0.9108199492814878
+        }
+      },
+      "mfcc_lr": {
+        "tümü": {
+          "auc_fold_mean": 0.7710285182653603,
+          "pooled_auc": 0.7782835239863449
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.7653803714811879,
+          "pooled_auc": 0.7712735981966751
+        }
+      },
+      "mfcc_mlp": {
+        "tümü": {
+          "auc_fold_mean": 0.7696332687780055,
+          "pooled_auc": 0.7879858657243817
+        },
+        "kısa kaydı olanlar hariç": {
+          "auc_fold_mean": 0.7689573429263818,
+          "pooled_auc": 0.7873344604113834
+        }
+      }
+    }
+  }
+}
