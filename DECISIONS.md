@@ -271,7 +271,13 @@ DURUM: KABUL · Tarih: 2026-10-08 (5. tur)
 - **UYGULAMA:** `scripts/analyze_recording_context.py` → `participant_context.csv` (`recording_date`, `recording_date_source`).
 
 ## D-025 — Birincil test spesifikasyonu revize edildi (T1, E2h, Spisak testleri)
-DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
+DURUM: **KABUL** (2026-10-10, 15. tur — Alper: "içeriği değiştirmeden kabul ediyorum") · Önerildiği tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** yazıldı · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Uygulama: `docs/EVAL016_PLAN.md` (D-037) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
+- **Uygulama notu (15. tur, kodlamadan sonra, gerçek veriden önce):** Sentetik testlerde iki uygulanabilirlik sorunu bulundu. Çözüm önerileri gerçek veride çalıştırmadan önce Alper'in onayını bekliyor (`docs/EVAL016_PLAN.md` Bölüm 7 S9–S10, Bölüm 9 K2 / K4–K6):
+  - (S9) yarı-tam ayrışmada klasik ML T1 çöküyor → Firth cezalı olabilirlik + PLR;
+  - (S10) `mlconfound` kısmi testi bağlamsız skorda yanlış pozitif → etiket-içi tam permütasyon testi;
+  - (S11) N5, gerçek sinyal + bağlam birlikteyken yapısal yanlış alarm veriyor → yalnız betimsel;
+  - (S12) E2h-KLR tabaka içi ayrışmada çöküyor → Jeffreys-cezalı koşullu logit;
+  - (K2) C1 koşul 3 boş bir koşul → "gün-kümeli p < 0.05 ve OR > 1" önerisi.
 - **15. tur notu (2026-10-10):** D-037 kapsamında EVAL-016 için **içerik değişmeden KABUL** önerildi. "O aşamada kesinleştirilir" denen ayrıntılar (ŝ tanımı, bootstrap B, E2h tabakaları, Spisak ayarları) ve önceden yazılmış metinden sapmalar (S1–S7) `docs/EVAL016_PLAN.md`'de, testler çalıştırılmadan önce sabitlendi.
 - **KARAR:**
   1. **T1 (birincil):** tek lojistik regresyon `y ~ spline(saat, 4 df) + spline(tarih, 4 df) + yaş + ŝ`.
@@ -399,6 +405,7 @@ DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model g
 
 ## D-028 — Kayıt bağlamı confounder'ı ayrı bir araştırma başlığıdır; değerlendirme model geliştirme bitince yapılır
 DURUM: KABUL · Tarih: 2026-10-08 (7. tur, Alper'in yönlendirmesi ve onayı) · D-023'ün birincil sorusunu değiştirmez; ne zaman ve nasıl uygulanacağını belirler
+- **Not (15. tur):** Madde 2'nin zamanlaması D-037 (KABUL) ile değişti: dondurulmuş aile için değerlendirme (EVAL-016) Faz 3'ten önce yapılır. İçerik ve madde 3–5 aynen geçerli.
 - **KARAR:**
   1. **Ana proje planı değişmez** (D-012 merdiveni: MFCC → dondurulmuş gömme + lineer prob → sıfırdan CNN10 → ham dalga formundan uçtan uca fine-tune). Geliştirme sırasında ek kontrol deneyi veya azaltma yöntemi uygulanmaz. Bunlar ertelenir:
      - bağlam probları (EXP-020) ve azaltma denemeleri (EXP-022);
@@ -691,7 +698,7 @@ DURUM: **KABUL** (2026-10-09, 13. tur — Alper **koşullu** onayladı: "BEATs/W
 - **UYGULAMA:** `run_probes.select_per_fold` (yalnız iç OOF tablosunu alır; iç satırların eğitim rolünde olduğunu assert eder) → `experiments/frozen_probe/d035_selection.csv`; `procedure_estimate` (dış test AUC'si yalnız değerlendirme için); testler: P6 (kurgulanmış örnek, eşitlik kuralı, sızıntı assert'i), P7 (dış test tahminleri bozulunca seçim birebir aynı).
 
 ## D-036 — Sıfırdan CNN10'un zamanlaması: Faz 3'ün aynı pipeline'ında kontrol kolu
-DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-012 basamak 3'ün **sırasını** değiştirir; RQ2 ve D-035 madde 1 (CNN10 sıfırdan–pretrained eşi) korunur · Faz 2 sonuçları görüldükten sonra yazıldı (Alper'in önceliği: ana yol fine-tuning)
+DURUM: **ÖNERİLDİ — Faz 3 tasarımında karara bağlanacak** (Alper, 15. tur: "şimdilik sonraya bırakalım; Faz 3 tasarımında kontrol kolu olarak değerlendiririz") · 2026-10-10, 14. tur · D-012 basamak 3'ün **sırasını** değiştirir; RQ2 ve D-035 madde 1 (CNN10 sıfırdan–pretrained eşi) korunur · Faz 2 sonuçları görüldükten sonra yazıldı (Alper'in önceliği: ana yol fine-tuning)
 - **KARAR:**
   1. Sıfırdan CNN10, fine-tuning'den önce ayrı bir basamak olarak koşulmaz.
   2. Faz 3'ün eğitim pipeline'ında **önceden belirlenmiş bir kontrol kolu** olur: aynı kod (`random_init`), aynı split'ler ve tohumlar, aynı hiperparametre ve epoch / early stopping kuralı, aynı tahmin kayıtları. Kural Faz 3 tasarım belgesinde, sonuçlardan önce yazılır.
@@ -716,7 +723,7 @@ DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-012 basamak 3'ün **sırasın�
 - **UYGULAMA:** Faz 3 tasarım belgesi; `scripts/train_finetune.py --random-init`; EXPERIMENTS.md planlanan tablo, sıra 5.
 
 ## D-037 — Bağlam değerlendirmesi (EVAL-016: T1 ve lens seti) dondurulmuş tahminler üzerinde, Faz 3'ten önce
-DURUM: **ÖNERİLDİ** (2026-10-10; 14. turda önerildi, **15. turda revize edildi** — aşağıdaki revizyon notu) · D-028 madde 2'nin **zamanlamasını** değiştirir, içeriğini değil · D-025'in (içerik değişmeden) KABUL edilmesini gerektirir · **EXP-016'nın E1 sonuçlarından sonra, hiçbir bağlam testi çalıştırılmadan önce** yazıldı · Ayrıntı: `docs/EVAL016_PLAN.md`
+DURUM: **KABUL** (2026-10-10, 15. tur — Alper: "revize edilmiş önerini kabul ediyorum"; 14. turda önerildi, 15. turda revize edildi) · D-028 madde 2'nin **zamanlamasını** değiştirir, içeriğini değil · D-025 KABUL · **EXP-016'nın E1 sonuçlarından sonra, hiçbir bağlam testi çalıştırılmadan önce** yazıldı · Ayrıntı: `docs/EVAL016_PLAN.md`
 - **KARAR:**
   1. **EVAL-016 Aşama 1 Faz 3'ten önce yapılır.**
      - D-025'in testleri (T1, E2h-KLR, Spisak) ve CONFOUND lens setinin CPU'luk kısmı (L1, L2, L3, L4, L5, L8, N2, N4; EXP-020 G1 probu; G1+ ise N5) koşulur.

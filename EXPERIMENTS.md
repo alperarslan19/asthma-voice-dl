@@ -515,17 +515,18 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-10 (plan; **E1 sonuçlarından sonra, bağlam testlerinden önce**) |
-| DURUM | Planlandı — D-025 (içerik değişmeden) ve D-037 onayı bekliyor; kod yazılmadı |
+| DURUM | **Kod hazır, gerçek veride ÇALIŞTIRILMADI** (2026-10-10). D-025 ve D-037 KABUL. Gerçek veriden önce onay bekleyen uygulama değişiklikleri: S9 Firth/PLR, S10 etiket-içi permütasyon kısmi testi, S11 N5 betimsel, S12 cezalı koşullu logit, K2 (C1 koşul 3) — `docs/EVAL016_PLAN.md` Bölüm 7 ve 9. Script onaysız protokolle gerçek veride çalışmaz |
 | Araştırma sorusu | D-023 / RQ7 (onaylayıcı): ses, ölçülen bağlam (saat, tarih) ve yaşın ötesinde astım bilgisi taşıyor mu? Ayrıca C2: model bağlamı kullanıyor mu? |
 | Beklenti (önceden) [HYPOTHESIS] | Bağlamın etiketi neredeyse belirlemesi ve sağlıklı n'in küçük olması nedeniyle T1'in gücü sınırlı (SIM-001: %80 güç için aynı-bağlam AUC'si ≈ 0.69 / Holm düzeyinde ≈ 0.74). SSL backbone'larının en az birinde T1 pozitif çıkması da, hiçbirinde çıkmaması da makul. META-016'nın zayıf işareti nedeniyle C2'nin (bağlam kullanımı) en az bir backbone'da pozitif çıkması daha olası |
 | Veri | EXP-016 `partial/` dış-test tahminleri (8 kol × 5 tekrar), `participant_context.csv`, `embeddings_v1` (G1 / N5) |
 | Kohort | EXP-016 kohortu ∩ saat, tarih ve yaşı tam (beklenen 339; çalıştırmada sayılır) |
-| Birincil test | T1: `y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ`, ŝ için LR testi; Holm (6 backbone), α 0.05, OR > 1 |
-| Destekleyici | Bootstrap OR CI (B 2000); gün-kümeli SE; cr df 6; E2h-KLR; Spisak tam / kısmi (`mlconfound`, linear); L5 karşıt hücreler; N2; EXP-020 G1 (hastalarda AM/PM probu); N5 (G1+ ise) |
-| Aşama 2 (koşullu) | Yalnız T1-pozitif backbone'larda: N3 (arka plan; GPU dakikalar), L7 (codec zinciri), gün-gruplu CV |
+| Birincil test | T1: `y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ`, ŝ için Firth cezalı olabilirlik oranı testi (S9, onay bekliyor; ML LRT ikincil); Holm (6 backbone), α 0.05, OR > 1 |
+| Destekleyici | Bootstrap OR CI (B 2000); gün-kümeli SE; cr df 6; E2h-KLR; L1 tabakalı AUC'ler + referanslar; Spisak tam (`mlconfound`, linear); C2 kısmi testi etiket-içi permütasyon (S10); L5 karşıt hücreler; N2; EXP-020 G1 (hastalarda AM/PM ve dönem probu); N5 (G1+ ise); L7 codec zinciri (S8); L8; kalibrasyon tanılaması |
+| Doğrulama | `tests/test_eval016.py` E1–E13 (sentetik, doğrusu bilinen; Firth R brglm2 ile, cezalı koşullu logit R survival ile); notebook 22 simüle Colab'da uçtan uca |
+| Aşama 2 (koşullu) | Yalnız Holm-T1-pozitif backbone'larda: N3 (arka plan; GPU dakikalar), gün-gruplu CV |
 | Karar kuralları | C1 / C2 (CONFOUND 6; `docs/EVAL016_PLAN.md` Bölüm 4) |
 | Faz 3'e etkisi | Backbone seçimi (D-035) ve C3 ölçütü değişmez; D-027 kol B yalnız G1+ ya da L3 kısmi pozitifse; Faz 3 tasarımı "T1 sonrası" etiketli |
-| Kod / notebook | `scripts/evaluate_context.py`, `notebooks/22_context_eval_frozen.ipynb` (yazılacak) |
+| Kod / notebook | `scripts/evaluate_context.py`, `notebooks/22_context_eval_frozen.ipynb` |
 | Sonuç konumu | `reports/context/EVAL-016_context.{md,json}`, `reports/context/EXP-020_g1.{md,json}` |
 
 ---
