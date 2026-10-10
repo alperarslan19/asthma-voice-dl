@@ -687,3 +687,66 @@ DURUM: **KABUL** (2026-10-09, 13. tur — Alper **koşullu** onayladı: "BEATs/W
 - **RİSK:** Fold'lar farklı backbone seçebilir → Faz 3'te üç backbone'un kod yolu da hazır olmalı (WavLM Large belleği, SMK-001 S12). E1 temelli ölçüt bağlamı en iyi öğreneni seçebilir; azaltma: PANNs iki model sabit, altı backbone'un tahminleri saklanıp değerlendirme aşamasında lens setinden geçer. İç OOF tahminleri C'nin seçildiği aynı iç fold'lardan gelir → hafif, simetrik iyimserlik. [INFERENCE]
 - **BİLİMSEL SONUÇ:** Faz 3'e geçiş, dış test fold'una hiç bakmayan, önceden yazılmış bir kurala bağlı; prosedürün iyimserliği dondurulmuş düzeyde ölçülür.
 - **UYGULAMA:** `run_probes.select_per_fold` (yalnız iç OOF tablosunu alır; iç satırların eğitim rolünde olduğunu assert eder) → `experiments/frozen_probe/d035_selection.csv`; `procedure_estimate` (dış test AUC'si yalnız değerlendirme için); testler: P6 (kurgulanmış örnek, eşitlik kuralı, sızıntı assert'i), P7 (dış test tahminleri bozulunca seçim birebir aynı).
+
+## D-036 — Sıfırdan CNN10'un zamanlaması: Faz 3'ün aynı pipeline'ında kontrol kolu
+DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-012 basamak 3'ün **sırasını** değiştirir; RQ2 ve D-035 madde 1 (CNN10 sıfırdan–pretrained eşi) korunur · Faz 2 sonuçları görüldükten sonra yazıldı (Alper'in önceliği: ana yol fine-tuning)
+- **KARAR:**
+  1. Sıfırdan CNN10, fine-tuning'den önce ayrı bir basamak olarak koşulmaz.
+  2. Faz 3'ün eğitim pipeline'ında **önceden belirlenmiş bir kontrol kolu** olur: aynı kod (`random_init`), aynı split'ler ve tohumlar, aynı hiperparametre ve epoch / early stopping kuralı, aynı tahmin kayıtları. Kural Faz 3 tasarım belgesinde, sonuçlardan önce yazılır.
+  3. GPU sırasında pretrained kollardan sonra koşulur.
+  4. RQ2, aynı fold'da eşleştirilmiş Δ ile yanıtlanır (pretrained CNN10 − sıfırdan CNN10). Bütçe yetmezse kesme sırası: önce CNN14 (D-035 madde 6), sonra sıfırdan CNN10.
+- **NEDEN:**
+  - Sıfırdan CNN10, Faz 3'ün eğitim döngüsüyle aynı kodu kullanır. Ayrı bir basamak olarak öne almanın mühendislik kazancı yok; sıra yalnız GPU sırasını belirler. [INFERENCE]
+  - RQ2'nin geçerli karşılaştırması aynı pipeline ve aynı fold'ları gerektirir. Ayrı zamanda, ayrı kodla koşulursa karşılaştırma bozulur.
+  - Ucuz: CNN10 eğitim adımı 0.063 s (SMK-001 S12, batch 16 × 4 s) → 25 fold × 20 epoch ≈ 5 T4 saati [INFERENCE; veri yükleme ve doğrulama hariç, kaba].
+  - Bilimsel değeri:
+    - RQ2'yi yanıtlar.
+    - Sıfırdan model pretrained'e yakın çıkarsa, ayırıcı ipuçlarının basit / düşük düzeyli (kanal / bağlam dahil) olabileceğine işaret eder. [INFERENCE]
+    - Boll ve ark.'ta sıfırdan CNN10'un hasta AUC'si 0.85 ± 0.05, pretrained CNN10'unki 0.91 ± 0.01 (10 tohum, başka veri seti) [FROM PAPER] → küçük veride anlamsız değil, ama tohum varyansı yüksek.
+- **ALTERNATİFLER:**
+  - D-012 olduğu gibi (fine-tuning'den önce): ana hedefi geciktirir, aynı kodu yine gerektirir.
+  - Proje sonuna, "zaman kalırsa": RQ2 cevapsız kalabilir; pipeline o zamana değişmiş olursa eşleştirme bozulur.
+  - Hiç yapmamak: RQ2 düşer; "pretraining yardım ediyor" iddiası yalnız literatüre dayanır.
+- **RİSK:**
+  - Sıfırdan model daha fazla epoch isteyebilir; ortak epoch kuralı ona haksızlık edebilir → kural önceden yazılır, bu kısıt raporlanır.
+  - Tohum varyansı yüksek (Boll: ±0.05) → tek tohumla yorum zayıf.
+- **BİLİMSEL SONUÇ:** RQ2 korunur, ana yol gecikmez. "Pretrained sıfırdan kötü" ya da "fark yok" sonuçları da raporlanır.
+- **UYGULAMA:** Faz 3 tasarım belgesi; `scripts/train_finetune.py --random-init`; EXPERIMENTS.md planlanan tablo, sıra 5.
+
+## D-037 — Bağlam değerlendirmesinin (T1) dondurulmuş tahminler üzerinde, Faz 3 tam koşularından önce yapılması
+DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-028 madde 2'nin **zamanlamasını** değiştirir, içeriğini değil · D-025'in T1 / E2h-KLR / Spisak spesifikasyonunun bu koşu için KABUL edilmesini gerektirir · Faz 2 sonuçları görüldükten sonra yazıldı
+- **KARAR:**
+  1. Faz 3 protokolü T1 sonuçları görülmeden yazılır ve kabul edilir: girdi, eğitim kapsamı, hiperparametreler, epoch / early stopping kuralı, bütçe ve kollar.
+  2. Faz 3 kodu yazılırken, CPU'da paralel olarak, D-025'in testleri Faz 2'nin kaydedilmiş dış-fold tahminleri üzerinde koşulur:
+     - testler: T1 (birincil), E2h-KLR, Spisak kısmi test;
+     - kollar: 6 backbone + 2 MFCC tabanı;
+     - Holm; yeniden eğitim yok.
+  3. Faz 3'ün tam GPU koşuları T1 raporundan sonra başlar.
+     - T1 sonucu 1. maddedeki protokolü değiştirmez.
+     - Yalnız yorumu belirler, ve D-027'deki koşullu kolun (bağlam-dengeli ağırlık) gerekip gerekmediğini.
+- **NEDEN:**
+  - Faz 2'nin en önemli bulgusu [FACT]: en iyi ses AUC'si (BEATs 0.921 ± 0.046) yalnız-bağlam referansının (0.934 ± 0.022) altında. Projenin birincil sorusu (D-023: ses, bağlam ve yaşın ötesinde bilgi taşıyor mu?) şu an cevapsız.
+  - T1 yalnız kaydedilmiş tahminlere ihtiyaç duyar; GPU maliyeti yok. [INFERENCE]
+  - Bu iş zaten yapılacak: C3 iddiası (fine-tune bağlamdan bağımsız bilgiyi artırdı mı? D-025, D-027) dondurulmuş T1'i karşılaştırma tabanı olarak ister. Değişen yalnız sıra.
+  - D-028'in RİSK maddesi bu anı öngörüyordu: "mimari ve hiperparametre seçimleri bağlamı en iyi kullanan modele kayabilir". Faz 3 seçimleri şimdi yapılıyor.
+  - META-016'da ilk, zayıf işaret var: sağlıklılarda sabah (12) vs öğleden sonra (46) göstergesi backbone'larda 0.59–0.70, MFCC'de 0.46. SE ≈ 0.09 [INFERENCE].
+  - Protokolü T1'den önce kilitlemek, tasarımın sonuca göre şekillenmesini önler.
+- **ALTERNATİFLER:**
+  - **(A) D-028 olduğu gibi:** önce Faz 3'ü bitir, T1 en sonda.
+    - Ana hedefe en hızlı yol.
+    - Ama 25+ GPU saatlik fine-tune'un bağlamı mı öğrendiğine dair hiçbir ara bilgi olmaz; seçimler geri alınamaz.
+  - **(B) Önce T1, sonra Faz 3 tasarımı (sonuca göre):** en bilgili seçenek, ama tasarım sonuç görülerek yapılır (çatallanan yollar).
+  - **(C) Önerilen:** protokolü kilitle → T1'i paralel koş → tam GPU koşularından önce T1 raporunu oku.
+- **RİSK:**
+  - T1'in gücü sınırlı (SIM-001): %80 güç ancak aynı-bağlam AUC'si ≈ 0.69'da (α 0.05), Holm düzeyinde ≈ 0.74'te. Olumsuz T1 "astım bilgisi yok" demek değildir; "saptanabilir büyüklükte kanıt yok" demektir.
+  - Pozitiflik sınırını hiçbir test aşamaz (sabah kaydedilen 12 sağlıklı; geç dönemde sağlıklı yok).
+  - Ek iş yükü:
+    - `scripts/evaluate_context.py`, testleri ve notebook hücresi;
+    - `mlconfound` bağımlılığı [NEEDS VERIFICATION: Colab'da kurulum ve sürüm].
+  - T1 kötü çıkarsa motivasyon etkilenebilir; sonuç yine önceden yazılmış iddia kurallarına göre raporlanır (D-025 madde 5).
+- **BİLİMSEL SONUÇ:** Fine-tuning'e "ses bağlamın ötesinde bilgi taşıyor mu?" sorusunun ilk cevabıyla girilir; Faz 3 için karşılaştırma tabanı (dondurulmuş T1) hazır olur.
+- **UYGULAMA:**
+  - `scripts/evaluate_context.py` (yeni);
+  - notebook `22_context_eval_frozen.ipynb`;
+  - rapor `reports/context/`;
+  - Faz 3 tasarım belgesi `docs/PHASE3_DESIGN.md`, bu karardan bağımsız olarak önce yazılır.

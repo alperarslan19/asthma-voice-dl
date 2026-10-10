@@ -399,7 +399,7 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (tasarım) |
-| DURUM | Planlandı — kod hazır. **Yerel birim testleri (`tests/test_phase2.py`, rastgele küçük modeller) SMK-001 DEĞİLDİR**; SMK-001 gerçek checkpoint'lerle Colab GPU'da yapılacak |
+| DURUM | **Tamamlandı — 2. deneme PASS (2026-10-10).** 1. deneme FAIL (aşağıda; korunuyor). Yerel birim testleri (`tests/test_phase2.py`, rastgele küçük modeller) SMK-001 DEĞİLDİR |
 | Soru | Her backbone resmi ağırlığı eksiksiz yüklüyor, resmi girdi biçimini alıyor, eval'de deterministik ve batch'ten bağımsız mı? Faz 3'te bir eğitim adımı ne kadar bellek / süre ister? |
 | Beklenti (önceden) | Hepsi PASS. PANNs'te kelime kayıtlarında "Speech" ilk 3'te. Aynı-kişi benzerlik AUC'si > 0.6 (konuşmacı bilgisi güçlü kodlanır). WavLM Large batch 16 × 4 s eğitimde T4'e gradient checkpointing'siz sığmayabilir [HYPOTHESIS] |
 | Kontroller | S1–S14 (`docs/PHASE2_DESIGN.md` Bölüm 9.5); S14 = dolgu yolu (tam uzunlukta `lengths` sonucu değiştirmez) |
@@ -409,13 +409,14 @@ Bunların hepsi D-025'e girdi.
 | Sonuç konumu | `reports/phase2/SMK-001_smoke.{md,json}`; checkpoint sha256'ları Drive `models/MANIFEST.json` |
 | 1. deneme (2026-10-09, T4, torch 2.11, transformers 5.18) | **FAIL.** (1) WavLM Base+ S2: sözleşme `return_attention_mask: false` bekliyordu, gerçek değer true → beklenti yanlıştı (bellekten yazılmış, "doğrulanmalı" işaretliydi); sözleşme düzeltildi. (2) CNN10, CNN14, CNN14_16k, BEATs S12: fp16 eğitim adımında kayıp ilk adımdan itibaren sonlu değil → neden: ön işleme fp16'da taşıyor / alt taşıyor (PANNs log-Mel amin=1e-10 → 0 → log(0); BEATs fbank ×2¹⁵ → taşma); CPU'da yeniden üretildi; düzeltme: ön işleme autocast altında fp32. WavLM Large S12 PASS (13.4 GB, 1.07 s/adım, gradient checkpointing'siz). Diğer kontroller beş modelde PASS; S9 PANNs "Speech" 1. sırada. Eşik gevşetilmedi; SMK-001 baştan çalıştırılacak. Rapor GitHub'da `phase2-smoke-results` dalında (commit `eae26bd`; main'e birleştirilmedi; olumsuz sonuç olarak korunur — dalı silme) |
 | Notebook düzeltmesi (1. denemeden sonra) | Aynı notebook'u ikinci kez çalıştırınca repo hücresi `git pull` hatası verdi (repo rapor dalında, upstream yok) ve aynı adlı dala ikinci gönderim reddedilecekti. Düzeltme: repo hücresi `fetch` + güvenli `main`'e geçiş (gönderilmemiş commit ya da commit edilmemiş dosya varsa durur); rapor zaman damgalı yeni dala gider; `!` yerine hata durumunda duran `sh()`; FAIL raporu da gönderilir, karar son hücrede. Rapor artık `code_sha256` + `git_commit` içerir; notebook 21 kapısı kodun SMK-001'den sonra değişmediğini ve checkpoint sha256'larını denetler. Tasarım ve eşikler değişmedi |
+| 2. deneme (2026-10-10, T4, torch 2.11, transformers 5.18, commit `568b8e3`) | **6/6 PASS** (rapor main'de, PR #15). S3 strict yükleme hepsinde PASS, beklenmeyen anahtar yok. S6 determinizm 0. S7 batch-değişmezlik göreli fark ≤ 4e-6. S8 kanca = resmi çıktı (SSL modelleri). S9: üç PANNs'te "Speech" 1. sırada. S10 aynı-kişi AUC: cnn10 0.67, cnn14 0.69, cnn14_16k 0.71, BEATs 0.83, Base+ 0.67, Large 0.70. S12 (batch 16 × 4 s, fp16, gradient checkpointing yok; tepe GB / s·adım): cnn10 0.63 / 0.063, cnn14 1.82 / 0.125, cnn14_16k 1.82 / 0.125, BEATs 3.86 / 0.316, Base+ 5.40 / 0.378, Large 13.05 / 1.004 → beklentinin aksine Large T4'e sığdı ama 15 GB'ye yakın. Base+'ta 3. adım GradScaler tarafından atlandı (sonlu olmayan gradyan; AMP'nin olağan davranışı) → Faz 3'te atlanan adım oranı izlenecek. Base+ `feat_extract_norm=group` (dolgu notu geçerli), Large `layer`. S14 kısa parça zeropad–nopad kosinüsü: PANNs 0.64–0.86 (maskesiz), BEATs 0.98, Base+ 0.89, Large 1.0 |
 | Başarısızlık protokolü | FAIL varsa gömme çıkarımı ve EXP-016 başlatılmaz; neden incelenir ve buraya yazılır; eşik gevşetilerek geçirilmez; düzeltmeden sonra SMK-001 baştan çalıştırılır; başarısız rapor git geçmişinde kalır (tasarım belgesi 1.1) |
 
 ## EXP-016 — Dondurulmuş gömme + lineer prob (6 backbone vs 2 MFCC tabanı)
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-09 (tasarım; **sonuçlardan önce**) |
-| DURUM | Planlandı — D-034 ve D-035 KABUL; SMK-001 PASS bekliyor |
+| DURUM | **Tamamlandı (2026-10-10)** — rapor `reports/frozen/EXP-016_frozen.md` (PR #16). Bütün sayılar D-028 gereği **üst sınır**: kayıt bağlamı değerlendirilmedi |
 | Araştırma sorusu | RQ1 (onaylayıcı, füzyon): backbone temsili MFCC'den fazla doğrusal çözülebilir bilgi taşıyor mu? RQ3 / RQ4 / RQ5 keşifsel |
 | Beklenti (önceden) [HYPOTHESIS] | B1: füzyon AUC'leri 0.70–0.85; en az biri MFCC-LR'yi (0.77) sayısal olarak geçebilir ama onaylayıcı testi geçen olmaması daha olası (kaba güç hesabı: saptanabilir fark ≈ 0.06–0.09; eşik değil, varsayımlar tasarım belgesi Bölüm 5.5). B2: bağlam izleme göstergeleri MFCC'den yüksek. B3: |cnn14 − cnn14_16k| < 0.03. B5: görevler arasında güvenilir sıralama yok. B7: Large, Base+'tan anlamlı biçimde iyi değil |
 | Veri sürümü | CSV sha256 + önbellek index sha256 (D-030) + gömme sha256'ları (`embeddings_v1/*/MANIFEST.sha256`) |
@@ -438,10 +439,48 @@ Bunların hepsi D-025'e girdi.
 | Kod / notebook | `scripts/extract_embeddings.py`, `scripts/run_probes.py`, `notebooks/21_frozen_embeddings.ipynb` |
 | Sonuç konumu | `reports/frozen/EXP-016_frozen.{md,json}`; Drive `experiments/frozen_probe/`, `data_derived/embeddings_v1/` |
 
+**Sonuçlar (füzyon, katılımcı düzeyi; 342 katılımcı, 2 393 kayıt, 11 170 pencere; 25 dış fold).** AUC fold ort. ± SD · havuzlanmış [%95 CI]:
+
+| kol | AUC | havuzlanmış | onaylayıcı karar (vs mfcc_lr ve mfcc_mlp; Holm p) |
+|---|---|---|---|
+| ref_context (yalnız tarih + saat) | 0.934 ± 0.022 | 0.931 [0.899–0.958] | referans, test edilmez |
+| beats | 0.921 ± 0.046 | 0.923 [0.886–0.953] | **destekleniyor** (ΔAUC +0.150 / +0.151; p 0.001) |
+| wavlm_large | 0.909 ± 0.041 | 0.909 [0.868–0.942] | **destekleniyor** (+0.138 / +0.139; p 0.003) |
+| wavlm_base_plus | 0.884 ± 0.039 | 0.886 [0.836–0.926] | **destekleniyor** (+0.113 / +0.114; p 0.006) |
+| cnn10 | 0.855 ± 0.047 | 0.858 [0.807–0.903] | desteklenmiyor (+0.084 / +0.085; p 0.067; bootstrap CI'lar 0'ı dışlıyor ama Holm geçmedi) |
+| cnn14 | 0.791 ± 0.063 | 0.811 [0.747–0.869] | desteklenmiyor (+0.020 / +0.022; p 0.649) |
+| mfcc_lr | 0.771 ± 0.078 | 0.778 [0.713–0.836] | taban (EXP-011'i birebir yeniden üretti: regresyon testi GEÇTİ) |
+| mfcc_mlp | 0.770 ± 0.058 | 0.788 [0.725–0.844] | taban |
+| cnn14_16k | 0.729 ± 0.067 | 0.733 [0.666–0.794] | desteklenmiyor; iki tabandan da düşük (nokta tahmini; −0.042 / −0.040) |
+| ref_age (yalnız yaş) | 0.682 ± 0.046 | 0.679 [0.601–0.750] | referans |
+
+- **Keşifsel çiftler** (Holm 15 içinde): beats − wavlm_large +0.012 (havuz CI [−0.010, +0.038], Holm p 0.40) → ikisi arasında fark kanıtı yok. wavlm_large − base+ +0.025 (Holm 0.19). cnn10 − cnn14 +0.063 (Holm 0.087). cnn14_16k üç SSL modelinden ve cnn10'dan düşük (Holm ≤ 0.004).
+- **Görev başına** (keşifsel): SSL modellerinin kazancı kelimelerde büyük (BEATs / Large: MFCC-LR'ye göre +0.13…+0.23), ünlüde (/aaa/) küçük. Ünlü − kelime ortalaması: Base+ −0.168 (Holm 0.001), Large −0.124 (Holm 0.008), BEATs −0.095 (Holm 0.14); PANNs ve MFCC'de ≈ 0.
+- **D-035 fold başına seçim:** BEATs 24/25 fold, WavLM Large 1/25 (tekrar 3, fold 1). Prosedürün iç içe tahmini 0.920 ± 0.047; sonradan en iyi sabit kol (BEATs 0.921) ile fark +0.001 → kazananın laneti ihmal edilebilir.
+- **Eşik metrikleri** (iç-CV eşiği): BEATs dengeli doğruluk 0.81 ± 0.08 (duyarlılık 0.82 / özgüllük 0.81). Test fold'unda ~12 sağlıklı → özgüllük çok gürültülü.
+- **Kalibrasyon:** LR kollarında eğim 1.9–3.2 ve ortalama tahmin oranın altında → `class_weight=balanced`'ın beklenen etkisi (olasılıklar 50/50 önsele kayar) [INFERENCE]; AUC'yi etkilemez.
+- **C ızgara ucu:** cnn14 %12, cnn14_16k %16 fold'da ızgaranın ucu seçildi → bu iki kolun AUC'si biraz eksik tahmin edilmiş olabilir [INFERENCE]; ızgara sonradan değiştirilmedi.
+- **mfcc_mlp ConvergenceWarning:** D-032'nin önceden sabitlediği "varsayılan MLPClassifier" (makale pipeline'ı) 200 iterasyonda durur; uyarı beklenen davranış. Sonuç EXP-013 ile tutarlı (havuz 0.788).
+
+**Önceden yazılmış beklentilerle karşılaştırma** (`docs/PHASE2_DESIGN.md` Bölüm 10): B1 **yanlış** (AUC'ler 0.73–0.92; üç backbone onaylayıcı testi geçti). B2 **kısmen** (yalnız "sağlıklılarda sabah vs öğleden sonra" göstergesinde backbone'lar MFCC'den yüksek). B3 **yanlış** (cnn14 − cnn14_16k +0.062). B4 **kısmen** (WavLM tepesi ortada değil, alt-orta katmanlarda). B5 **kısmen yanlış** (WavLM'de ünlü kelimelerden güvenilir biçimde kötü). B6 çoğunlukla doğru. B7 doğru. B8 doğru.
+
+**Yorum.**
+- [FACT] En iyi ses temsili (BEATs 0.921), yalnız kayıt bağlamını (tarih + saat) kullanan modeli (0.934) geçmiyor. Bu tabloda sesin bağlamın ötesinde astım bilgisi taşıdığına dair kanıt **yok**; bu soru D-023/D-025'in T1 testinin sorusu ve henüz yapılmadı (D-028).
+- [INFERENCE] "Backbone > MFCC" kararı istatistiksel olarak sağlam (üç SSL modeli, iki taban, Holm). Ama bu üstünlüğün astım bilgisinden mi yoksa bağlamı (oda / gün / saat izi) daha iyi kodlamaktan mı geldiği ayrılamaz.
+- [HYPOTHESIS] BEATs'in (AudioSet; genel ses ve ortam olayları) en yüksek AUC'yi alması iki biçimde açıklanabilir: ses kalitesini daha iyi kodlaması ya da akustik ortam izini daha iyi kodlaması. META-016'daki zayıf işaret ikinciyle uyumlu ama belirsizlik çok büyük.
+- Olumsuz sonuçlar: CNN14 CNN10'dan kötü (dondurulmuş, keşifsel; Holm 0.087); CNN14_16k iki MFCC tabanının da altında; CNN10 onaylayıcı testi geçemedi.
+
+**Bilinen kısıtlar.**
+- D-028 (bağlam değerlendirmesi yapılmadı).
+- Fold'lar bağımsız değil (NB düzeltmesi sezgisel).
+- Sağlıklı grup küçük (59).
+- EXP-017 yalnız tekrar 0.
+- Kilitli test seti yok (D-009).
+
 ## EXP-016S — Kısa kayıt dolgu politikası duyarlılığı (önceden belirlenmiş)
 | Alan | Değer |
 |---|---|
-| DURUM | Planlandı (EXP-016'dan sonra) |
+| DURUM | **Tamamlandı (2026-10-10).** Bütün kollarda \|Δ füzyon AUC\| ≤ 0.007 (Holm p = 1); WavLM Large'da tam 0 → **B8 doğru**. Etkilenen 17 katılımcıda ort. \|Δp\|: PANNs 0.030–0.036, Base+ 0.025, BEATs 0.003, Large 0. Birincil `zeropad` sonuçları politikaya duyarlı değil |
 | Soru | 17 kısa kayıtta diğer politika (birincil zeropad ise nopad) kullanılsaydı füzyon sonuçları değişir miydi? |
 | Beklenti (önceden) [HYPOTHESIS] | B8: \|Δ\| < 0.01 (etkilenen kayıt %0.7) |
 | Tasarım | 6 backbone, birincil temsil, tekrar 0; eşleştirilmiş Δ (alternatif − birincil). Seçimde kullanılmaz |
@@ -449,7 +488,9 @@ Bunların hepsi D-025'e girdi.
 ## META-016 — Meta veri / confounder izleme (AYRI rapor; ana akışa girmez)
 | Alan | Değer |
 |---|---|
-| DURUM | Planlandı (EXP-016'dan sonra; kaydedilmiş tahminler üzerinde) |
+| DURUM | **Tamamlandı (2026-10-10)**; betimsel, karar için kullanılmaz |
+| Sonuç: bağlam göstergeleri | Etiket sabitken skorun bağlamı ayırma AUC'si (0.5 = bağımlılık yok). **Sağlıklılarda sabah (12) vs öğleden sonra (46):** bütün backbone'lar 0.59–0.70 (BEATs 0.697 en yüksek, Large 0.589 en düşük), MFCC 0.46–0.47 → sabah kaydedilen sağlıklılar daha "astımlı" skor alıyor. Hastalarda sabah/öğleden sonra (0.47–0.50) ve geç/erken dönem (0.48–0.55) göstergelerinde MFCC'den farklı değil. Belirsizlik büyük: 12 × 46 karşılaştırmada AUC'nin SE'si ≈ 0.09 (Hanley–McNeil, yaklaşık) → %95 aralık ≈ ±0.18 [INFERENCE] |
+| Sonuç: süre | Görev × etiket medyan süreler 10.1–10.4 s, gruplar arasında benzer; yalnız-süre referansı AUC 0.497 ± 0.080 (havuz 0.449 [0.354–0.543]) → süre etiketi taşımıyor. Kısa kaydı olan 17 katılımcı çıkarıldığında füzyon AUC değişimi ≤ 0.015 |
 | İçerik | (1) EXP-014'ün üç bağlam bağımlılığı AUC'si, her kol ve referanslar; (2) görev × etiket süre dağılımı ve kısa kayıt sayıları; (3) yalnız-süre referans çizgisi (D-005; aynı fold'lar); (4) önceden belirlenmiş duyarlılık: kısa kaydı olan katılımcılar değerlendirmeden çıkarıldığında füzyon AUC'leri |
 | Kural | Hiçbir sayı onaylayıcı karara, D-035 seçimine ya da katman seçimine girmez. Asıl bağlam değerlendirmesi model geliştirme bitince (D-028) |
 | Kod | `scripts/report_metadata_monitor.py` → `reports/frozen/META-016_metadata_monitor.{md,json}` |
@@ -457,7 +498,7 @@ Bunların hepsi D-025'e girdi.
 ## EXP-017 — Katman katman prob (BEATs, WavLM; keşifsel)
 | Alan | Değer |
 |---|---|
-| DURUM | Planlandı (EXP-016'dan sonra) |
+| DURUM | **Tamamlandı (2026-10-10)**; yalnız tekrar 0, 5 fold, keşifsel. BEATs: L0 0.64, L1 0.75, L2 0.85 → L5'ten itibaren ≈ 0.92 düzlüğü (L10 0.927); katman ortalaması 0.923. Base+: L0 zaten 0.86, tepe L3–L4 ≈ 0.90, L8'de 0.84'e iner, sonda 0.87; ortalama 0.888. Large: L0 0.84, tepe L4 0.917, sonra 0.89–0.905; ortalama 0.913. Fold SD 0.03–0.07 → komşu katman farkları yorumlanmaz. **B4 kısmen:** WavLM tepesi alt-orta katmanlarda; eşit katman ortalaması en iyi katmanlarla aynı düzeyde (bilgiyi seyreltmiyor). [INFERENCE] BEATs L0'ın düşüklüğü kısmen havuzlamadan: ilk katmanda yamalar karışmadığı için zaman + frekans yamalarının ortalaması spektral düzeni siliyor |
 | Soru | SSL modellerinde astım / sağlıklı bilgisi hangi katmanlarda? Eşit katman ortalaması (birincil temsil) bilgiyi seyreltiyor mu? |
 | Beklenti (önceden) [HYPOTHESIS] | B4: WavLM'de eğri ortada tepe yapar; son katman ortalamadan kötü |
 | Tasarım | Yalnız tekrar 0; her katman (0..L) ayrı kol; aynı prob protokolü. **Hiçbir seçimde kullanılmaz** |
@@ -465,7 +506,7 @@ Bunların hepsi D-025'e girdi.
 ## EXP-018 — Tüm kayıt tek girdi vs 4 s pencereler (keşifsel)
 | Alan | Değer |
 |---|---|
-| DURUM | Planlandı (EXP-016'dan sonra) |
+| DURUM | **Tamamlandı (2026-10-10).** Tüm kayıt − 4 s pencere (füzyon, 25 fold): BEATs −0.011, Base+ −0.004, Large −0.003, cnn10 −0.027, cnn14 +0.014, cnn14_16k +0.035; hepsinde Holm p ≥ 0.46. **B6 çoğunlukla doğru** (cnn10 ve cnn14_16k nokta tahminleri 0.02'yi aşıyor ama CI'lar 0'ı içeriyor). Faz 3 için 4 s pencere girdisi bilgi kaybettirmiyor |
 | Soru | Kayıtlar ~10 s ve PANNs / BEATs 10 s'lik AudioSet klipleriyle eğitildi. Tüm kaydı tek girdi olarak vermek, Boll'un 4 s pencerelemesinden farklı sonuç veriyor mu? |
 | Beklenti (önceden) [HYPOTHESIS] | B6: |Δ| < 0.02 |
 | Tasarım | 6 backbone, birincil temsil, 5 tekrar; eşleştirilmiş Δ (NB, bootstrap). Faz 3 girdi tasarımına bilgi verir; Faz 2'de seçim için kullanılmaz |
@@ -484,8 +525,8 @@ Bunların hepsi D-025'e girdi.
 | 1d | ~~Harmonize ses önbelleği~~ → Colab'da üretildi ve doğrulandı (D-030; rapor `reports/audio_cache/`) | altyapı | 1c |
 | 2 | ~~MFCC sadık yeniden üretim (EXP-010)~~ → tamamlandı | RQ1 | 1d |
 | 3 | ~~MFCC, ortak protokol (EXP-011)~~ → tamamlandı; EXP-012–015 keşifsel analizler | RQ1, RQ4, RQ5, RQ6 | 1c, 1d |
-| 4 | **Dondurulmuş gömme + lineer prob → SMK-001, EXP-016 / 016S / 017 / 018, META-016 (ayrı)** (tasarım `docs/PHASE2_DESIGN.md`; D-034 ve D-035 kabul); gömmeler saklanır (D-028) | RQ1, RQ3, RQ4, RQ5 | Ses önbelleği, SMK-001 PASS |
-| 5 | Sıfırdan CNN10 | RQ2 | Eğitim döngüsü + checkpoint testi |
+| 4 | ~~Dondurulmuş gömme + lineer prob~~ → **tamamlandı (2026-10-10)**: SMK-001 PASS, EXP-016 / 016S / 017 / 018, META-016. Üç SSL backbone MFCC'yi onaylayıcı testte geçti; hiçbiri yalnız-bağlam referansını (0.934) geçmedi (üst sınır, D-028). D-035: BEATs 24/25 fold | RQ1, RQ3, RQ4, RQ5 | — |
+| 5 | Sıfırdan CNN10 — **zamanlaması D-036'da önerildi** (Faz 3'ün aynı pipeline'ında kontrol kolu olarak, ana kollardan sonra) | RQ2 | Faz 3 eğitim döngüsü + SMK-002 |
 | 6 | Ham dalga formundan uçtan uca fine-tune: 4'te öne çıkan 1–2 aile + PANNs referans; Boll hiperparametreleri, iç doğrulamayla early stopping (D-009); en iyi ve son epoch tahminleri saklanır (D-028); seçim ölçütü **Faz 2 sonuçlarından önce yazıldı: D-035 (KABUL)** — CNN10 + CNN14 sabit; PANNs dışı backbone **her dış fold'da**, yalnız o fold'un eğitim verisindeki iç doğrulamayla | RQ2, RQ3 | 4 ve 5 tamam |
 | 7 | Çok görevli füzyon, alt gruplar, ses + yaş/cinsiyet/sigara | RQ6, RQ8, RQ9 | OOF tahminleri |
 

@@ -486,16 +486,16 @@ S1 sha256 (Zenodo md5'i indirmede) · S2 sözleşme · S3 strict yükleme · S4 
 
 Sonuçlar görülmeden yazıldı; yanlış çıkmaları da raporlanır.
 
-| # | Beklenti | Gerekçe |
-|---|---|---|
-| B1 | Backbone füzyon AUC'leri 0.70–0.85; onaylayıcı testi geçen olmaması daha olası | Bölüm 5.5; MFCC füzyonu zaten 0.77 |
-| B2 | Bağlam bağımlılığı göstergeleri (META-016) MFCC'ninkinden yüksek | Daha zengin temsil oda / cihaz / saat bilgisini de taşır |
-| B3 | \|cnn14 − cnn14_16k\| < 0.03 | 32k yolu 11 kHz'e kesildi |
-| B4 | WavLM'de katman eğrisi ortada tepe yapar | Pasad ve ark. 2021; Chen ve ark. 2022 |
-| B5 | Görevler arasında güvenilir sıralama yok | EXP-011/012 |
-| B6 | \|tüm kayıt − 4 s\| < 0.02 | Kayıtlar ~10 s |
-| B7 | WavLM Large, Base+'tan anlamlı biçimde iyi değil | 342 katılımcı |
-| B8 | \|zeropad − nopad\| (EXP-016S) füzyon AUC'sinde < 0.01; WavLM Large'da ≈ 0 (tanım gereği) | Etkilenen kayıt %0.7; asıl bilgi etkilenen katılımcılardaki \|Δp\| |
+| # | Beklenti | Gerekçe | Sonuç (2026-10-10; EXP-016 / 016S / 017 / 018, META-016) |
+|---|---|---|---|
+| B1 | Backbone füzyon AUC'leri 0.70–0.85; onaylayıcı testi geçen olmaması daha olası | Bölüm 5.5; MFCC füzyonu zaten 0.77 | **Yanlış.** AUC'ler 0.73–0.92; BEATs, WavLM Large ve Base+ onaylayıcı testi geçti (Holm p ≤ 0.006) |
+| B2 | Bağlam bağımlılığı göstergeleri (META-016) MFCC'ninkinden yüksek | Daha zengin temsil oda / cihaz / saat bilgisini de taşır | **Kısmen.** Yalnız "sağlıklılarda sabah vs öğleden sonra" göstergesinde backbone'lar (0.59–0.70) MFCC'den (0.46) yüksek; diğer iki göstergede fark yok. 12 × 46 karşılaştırma → SE ≈ 0.09 |
+| B3 | \|cnn14 − cnn14_16k\| < 0.03 | 32k yolu 11 kHz'e kesildi | **Yanlış.** cnn14 − cnn14_16k fold ort. +0.062, havuz +0.078 [+0.031, +0.129]; fark bant genişliğinden büyük → iki checkpoint ayrı eğitildi, mel/STFT ayarları da farklı [INFERENCE] |
+| B4 | WavLM'de katman eğrisi ortada tepe yapar | Pasad ve ark. 2021; Chen ve ark. 2022 | **Kısmen.** Tepe ortada değil, alt-orta katmanlarda (Base+ L3–L4, Large L4); sonra düzlük. Tek tekrar |
+| B5 | Görevler arasında güvenilir sıralama yok | EXP-011/012 | **Kısmen yanlış.** WavLM'de ünlü kelimelerden güvenilir biçimde kötü (Holm 0.001 / 0.008); PANNs ve MFCC'de sıralama yok |
+| B6 | \|tüm kayıt − 4 s\| < 0.02 | Kayıtlar ~10 s | **Çoğunlukla doğru.** Hepsinde Holm p ≥ 0.46; cnn10 (−0.027) ve cnn14_16k (+0.035) nokta tahminleri 0.02'yi aşıyor |
+| B7 | WavLM Large, Base+'tan anlamlı biçimde iyi değil | 342 katılımcı | **Doğru.** Large − Base+ +0.025, Holm p 0.19 |
+| B8 | \|zeropad − nopad\| (EXP-016S) füzyon AUC'sinde < 0.01; WavLM Large'da ≈ 0 (tanım gereği) | Etkilenen kayıt %0.7; asıl bilgi etkilenen katılımcılardaki \|Δp\| | **Doğru.** \|Δ\| ≤ 0.007; Large tam 0 |
 
 ---
 
