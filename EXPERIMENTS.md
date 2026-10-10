@@ -544,7 +544,7 @@ Bunların hepsi D-025'e girdi.
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-10 (plan; **E1 sonuçlarından sonra, bağlam testlerinden önce**) |
-| DURUM | **Kod hazır, protokol onaylı (D-038), gerçek veride ÇALIŞTIRILMADI — sonuç yok** (2026-10-10). D-025, D-037, D-038 KABUL: S9 Firth/PLR, S10 etiket-içi permütasyon kısmi testi, S11 N5 betimsel, S12 cezalı koşullu logit, K2 (C1 koşul 3 = gün-kümeli jackknife CV3; SIM-002). Analiz ayarları sabit; script farklı ayarla ya da onaysız protokolle gerçek veride çalışmaz |
+| DURUM | **Aşama 1 tamamlandı** (2026-10-10, Colab CPU, 63 dk; gerçek veri kipi, protokol v1.2 D-038, sabit ayarlar; çıktılarda katılımcı ID'si / token yok). **Aşama 2 tasarlanmadı, çalıştırılmadı; C1 hiçbir backbone için kurulmadı** |
 | Araştırma sorusu | D-023 / RQ7 (onaylayıcı): ses, ölçülen bağlam (saat, tarih) ve yaşın ötesinde astım bilgisi taşıyor mu? Ayrıca C2: model bağlamı kullanıyor mu? |
 | Beklenti (önceden) [HYPOTHESIS] | Bağlamın etiketi neredeyse belirlemesi ve sağlıklı n'in küçük olması nedeniyle T1'in gücü sınırlı (SIM-001: %80 güç için aynı-bağlam AUC'si ≈ 0.69 / Holm düzeyinde ≈ 0.74). SSL backbone'larının en az birinde T1 pozitif çıkması da, hiçbirinde çıkmaması da makul. META-016'nın zayıf işareti nedeniyle C2'nin (bağlam kullanımı) en az bir backbone'da pozitif çıkması daha olası |
 | Veri | EXP-016 `partial/` dış-test tahminleri (8 kol × 5 tekrar), `participant_context.csv`, `embeddings_v1` (G1 / N5) |
@@ -557,6 +557,61 @@ Bunların hepsi D-025'e girdi.
 | Faz 3'e etkisi | Backbone seçimi (D-035) ve C3 ölçütü değişmez; D-027 kol B yalnız G1+ ya da L3 kısmi pozitifse; Faz 3 tasarımı "T1 sonrası" etiketli |
 | Kod / notebook | `scripts/evaluate_context.py`, `notebooks/22_context_eval_frozen.ipynb` |
 | Sonuç konumu | `reports/context/EVAL-016_context.{md,json}` (EXP-020 G1 ve N5 bu raporun 4. bölümünde) |
+
+### Aşama 1 sonuçları (2026-10-10; rapor `reports/context/EVAL-016_context.md`)
+
+**Kalibrasyon (gerçek bağlam, Drive dosyası, yapay sinyalsiz skor, 500 sim.)** — p < 0.05 oranı:
+
+| | S1 düzgün | S2 basamak | S3 gün etkisi |
+|---|---|---|---|
+| T1-PLR | 0.046 | 0.044 | **0.148** |
+| CR1 (betimsel) | 0.102 | 0.104 | 0.162 |
+| CV3 (koşul 3) | 0.026 | 0.026 | 0.036 |
+
+K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023). SIM-002'nin bulgusu Drive dosyasında tekrarlandı: CR1 geçersiz, CV3 geçerli. [FACT]
+
+**T1 ve C1 Aşama-1 koşulları:**
+
+| kol | Holm p (PLR) | OR / SD [bootstrap %95] | CV3 p | SE oranı CV3 / model | E2h-KLR OR [%95] | Aşama-1 | C1 |
+|---|---|---|---|---|---|---|---|
+| cnn10 | 0.002 | 3.06 [1.80, 9.67] | 0.003 | 1.03 | 4.91 [1.92, 12.6]ᵃ | hepsi ✓ | Aşama 2 bekliyor |
+| cnn14 | 0.012 | 2.14 [1.30, 5.11] | 0.015 | 1.04 | 2.73 [1.34, 5.55] | hepsi ✓ | Aşama 2 bekliyor |
+| cnn14_16k | 0.145 | 1.55 [1.01, 2.88] | 0.192 | 1.11 | 2.16 [1.05, 4.43] | 1 ✗, 3 ✗ | sağlanmadı |
+| beats | <0.001 | 4.69 [2.66, 18.8] | 0.020 | 1.59 | 7.17 [2.52, 20.4]ᵃ | hepsi ✓ | Aşama 2 bekliyor |
+| wavlm_base_plus | 0.006 | 2.75 [1.45, 9.39] | **0.068** | 1.54 | 3.66 [1.57, 8.52] | 3 ✗ | sağlanmadı |
+| wavlm_large | <0.001 | 3.83 [1.97, 14.7] | 0.017 | 1.45 | 5.05 [2.02, 12.7]ᵃ | hepsi ✓ | Aşama 2 bekliyor |
+| mfcc_lr (ref.) | ham 0.009 | 2.11 [1.32, 5.30] | 0.103 | 1.54 | 2.69 [1.38, 5.24] | — | — |
+| mfcc_mlp (ref.) | ham 0.022 | 2.03 [1.23, 6.53] | 0.152 | 1.53 | 2.30 [1.14, 4.60] | — | — |
+
+ᵃ Cezalı koşullu logit `converged = False` (K19); klasik ML koşullu logit aynı yönde (OR 5.9 / 8.9 / 6.1, p < 0.001).
+
+- Aşama 2 tetiklendi (kabul edilen kural: Holm-T1 pozitif): cnn10, cnn14, beats, wavlm_base_plus, wavlm_large.
+- Bütün fit'ler yakınsadı (T1, df 6, bootstrap 0 başarısız, jackknife 0 başarısız), K19 hariç.
+- CV ΔAUC (bağlam + ŝ − bağlam; betimsel): +0.001 ile +0.009 arası, SD ≈ 0.01. 0'dan ayırt edilemiyor; tavan etkisi nedeniyle bekleniyordu (SIM-001).
+- Tekrar başına PLR χ² aralığı: beats 13.9–20.8, wavlm_large 10.6–19.0, cnn10 9.5–13.0 (bütün tekrarlarda p < 0.01); cnn14 3.5–9.1 ve wavlm_base_plus 5.6–11.9 (cnn14'ün en az bir tekrarı p > 0.05).
+- L8 fold / tekrar AUC'leri EXP-016 ile aynı (skorlar doğru yüklendi).
+
+**C2 (model bağlamı kullanıyor mu?): hiçbir backbone'da gösterilemedi.**
+- L3 etiket-içi permütasyon (C = saat + tarih): p 0.08–0.21 (mfcc_lr 0.050). Yaş eklenince bütün kollarda p < 0.05: skorlar etiket içinde yaşı kodluyor.
+- L5 hasta-içi PM katsayısı: bütün CI'lar 0'ı içeriyor.
+- G1 (gömmelerden hastalarda AM / PM): hepsi negatif (Holm p ≥ 0.27; OOF AUC 0.52–0.58). N5 bu yüzden hesaplanmadı.
+- Betimsel işaretler: sağlıklılarda AM − PM skor farkı backbone'larda pozitif (+0.20 ile +0.47; yalnız beats'te CI 0'ı dışlıyor, sabah n = 12); MFCC'de negatif. N2: hastalarda skor ↔ tarih ilişkisi beats, wavlm_large, wavlm_base_plus ve MFCC'de p < 0.05. Gömmelerin dönemi ayırması (0.59–0.73) klinik profilinkinden (0.855) zayıf; N2 vaka karışımının değişmesiyle de açıklanabilir.
+
+**L7 codec zinciri:** gömmeler zinciri kayıt düzeyinde kısmen ayırıyor (AUC 0.56–0.71, en yüksek beats). Katılımcı içi ffmpeg − apple skor farkı cnn10, cnn14, wavlm_large'da negatif (CI 0'ı dışlıyor). Erken dönemde ffmpeg payı hastalarda biraz daha yüksek (0.34 vs 0.28), yani bu etki hasta skorlarını aşağı çeker; T1'i şişirme yönünde değil [INFERENCE].
+
+**Olumsuz sonuçlar (korunuyor):**
+- cnn14_16k T1'de anlamlı değil (bant genişliği ablasyonuyla tutarlı).
+- wavlm_base_plus koşul 3'te düştü; gün düzeyinde en çok kümelenen skorlar SSL ve MFCC'de (SE oranı 1.45–1.59), CNN'lerde değil (1.03–1.04).
+- MFCC referansları T1'de ham p < 0.05 ama CV3'te değil.
+- CR1 sandviç bu veri yapısında geçersiz (Drive dosyasında tekrarlandı).
+- Artımlı AUC 0'dan ayırt edilemiyor.
+
+**Post hoc bakış (karar değil, önceden belirtilmemiş):** CV3 p'lerine de Holm uygulansaydı yalnız cnn10 kalırdı (0.017; cnn14 0.076).
+
+**Yorum katmanları:**
+1. İstatistiksel anlamlılık: 6 backbone'un 5'inde ŝ, ölçülen saat, tarih ve yaşın ötesinde etiketle ilişkili (Holm p ≤ 0.012). [FACT]
+2. Bağlamdan bağımsız ses sinyali: 4 backbone (cnn10, cnn14, beats, wavlm_large) Aşama-1 koşullarının hepsini sağladı. Bu, C1 için gerekli ama yeterli değil: N3 (arka plan / ortam yolu) bekleniyor. Bilinen açık yollar: bronkodilatör / prosedür (S13), yaşın yalnız doğrusal ayarlanması, ölçülmemiş gün etkisi (CV3 sınırlıyor, sıfırlamıyor). [INFERENCE]
+3. Klinik yorum: yok. Artımlı ayrım bu kohortta ölçülemeyecek kadar küçük; vaka-kontrol, tek merkez, sağlıklı n = 57, geç dönemde sağlıklı yok, dış doğrulama yok.
 
 ---
 
