@@ -272,6 +272,7 @@ DURUM: KABUL · Tarih: 2026-10-08 (5. tur)
 
 ## D-025 — Birincil test spesifikasyonu revize edildi (T1, E2h, Spisak testleri)
 DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · **Ses modeli sonuçları görülmeden** · D-023'ün test ayrıntılarının yerine geçer (birincil soru aynı) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 2–4, 6
+- **15. tur notu (2026-10-10):** D-037 kapsamında EVAL-016 için **içerik değişmeden KABUL** önerildi. "O aşamada kesinleştirilir" denen ayrıntılar (ŝ tanımı, bootstrap B, E2h tabakaları, Spisak ayarları) ve önceden yazılmış metinden sapmalar (S1–S7) `docs/EVAL016_PLAN.md`'de, testler çalıştırılmadan önce sabitlendi.
 - **KARAR:**
   1. **T1 (birincil):** tek lojistik regresyon `y ~ spline(saat, 4 df) + spline(tarih, 4 df) + yaş + ŝ`.
      - ŝ = katılımcının dış-fold OOF ses logit'i (tekrarlar boyunca ortalama).
@@ -363,6 +364,7 @@ DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model g
 
 ## D-027 — Confounding altında fine-tuning protokolü
 DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 6 (EXP-030)
+- **Not (15. tur):** "Backbone seçimi: T1'e göre" maddesinin yerini **D-035** (KABUL, Faz 2 sonuçlarından önce) aldı; T1 sonucuna bakılarak geri dönülmez. Kol B'nin koşulu (G1+ ya da L3 kısmi test) geçerli ve EVAL-016'da değerlendirilir (D-037).
 - **KARAR:**
   - **Backbone seçimi:** EXP-021'de **T1'e göre** ilk 1–2 backbone. E1'e göre seçilmez; eşitlikte düşük kapasiteli olan seçilir.
   - **Eğitim kapsamı:** kısmi fine-tune (son blok(lar) + baş). Blok sayısı mimari başına önceden yazılır.
@@ -713,40 +715,44 @@ DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-012 basamak 3'ün **sırasın�
 - **BİLİMSEL SONUÇ:** RQ2 korunur, ana yol gecikmez. "Pretrained sıfırdan kötü" ya da "fark yok" sonuçları da raporlanır.
 - **UYGULAMA:** Faz 3 tasarım belgesi; `scripts/train_finetune.py --random-init`; EXPERIMENTS.md planlanan tablo, sıra 5.
 
-## D-037 — Bağlam değerlendirmesinin (T1) dondurulmuş tahminler üzerinde, Faz 3 tam koşularından önce yapılması
-DURUM: **ÖNERİLDİ** (2026-10-10, 14. tur) · D-028 madde 2'nin **zamanlamasını** değiştirir, içeriğini değil · D-025'in T1 / E2h-KLR / Spisak spesifikasyonunun bu koşu için KABUL edilmesini gerektirir · Faz 2 sonuçları görüldükten sonra yazıldı
+## D-037 — Bağlam değerlendirmesi (EVAL-016: T1 ve lens seti) dondurulmuş tahminler üzerinde, Faz 3'ten önce
+DURUM: **ÖNERİLDİ** (2026-10-10; 14. turda önerildi, **15. turda revize edildi** — aşağıdaki revizyon notu) · D-028 madde 2'nin **zamanlamasını** değiştirir, içeriğini değil · D-025'in (içerik değişmeden) KABUL edilmesini gerektirir · **EXP-016'nın E1 sonuçlarından sonra, hiçbir bağlam testi çalıştırılmadan önce** yazıldı · Ayrıntı: `docs/EVAL016_PLAN.md`
 - **KARAR:**
-  1. Faz 3 protokolü T1 sonuçları görülmeden yazılır ve kabul edilir: girdi, eğitim kapsamı, hiperparametreler, epoch / early stopping kuralı, bütçe ve kollar.
-  2. Faz 3 kodu yazılırken, CPU'da paralel olarak, D-025'in testleri Faz 2'nin kaydedilmiş dış-fold tahminleri üzerinde koşulur:
-     - testler: T1 (birincil), E2h-KLR, Spisak kısmi test;
-     - kollar: 6 backbone + 2 MFCC tabanı;
-     - Holm; yeniden eğitim yok.
-  3. Faz 3'ün tam GPU koşuları T1 raporundan sonra başlar.
-     - T1 sonucu 1. maddedeki protokolü değiştirmez.
-     - Yalnız yorumu belirler, ve D-027'deki koşullu kolun (bağlam-dengeli ağırlık) gerekip gerekmediğini.
+  1. **EVAL-016 Aşama 1 Faz 3'ten önce yapılır.**
+     - D-025'in testleri (T1, E2h-KLR, Spisak) ve CONFOUND lens setinin CPU'luk kısmı (L1, L2, L3, L4, L5, L8, N2, N4; EXP-020 G1 probu; G1+ ise N5) koşulur.
+     - Faz 2'nin kaydedilmiş tahminleri ve gömmeleri kullanılır; yeniden eğitim yok, GPU yok.
+  2. **Aşama 2 yalnız T1'i Holm sonrası pozitif backbone'lar için yapılır** (N3, L7, gün-gruplu CV). C1 iddiası için gerekli; negatif T1'de gereksiz.
+  3. **Faz 3 tasarımı Aşama 1 raporundan sonra yazılır** ve "T1 sonrası" diye etiketlenir. Faz 3 protokolde zaten keşifsel (CONFOUND 5.11). Değişmeyenler:
+     - backbone seçimi (D-035);
+     - Faz 3'ün başarı ölçütü (C3);
+     - D-027 kol B'nin koşulu (G1+ ya da L3 kısmi test).
+     Bunlar sonuçlardan önce yazılmıştı; T1'e bakılarak değiştirilmez.
+  4. Aşama 1 raporu, `PHASE3_DESIGN.md` kabulü ve SMK-002 PASS olmadan Faz 3 GPU koşusu yok.
 - **NEDEN:**
-  - Faz 2'nin en önemli bulgusu [FACT]: en iyi ses AUC'si (BEATs 0.921 ± 0.046) yalnız-bağlam referansının (0.934 ± 0.022) altında. Projenin birincil sorusu (D-023: ses, bağlam ve yaşın ötesinde bilgi taşıyor mu?) şu an cevapsız.
-  - T1 yalnız kaydedilmiş tahminlere ihtiyaç duyar; GPU maliyeti yok. [INFERENCE]
-  - Bu iş zaten yapılacak: C3 iddiası (fine-tune bağlamdan bağımsız bilgiyi artırdı mı? D-025, D-027) dondurulmuş T1'i karşılaştırma tabanı olarak ister. Değişen yalnız sıra.
-  - D-028'in RİSK maddesi bu anı öngörüyordu: "mimari ve hiperparametre seçimleri bağlamı en iyi kullanan modele kayabilir". Faz 3 seçimleri şimdi yapılıyor.
-  - META-016'da ilk, zayıf işaret var: sağlıklılarda sabah (12) vs öğleden sonra (46) göstergesi backbone'larda 0.59–0.70, MFCC'de 0.46. SE ≈ 0.09 [INFERENCE].
-  - Protokolü T1'den önce kilitlemek, tasarımın sonuca göre şekillenmesini önler.
+  - Projenin birincil sorusu (D-023) Faz 2'den sonra cevapsız: en iyi ses AUC'si (0.921) yalnız-bağlam referansının (0.934) altında. [FACT]
+  - Onaylayıcı aile zaten dondurulmuş backbone'lardı (CONFOUND 5.9; D-025 madde 4). Cevap Faz 2 tahminlerinden çıkacak; beklemek cevabı değiştirmez, yalnız geciktirir.
+  - Asıl bağlam tasarımı (CONFOUND 6, sonuçlardan önce) bu sırayı öngörüyordu: G1 → dondurulmuş lens → (koşullu azaltma) → fine-tune. D-027 kol B'nin koşulu (G1) fine-tune'dan önce bilinmeli.
+  - Gereksiz GPU harcamasını önler: Faz 3'ün kolları (B) ve ölçeği bu bilgiye bağlı.
+  - Ek maliyet yalnız CPU ve kod.
 - **ALTERNATİFLER:**
-  - **(A) D-028 olduğu gibi:** önce Faz 3'ü bitir, T1 en sonda.
-    - Ana hedefe en hızlı yol.
-    - Ama 25+ GPU saatlik fine-tune'un bağlamı mı öğrendiğine dair hiçbir ara bilgi olmaz; seçimler geri alınamaz.
-  - **(B) Önce T1, sonra Faz 3 tasarımı (sonuca göre):** en bilgili seçenek, ama tasarım sonuç görülerek yapılır (çatallanan yollar).
-  - **(C) Önerilen:** protokolü kilitle → T1'i paralel koş → tam GPU koşularından önce T1 raporunu oku.
+  - **(A) D-028 olduğu gibi** (önce Faz 3, değerlendirme en sonda): ana hedefe en hızlı yol. Ama kol B'nin koşulu bilinmeden fine-tune yapılır ve ~25+ GPU saati bağlamı öğrenip öğrenmediği bilinmeden harcanır.
+  - **(C) 14. tur önerisi:** Faz 3 protokolünü önce kilitle, T1'i paralel koş. Faz 3'ü T1'den korur, ama Faz 3 zaten keşifsel. Üstelik kol B'nin koşulu ve bütçe bilgisi olmadan kilitlemek ya gereksiz kolu ya da eksik tasarımı kilitler.
 - **RİSK:**
-  - T1'in gücü sınırlı (SIM-001): %80 güç ancak aynı-bağlam AUC'si ≈ 0.69'da (α 0.05), Holm düzeyinde ≈ 0.74'te. Olumsuz T1 "astım bilgisi yok" demek değildir; "saptanabilir büyüklükte kanıt yok" demektir.
-  - Pozitiflik sınırını hiçbir test aşamaz (sabah kaydedilen 12 sağlıklı; geç dönemde sağlıklı yok).
-  - Ek iş yükü:
-    - `scripts/evaluate_context.py`, testleri ve notebook hücresi;
-    - `mlconfound` bağımlılığı [NEEDS VERIFICATION: Colab'da kurulum ve sürüm].
-  - T1 kötü çıkarsa motivasyon etkilenebilir; sonuç yine önceden yazılmış iddia kurallarına göre raporlanır (D-025 madde 5).
-- **BİLİMSEL SONUÇ:** Fine-tuning'e "ses bağlamın ötesinde bilgi taşıyor mu?" sorusunun ilk cevabıyla girilir; Faz 3 için karşılaştırma tabanı (dondurulmuş T1) hazır olur.
+  - Faz 3 tasarımının T1 sonucundan etkilenmesi (çatallanan yollar). Azaltma:
+    - seçim, başarı ölçütü ve kol B koşulu önceden sabit;
+    - Faz 3 keşifsel etiketli;
+    - "T1 sonrası" kararlar ayrıca işaretlenir.
+  - T1'in gücü sınırlı (SIM-001, iyimser): olumsuz sonuç "yok" demek değil.
+  - Ölçülmemiş gün bağlamında yanlış pozitif ~%12 (p < 0.05).
+  - Pozitiflik sınırı.
+  - `mlconfound`: yalnız `cond_dist_method='linear'` çalışıyor (yerelde doğrulandı; `docs/EVAL016_PLAN.md` S3) [NEEDS VERIFICATION: Colab].
+- **BİLİMSEL SONUÇ:** Faz 3'e "ses, ölçülen bağlam ve yaşın ötesinde bilgi taşıyor mu?" sorusunun onaylayıcı cevabıyla girilir. Fine-tune'un katkısı (C3) için karşılaştırma tabanı hazır olur.
 - **UYGULAMA:**
-  - `scripts/evaluate_context.py` (yeni);
-  - notebook `22_context_eval_frozen.ipynb`;
-  - rapor `reports/context/`;
-  - Faz 3 tasarım belgesi `docs/PHASE3_DESIGN.md`, bu karardan bağımsız olarak önce yazılır.
+  - `docs/EVAL016_PLAN.md`;
+  - `scripts/evaluate_context.py` (plan onaylanınca);
+  - `notebooks/22_context_eval_frozen.ipynb`;
+  - raporlar `reports/context/`.
+- **Revizyon notu (15. tur):** 14. turda (C) önerilmişti. Değiştirdim, çünkü:
+  1. CONFOUND 5.9 / 5.11'e göre onaylayıcı cevap dondurulmuş aileden geliyor, Faz 3 keşifsel; Faz 3'ü T1'den korumanın değeri sınırlı.
+  2. D-027 kol B'nin koşulu G1'e bağlı; (C)'de Faz 3 bu bilgi olmadan kilitlenirdi.
+  3. Alper'in önceliği gereksiz GPU harcamasını önlemek.

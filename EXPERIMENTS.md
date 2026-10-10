@@ -511,6 +511,23 @@ Bunların hepsi D-025'e girdi.
 | Beklenti (önceden) [HYPOTHESIS] | B6: |Δ| < 0.02 |
 | Tasarım | 6 backbone, birincil temsil, 5 tekrar; eşleştirilmiş Δ (NB, bootstrap). Faz 3 girdi tasarımına bilgi verir; Faz 2'de seçim için kullanılmaz |
 
+## EVAL-016 — Dondurulmuş aile için bağlam değerlendirmesi (T1 ve lens seti; onaylayıcı)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-10 (plan; **E1 sonuçlarından sonra, bağlam testlerinden önce**) |
+| DURUM | Planlandı — D-025 (içerik değişmeden) ve D-037 onayı bekliyor; kod yazılmadı |
+| Araştırma sorusu | D-023 / RQ7 (onaylayıcı): ses, ölçülen bağlam (saat, tarih) ve yaşın ötesinde astım bilgisi taşıyor mu? Ayrıca C2: model bağlamı kullanıyor mu? |
+| Beklenti (önceden) [HYPOTHESIS] | Bağlamın etiketi neredeyse belirlemesi ve sağlıklı n'in küçük olması nedeniyle T1'in gücü sınırlı (SIM-001: %80 güç için aynı-bağlam AUC'si ≈ 0.69 / Holm düzeyinde ≈ 0.74). SSL backbone'larının en az birinde T1 pozitif çıkması da, hiçbirinde çıkmaması da makul. META-016'nın zayıf işareti nedeniyle C2'nin (bağlam kullanımı) en az bir backbone'da pozitif çıkması daha olası |
+| Veri | EXP-016 `partial/` dış-test tahminleri (8 kol × 5 tekrar), `participant_context.csv`, `embeddings_v1` (G1 / N5) |
+| Kohort | EXP-016 kohortu ∩ saat, tarih ve yaşı tam (beklenen 339; çalıştırmada sayılır) |
+| Birincil test | T1: `y ~ cr(saat, 4) + cr(tarih, 4) + yaş + ŝ`, ŝ için LR testi; Holm (6 backbone), α 0.05, OR > 1 |
+| Destekleyici | Bootstrap OR CI (B 2000); gün-kümeli SE; cr df 6; E2h-KLR; Spisak tam / kısmi (`mlconfound`, linear); L5 karşıt hücreler; N2; EXP-020 G1 (hastalarda AM/PM probu); N5 (G1+ ise) |
+| Aşama 2 (koşullu) | Yalnız T1-pozitif backbone'larda: N3 (arka plan; GPU dakikalar), L7 (codec zinciri), gün-gruplu CV |
+| Karar kuralları | C1 / C2 (CONFOUND 6; `docs/EVAL016_PLAN.md` Bölüm 4) |
+| Faz 3'e etkisi | Backbone seçimi (D-035) ve C3 ölçütü değişmez; D-027 kol B yalnız G1+ ya da L3 kısmi pozitifse; Faz 3 tasarımı "T1 sonrası" etiketli |
+| Kod / notebook | `scripts/evaluate_context.py`, `notebooks/22_context_eval_frozen.ipynb` (yazılacak) |
+| Sonuç konumu | `reports/context/EVAL-016_context.{md,json}`, `reports/context/EXP-020_g1.{md,json}` |
+
 ---
 
 ## Planlanan deneyler (ID'ler başlarken verilecek)
@@ -536,6 +553,7 @@ Model geliştirme sırasında her sonuç **üst sınır** olarak raporlanır. He
 
 | Sıra | Analiz | RQ | Ön koşul |
 |---|---|---|---|
+| E-0 | **EVAL-016 (dondurulmuş aile, onaylayıcı) — D-037 önerisiyle Faz 3'ten önce** (`docs/EVAL016_PLAN.md`) | RQ7 | 4'ün saklanmış tahminleri |
 | E-1 | Kaydedilmiş tahminler üzerinde artımlı test T1, E1/E1h/E2/E3 + denge tabloları ve referans çizgileri, ayarlı E2h, D-005 baseline'ları, negatif kontroller (N1–N4), codec zinciri duyarlılığı; test ayrıntıları D-025 önerisi üzerinden kesinleşir | RQ7 | 2–7'nin saklanmış tahminleri |
 | E-2 | Gerekirse: bağlam probları (EXP-020), azaltma denemeleri (EXP-022), gün-gruplu CV, fine-tune protokol varyantları (D-026, D-027) | RQ7 | E-1 sonuçları |
 
