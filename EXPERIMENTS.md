@@ -613,6 +613,23 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 2. Bağlamdan bağımsız ses sinyali: 4 backbone (cnn10, cnn14, beats, wavlm_large) Aşama-1 koşullarının hepsini sağladı. Bu, C1 için gerekli ama yeterli değil: N3 (arka plan / ortam yolu) bekleniyor. Bilinen açık yollar: bronkodilatör / prosedür (S13), yaşın yalnız doğrusal ayarlanması, ölçülmemiş gün etkisi (CV3 sınırlıyor, sıfırlamıyor). [INFERENCE]
 3. Klinik yorum: yok. Artımlı ayrım bu kohortta ölçülemeyecek kadar küçük; vaka-kontrol, tek merkez, sağlıklı n = 57, geç dönemde sağlıklı yok, dış doğrulama yok.
 
+## EVAL-016-PH — Aşama 1'in post hoc duyarlılıkları (PH1–PH3)
+| Alan | Değer |
+|---|---|
+| Tarih | 2026-10-11 (D-040 KABUL; **POST HOC**, Aşama 1 sonuçlarından sonra) |
+| DURUM | Kod ve testler hazır (E18–E20); **gerçek veride ÇALIŞTIRILMADI** |
+| Soru | Aşama 1'in T1 bulgusu yaşın esnek ayarına (PH1) ve cinsiyet + sigaraya (PH2) duyarlı mı? K19'un sayısal bayrağı E2h yönünü etkiliyor mu (PH3)? |
+| Kural | Önceden yazıldı (`docs/EVAL016_STAGE2_PLAN.md` Bölüm 5); C1 / C2 kararlarını değiştirmez |
+| Kod / notebook | `scripts/posthoc_eval016.py`, `notebooks/23_eval016_posthoc.ipynb` (CPU) |
+| Sonuç konumu | `reports/context/EVAL-016_posthoc.{md,json}` |
+
+## EVAL-016 Aşama 2 — N3 ve gün-gruplu CV
+| Alan | Değer |
+|---|---|
+| DURUM | **Tasarım ÖNERİLDİ (D-039)**; kod yok; hiçbir hesaplama yapılmadı |
+| Kapsam | cnn10, cnn14, beats, wavlm_base_plus, wavlm_large (Holm-T1 pozitif; K10) |
+| Tasarım | `docs/EVAL016_STAGE2_PLAN.md` |
+
 ---
 
 ## Planlanan deneyler (ID'ler başlarken verilecek)

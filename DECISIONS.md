@@ -827,3 +827,69 @@ DURUM: **KABUL** (2026-10-10, 16. tur — Alper: "S9, S10, S11 ve S12 önerileri
   - `tests/test_eval016.py`: E12 güncellendi; E14–E17 eklendi.
   - `notebooks/22_context_eval_frozen.ipynb`: kapı protokolü ve D-038'i doğrular.
   - `docs/EVAL016_PLAN.md` Bölüm 0–4, 6, 7, 9, 10.
+
+## D-039 — EVAL-016 Aşama 2 tasarımı: N3 (yalnız arka plan) ve gün-gruplu CV
+DURUM: **ÖNERİLDİ** (2026-10-11, 17. tur) · **Aşama 1 sonuçları görüldükten sonra, Aşama 2'nin hiçbir hesaplamasından önce** yazıldı ("Aşama 1 sonrası") · D-025 / D-037 / D-038'in Aşama 2 kısmını kesinleştirir; K7 ve K13'ü kapatır · Ayrıntı: `docs/EVAL016_STAGE2_PLAN.md` Bölüm 0–4
+- **KARAR (önerilen):**
+  1. **Kapsam:** kabul edilen kurala (K10) göre Holm-T1 pozitif 5 backbone: cnn10, cnn14, beats, wavlm_base_plus, wavlm_large. C1 yalnız Aşama-1'i tam geçen 4'ü için kurulabilir.
+  2. **N3 kare seçimi (K13):** sayılar sonuç görülmeden sabit.
+     - 25 ms / 10 ms kareler; aday kare enerjisi ≤ taban (P10) + 3 dB.
+     - Taban + 15 dB'yi aşan karelere 150 ms koruma bandı; koşu uzunluğu ≥ 100 ms.
+     - Katılımcı başına 7 görev havuzlanır; sabit 4.0 s klip (2–4 s ise döşenir; < 2 s ise dışlanır, etikete göre raporlanır).
+  3. **Dinleme denetimi (N3 sonucu görülmeden; D-020):**
+     - 40 klip (20 / 20), etiketsiz; ölçüt nefes + konuşma artığı ≤ %10.
+     - Geçmezse eşikler bir kez sıkılaştırılır ve yeni örneklem dinlenir. İkinci denetim de geçmezse koşul 6 "değerlendirilemedi" olur.
+  4. **N3 temsili:**
+     - N3-gömme: backbone başına tek 4 s klip; EXP-016 probu, füzyon yok (C1 koşul 6).
+     - N3-spektral: log-mel, düzlük ve düzey özeti (D-020; destekleyici).
+  5. **K7:** ŝ_N3 ile T1-PLR p < 0.05 ve OR > 1 → "yeniden üretiyor".
+     - Koşul 6 = yeniden üretmiyor **ve** dinleme denetimi geçti.
+     - Yeniden üretiyorsa C1 "kurulamadı — ortam yolu açıklayabilir" olur; otomatik "sızıntı" denmez.
+  6. **Gün-gruplu CV:**
+     - Yeni split'ler: dış ve iç fold'lar `recording_date`'e göre gruplu ve etikete göre tabakalı.
+     - Aynı prob; 5 backbone + 2 MFCC referansı. ŝ_DG ile T1, bootstrap ve CV3.
+  7. **Önerilen ek koşul 8 †:** ŝ_DG ile T1-PLR p < 0.05 ve OR > 1 (Holm yok).
+     - Aşama 1 sonucundan sonra önerildi ve öyle işaretlenir; C1'i yalnız zorlaştırabilir.
+     - Alternatif: betimsel kalır; "C1 sağlandı" ifadesinin yanına zorunlu not düşülür.
+- **NEDEN:**
+  - Aşama 1'de SSL ve MFCC skorlarında ölçülmüş bağlamın açıklamadığı gün düzeyi kümelenme görüldü (CV3 / model SE oranı 1.45–1.59; CNN'lerde 1.03–1.04). [FACT]
+  - Bunun iki aday mekanizması var:
+    - ortam: N3 sınar;
+    - eğitimde gün parmak izi: 65 günün 53'ü tek etiketli ve katılımcı düzeyi CV'de gün eşleri eğitimde kalıyor. Gün-gruplu CV bu yolu kaynağında kapatır; CV3 yalnız çıkarımda hesaba katar. [INFERENCE]
+  - Planın N3 tanımı (EVAL016_PLAN Bölüm 3: backbone gömmesi) ile D-020'nin tanımı (basit spektral özet) farklıydı. İkisi de yapılıyor: koşul gömmeye dayanıyor, spektral özet backbone'dan bağımsız destek veriyor.
+  - Klip uzunluğunun sabit olması, uzunluk ya da dolgu farkının etikete sızmasını engelliyor.
+- **ALTERNATİFLER:**
+  - Görev başına arka plan + 7 görev füzyonu: EXP-016'ya daha yakın, ama birçok kayıtta yeterli sessizlik olmayabilir ve uzunluklar değişir.
+  - Dinleme denetimi olmadan N3: K13'teki nefes belirsizliği açık kalır.
+  - Gün-gruplu CV yalnız betimsel (madde 7'nin alternatifi).
+  - Aşama 2'yi atlayıp Faz 3'e geçmek: C1 kurulamaz.
+- **RİSK:**
+  - Sessizlik az olan katılımcılar dışlanırsa N3 alt kohortu yanlı olabilir (etikete göre raporlanır).
+  - Gün-gruplu CV, eğitim verisini ve gün çeşitliliğini azaltır; ŝ_DG'nin gücü düşebilir. Olumsuz sonuç "gün parmak izi kanıtlandı" diye okunmaz; güç sınırıyla birlikte raporlanır.
+  - Dinleme denetimini yapan kişi çalışmayı biliyor (etiketsiz; körleme kısmi).
+- **BİLİMSEL SONUÇ:** C1 kurulursa ifade şudur: "ölçülen saat ve tarih, yaş, gün kümelenmesi, ortam ve (önerilirse) gün parmak izi yollarıyla açıklanamayan bir etiket ilişkisi". Prosedür yolu (S13), klinik ayırt edicilik ve dış genelleme bu ifadenin dışında kalır.
+- **UYGULAMA (onaydan sonra):**
+  - `scripts/select_background.py` (kare seçimi + denetim klipleri);
+  - `scripts/make_splits.py`'ye gün-gruplu kip;
+  - N3 çıkarımı;
+  - `run_probes.py` ile problar;
+  - `scripts/evaluate_stage2.py`;
+  - notebook 24;
+  - sentetik testler (yerleştirilmiş arka plan ve gün izi) ve simüle Colab.
+
+## D-040 — EVAL-016 post hoc duyarlılıklar (PH1–PH3)
+DURUM: **KABUL** (2026-10-11, 17. tur — Alper: "onaylıyorum devam edelim") · **POST HOC:** Aşama 1 sonuçları görüldükten sonra önerildi · C1 / C2 kararlarını **değiştirmez** · Ayrıntı: `docs/EVAL016_STAGE2_PLAN.md` Bölüm 5
+- **KARAR:**
+  - PH0: bütünlük; kaydedilmiş ŝ'ler Aşama 1 T1'ini yeniden üretmeli.
+  - PH1: T1, yaş için cr(yaş, 4).
+  - PH2: T1 + cinsiyet + sigara.
+  - PH3: K19 için E2h cezalı koşullu logit aynı amaç fonksiyonuyla, sağlam sayısal yöntemle (çok başlangıç, BFGS + Nelder–Mead, yerel minimum denetimi).
+  - Yorum kuralı önceden yazıldı: Aşama-1'i geçen bir backbone PH1 ya da PH2'de Holm p ≥ 0.05 ya da CV3 p ≥ 0.05 çıkarsa "yaş / demografi ayarına duyarlı" diye işaretlenir. PH3'te yön değişirse K19 yeniden açılır.
+- **NEDEN:**
+  - Hastalar ortalama 7.6 yaş büyük; skorlar etiket içinde yaşı kodluyor; T1'de yaş doğrusal.
+  - RQ9 (D-006) "yaş, cinsiyet, sigaranın ötesinde" diye soruyor.
+  - K19'un sayısal bayrağının kararı etkileyip etkilemediği doğrulanmalı.
+- **ALTERNATİFLER:** Duyarlılık yapmamak (yorum sınırı belirsiz kalır); bunları birincil teste katmak (sonuç sonrası protokol değişikliği; reddedildi).
+- **RİSK:** Post hoc çoklu bakış → herhangi bir PH sonucu doğrulayıcı sayılmaz; yalnız sınır gösterir.
+- **BİLİMSEL SONUÇ:** Aşama 1 bulgusunun yaş biçimine ve demografiye ne kadar duyarlı olduğu, karar kuralına dokunmadan bilinir.
+- **UYGULAMA:** `scripts/posthoc_eval016.py`, `tests/test_posthoc_eval016.py` (E18–E20), `notebooks/23_eval016_posthoc.ipynb` → `reports/context/EVAL-016_posthoc.{md,json}`.
