@@ -634,24 +634,31 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EXP-016DG / G1 — Dondurulmuş problar gün-gruplu split'lerde (Faz 3 baz çizgisi + gün parmak izi kontrolü)
 | Alan | Değer |
 |---|---|
-| DURUM | Kod ve sentetik testler hazır (F1, F11); **gerçek veride ÇALIŞTIRILMADI** |
+| DURUM | **Tamamlandı** (2026-10-11, notebook 24, CPU; 2. deneme). Okuma: dört backbone da "gün parmak izi yoluyla açıklanmıyor" |
 | 1. deneme (2026-10-11, Colab) | **Durdu (split kontrolü):** sklearn 1.6.1'in `StratifiedGroupKFold(shuffle=True)`'u gerçek gün yapısında çok dengesiz fold'lar üretti (test fold'larında 1–24 sağlıklı; bir iç doğrulamada 0) ve kontrol split'i yazmadan durdu. Yerelde 1.9.1 dengeliydi → sürüme bağlı. Yerelde 1.6.1 ile birebir yeniden üretildi. Düzeltme: sklearn'den bağımsız, belirlenimci gruplu atama (`grouped_folds`; büyük günler önce, sınıf doluluğunu dengeleyen fold). Gerçek bağlam yapısında test fold'larında 11–13 sağlıklı, iç doğrulamalarda 9–11; iki sklearn sürümünde de aynı dosyalar. Kontrol sıkılaştırıldı (sağlıklı sayısı beklenenden en çok max(1.5, %50) sapabilir). Hiçbir prob çalışmamıştı |
 | Tasarım | D-041, D-042; `docs/PHASE3_DESIGN.md` 5.1 (okuma kuralı sonuçlardan önce) |
 | Ne | EXP-016'nın aynı probu `splits_day` (3 tekrar × 5 fold) üzerinde; D-035 fold başına seçim; ŝ_DG ile T1 |
 | Kod / notebook | `make_splits.py --group-by-day`, `run_probes.py --exp EXP-016DG`, `evaluate_phase3.py frozen-dg`; `notebooks/24_phase3_prep.ipynb` (CPU) |
 | Sonuç konumu | `reports/splits_day/`, `reports/phase3/EXP-016DG_frozen.{md,json}`, `reports/phase3/G1_frozen_daygrouped.{md,json}` |
+| Split | 342 katılımcı, 66 gün grubu; test fold'larında 11–13 sağlıklı, iç doğrulamalarda 9–11 |
+| G1 (T1-PLR p · OR/SD · CV3 p) | cnn10 0.004 · 2.29 · 0.082; beats <0.001 · 3.30 · 0.035; wavlm_large <0.001 · 3.44 · 0.054; cnn14 0.008 · 2.01 · 0.026; wavlm_base_plus 0.002 · 2.54 · 0.120; cnn14_16k 0.266; MFCC LR 0.040 / MLP 0.049 (CV3 0.27 / 0.45) |
+| Olumsuz / zayıflayan | OR'lar Aşama 1'e göre küçüldü (cnn10 3.06 → 2.29, beats 4.69 → 3.30); gün-kümeli CV3 cnn10 ve wavlm_large'da > 0.05 (betimsel). Gün izi payı ile eğitim çeşitliliği kaybı ayrılamaz [INFERENCE] |
+| E1 (fold AUC, gün-gruplu) | beats 0.884 ± 0.057, wavlm_large 0.884 ± 0.061, wavlm_base_plus 0.864 ± 0.066, cnn10 0.823 ± 0.093, cnn14 0.767 ± 0.084, MFCC 0.72–0.73; yalnız bağlam 0.942 ± 0.038 (referans, D-028) |
+| D-035 seçimi | beats 12 / 15, wavlm_large 2, wavlm_base_plus 1; prosedür AUC 0.882 ± 0.062, kazananın laneti +0.002 |
 
 ## SMK-002 — Faz 3 fine-tuning smoke testi
 | Alan | Değer |
 |---|---|
-| DURUM | Kod hazır; CPU'da küçük rastgele modellerle geçti (F10); **GPU'da ÇALIŞTIRILMADI** |
+| DURUM | **PASS** (2026-10-11, T4, notebook 25 Bölüm 1; kod sha 59656cee). Altı kolun hepsi bütün kontrolleri geçti |
+| Sonuç (GPU tepe GB · s/adım · tahmini dk/fold, en çok epoch) | cnn10 0.65 · 0.10 · 8.2; cnn10_scratch 0.66 · 0.10 · 8.1; cnn14 6.91 · 0.15 · 12.3; beats 4.25 · 0.35 · 14.6; wavlm_base_plus 5.55 · 0.43 · 17.8; wavlm_large 11.71 · 1.18 · 49.0 |
+| Notlar | cnn10_scratch'te 2 küçük epoch'ta kayıp düşmedi (0.215 → 0.215; gövde değişti): sıfırdan başlangıçta beklenir, kontrol eşiği değil; kalibrasyon eğrisinde izlenecek. Checkpoint boyutları 62 MB (CNN10) – 3.7 GB (wavlm_large) → checkpoint'ler yerel diske alındı (D-042 kabul notu). Sonraki kod farkı yalnız protokol statüsü ve checkpoint klasörü; eğitim / model kodu aynı → SMK-002 yeniden gerekmez [INFERENCE] |
 | Kontroller | split sızıntı kapıları, ileri geçiş, gerçek eğitim döngüsüyle 2 küçük epoch, değerlendirme, checkpoint'ten aynı tahmin, GPU belleği < 14.5 GB, bütçe tahmini |
 | Kod / notebook | `scripts/smoke_test_finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 1 (T4) |
 
 ## EXP-030 — Uçtan uca fine-tuning (Faz 3)
 | Alan | Değer |
 |---|---|
-| DURUM | **Tasarım ÖNERİLDİ (D-042)**; kod ve sentetik testler hazır (F1–F11); hiçbir eğitim yapılmadı |
+| DURUM | **D-042 KABUL** (2026-10-11); kod ve sentetik testler hazır (F1–F12; notebook harness S14); kalibrasyon ve eğitim Colab'da başlayacak |
 | Kollar | cnn10, cnn14, ssl (D-035 fold başına), cnn10_scratch |
 | Değerlendirme | E1, T1, C3 (keşifsel), C2, RQ2 — `docs/PHASE3_DESIGN.md` 5.2 |
 | Kod / notebook | `scripts/finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 2 |

@@ -920,7 +920,7 @@ DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · Alper'in kapsam yönlendirmesiyl
 - **UYGULAMA:** `docs/EVAL016_CONCLUSION.md`. Gün-gruplu split'ler ve dondurulmuş baz çizgisi `docs/PHASE3_DESIGN.md`'de (D-041 kabulünden sonra yazılır).
 
 ## D-042 — Faz 3 (EXP-030) tasarımı: gün-gruplu split'lerde uçtan uca fine-tuning
-DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · **EVAL-016 Aşama 1 raporundan sonra** yazıldı ("T1 sonrası", D-037 madde 3) · Alper: "önerilerine uyalım; eğitim kodlarını yazabilirsin" (gün-gruplu değerlendirme ve D-041 kabul edildi) · D-027'nin yerine geçer; D-036'yı karara bağlar · Ayrıntı: `docs/PHASE3_DESIGN.md`
+DURUM: **KABUL** (2026-10-11, 20. tur; G1 ve SMK-002 sonuçları okunduktan sonra. Alper: "Hataya sebep olan durumu ve kodu düzeltip … beni kalan adımlar konusunda yönlendir" — Bölüm 2'nin çalışması istendi; daha önce "önerilerine uyalım". Tarif değişmedi; `finetune.PHASE3["status"] = "KABUL"`) · önerildi: 2026-10-11, 18. tur · **EVAL-016 Aşama 1 raporundan sonra** yazıldı ("T1 sonrası", D-037 madde 3) · Alper: "önerilerine uyalım; eğitim kodlarını yazabilirsin" (gün-gruplu değerlendirme ve D-041 kabul edildi) · D-027'nin yerine geçer; D-036'yı karara bağlar · Ayrıntı: `docs/PHASE3_DESIGN.md`
 - **KARAR (önerilen; † = ilk kez bu kararda):**
   1. **Split:** gün-gruplu, 3 tekrar × 5 fold (dış ve iç fold'lar kayıt gününe göre gruplu, etikete göre tabakalı).
   2. **Kollar:**
@@ -973,6 +973,11 @@ DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · **EVAL-016 Aşama 1 raporundan s
   - `scripts/run_probes.py --exp EXP-016DG`;
   - `scripts/evaluate_phase3.py frozen-dg`;
   - `scripts/finetune.py`, `scripts/smoke_test_finetune.py`;
-  - `tests/test_phase3.py` (F1–F11);
+  - `tests/test_phase3.py` (F1–F12);
   - `notebooks/24_phase3_prep.ipynb` (CPU), `notebooks/25_phase3_finetune.ipynb` (T4).
+- **Kabul notları (2026-10-11):**
+  - G1: dört backbone da önceden yazılmış kuralı geçti (ayrıntı `docs/EVAL016_CONCLUSION.md` Bölüm 5). Faz 3 planını değiştiren bir sonuç yok.
+  - SMK-002 (T4): altı kolun hepsi PASS; GPU tepe belleği en çok 11.7 GB (wavlm_large, micro-batch 8). Tarif değişmedi.
+  - Bütçe: SMK-002'nin tahmini en çok epoch'ta ≈ 12 saat eğitim + ≈ 1.5 saat kalibrasyon (üst sınır; değerlendirme payı dahil) [INFERENCE]. ~10 saati aşabilir. Gerçek epoch sayıları kalibrasyondan sonra bilinir; madde "aşılırsa önce CNN14 çıkarılır" o zaman, gerçek sayılarla uygulanır (CNN14 zaten sırada en sonda).
+  - **Mühendislik değişikliği (bilimsel tarif değil) [DECISION]:** checkpoint'ler (`latest.pt`) Colab'ın yerel diskinde (`--ckpt-root /content/ft_ckpt`). Neden: Drive'da üzerine yazılan / silinen dosyalar çöp kutusuna gider ve kotadan sayılır [FROM OFFICIAL DOCS: Google Drive yardım — çöp kutusundaki dosyalar depolama alanı kullanır; Colab'daki davranış topluluk raporu, NEEDS VERIFICATION]; epoch başına 62 MB–3.7 GB checkpoint kotayı doldururdu. Bedel: Colab makinesi değişirse yarım kalan fold aynı tohumla baştan başlar (en çok bir fold; wavlm_large'da ≤ ~50 dk). Bitmiş fold'lar (preds, fold.json) Drive'da. F12 ve notebook harness'i (S14) devam ve baştan başlamanın aynı tahmini verdiğini gösterdi (CPU).
 
