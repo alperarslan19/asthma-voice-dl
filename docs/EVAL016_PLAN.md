@@ -133,7 +133,7 @@ Hastalarda `ŝ ~ cr(days, 4) + cr(start_hour, 4)`: tarih terimlerinin HC3-dayan�
 
 ## 3. Aşama 2 — yalnız T1'i (L2) Holm sonrası pozitif olan backbone'lar için
 
-**Kesin tasarım:** `docs/EVAL016_STAGE2_PLAN.md` (D-039, ÖNERİLDİ; Aşama 1 sonrası yazıldı). Aşağıdaki metin özgün plandır.
+**Durum:** Aşama 2 yapılmadı. D-039 geri çekildi; yerine D-041 önerildi: N3 yapılmaz, gün-gruplu değerlendirme Faz 3'e taşındı. Sonuç bildirimi: `docs/EVAL016_CONCLUSION.md`. Aşağıdaki metin özgün plandır.
 
 C1 iddiası ancak bunlarla tamamlanır; negatif T1'de gerekmez.
 - **N3 — yalnız arka plan:**
@@ -243,7 +243,7 @@ Plan; D-023, D-025, D-028, D-035, D-037 ve CONFOUND 4–6 (lens seti, C1 / C2 / 
 | K16 | (16. tur, K2 teyidi sırasında) Planın gün-kümeli SE'si (Firth sandviç, CR1) gerçek bağlam yapısında **anti-konservatif**: doğru belirtilmiş modelde p < 0.05 oranı ~0.10; ölçülmemiş gün etkisini düzeltmiyor (SIM-002). Neden [INFERENCE]: 65 günün 53'ü tek etiketli, bilgi az sayıda günden geliyor; az ve dengesiz kümede CR1 varyansı küçümser (bilinen sonuç) | CV3 jackknife (her gün dışarıda bırakılarak yeniden fit, t(G−1)); CR1 betimsel kalır, raporda görünür | **KABUL (D-038)**; olumsuz sonuç korunuyor (SIM-002) |
 | K17 | Analiz ayarları (B, permütasyon, simülasyon sayısı, tohum, backbone listesi) komut satırından değiştirilebiliyordu; sonuçtan sonra ayar değiştirme riski | `FIXED` sözlüğü; gerçek veri kipinde herhangi bir sapma çalışmayı durdurur; `--allow-unapproved` raporlara "karar için kullanılamaz" yazar (E12, E15) | Çözüldü (D-038) |
 | K18 | (16. tur) Bilgi-matrisli Firth adımları yarı-tam ayrışmalı, çok düz bir yüzeyde yakınsamıyor (sentetik testte bir jackknife alt örneklemi; 3000 adımda bitmedi; R brglm2 6105 iterasyon gerektirdi). Jackknife fit'i "başarısız" sayılınca K2 kuralı sentetik testte yanlışlıkla "geçersiz" çıktı | Yakınsamazsa Newton-CG cilası (U tam gradyan, Hessian merkezi farklarla); tahminci aynı; R brglm2 ile 6 ondalığa kadar aynı (E17) | Çözüldü (D-038 madde 8) |
-| K19 | (Aşama 1 gerçek çalıştırması, sonuçtan SONRA görüldü) E2h-KLR'nin Jeffreys-cezalı koşullu logit fit'i 3 kolda (cnn10, beats, wavlm_large) `converged = False` döndü (BFGS sayısal gradyanla, sonra Nelder–Mead). OR'lar klasik ML koşullu logitle aynı yönde ve ondan küçük (beklenen büzülme); C1 koşul 4 yalnız yönü kullandığı için karar etkilenmiyor [INFERENCE]. Bu kollarda E2h CI / p dikkatle okunmalı | Analitik gradyanla yeniden fit ve optimumun doğrulanması (post hoc, sayısal; karar değiştirmez) — önerildi | Açık |
+| K19 | (Aşama 1 gerçek çalıştırması, sonuçtan SONRA görüldü) E2h-KLR'nin Jeffreys-cezalı koşullu logit fit'i 3 kolda (cnn10, beats, wavlm_large) `converged = False` döndü (BFGS sayısal gradyanla, sonra Nelder–Mead). OR'lar klasik ML koşullu logitle aynı yönde ve ondan küçük (beklenen büzülme); C1 koşul 4 yalnız yönü kullandığı için karar etkilenmiyor [INFERENCE]. Bu kollarda E2h CI / p dikkatle okunmalı | Analitik gradyanla yeniden fit ve optimumun doğrulanması (post hoc, sayısal; karar değiştirmez) — önerildi | **Kapandı** (PH3, 2026-10-11): aynı amaç fonksiyonu sağlam yöntemle 8 kolun hepsinde yakınsadı; OR'lar Aşama 1 ile 3 ondalığa kadar aynı. Bayrak sayısaldı, karar etkilenmedi |
 
 ## 10. K2 geçerlilik çalışması — SIM-002 (16. tur; gerçek bağlam yapısı, yapay skor; ses sonucu YOK)
 

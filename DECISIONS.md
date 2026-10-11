@@ -829,7 +829,7 @@ DURUM: **KABUL** (2026-10-10, 16. tur — Alper: "S9, S10, S11 ve S12 önerileri
   - `docs/EVAL016_PLAN.md` Bölüm 0–4, 6, 7, 9, 10.
 
 ## D-039 — EVAL-016 Aşama 2 tasarımı: N3 (yalnız arka plan) ve gün-gruplu CV
-DURUM: **ÖNERİLDİ** (2026-10-11, 17. tur) · **Aşama 1 sonuçları görüldükten sonra, Aşama 2'nin hiçbir hesaplamasından önce** yazıldı ("Aşama 1 sonrası") · D-025 / D-037 / D-038'in Aşama 2 kısmını kesinleştirir; K7 ve K13'ü kapatır · Ayrıntı: `docs/EVAL016_STAGE2_PLAN.md` Bölüm 0–4
+DURUM: **GERİ ÇEKİLDİ → D-041** (2026-10-11, 18. tur; hiçbir kısmı uygulanmadı) · Önerildiği: 17. tur · **Aşama 1 sonuçları görüldükten sonra, Aşama 2'nin hiçbir hesaplamasından önce** yazıldı ("Aşama 1 sonrası") · D-025 / D-037 / D-038'in Aşama 2 kısmını kesinleştirir; K7 ve K13'ü kapatır · Ayrıntı: `docs/EVAL016_STAGE2_PLAN.md` Bölüm 0–4
 - **KARAR (önerilen):**
   1. **Kapsam:** kabul edilen kurala (K10) göre Holm-T1 pozitif 5 backbone: cnn10, cnn14, beats, wavlm_base_plus, wavlm_large. C1 yalnız Aşama-1'i tam geçen 4'ü için kurulabilir.
   2. **N3 kare seçimi (K13):** sayılar sonuç görülmeden sabit.
@@ -893,3 +893,28 @@ DURUM: **KABUL** (2026-10-11, 17. tur — Alper: "onaylıyorum devam edelim") ·
 - **RİSK:** Post hoc çoklu bakış → herhangi bir PH sonucu doğrulayıcı sayılmaz; yalnız sınır gösterir.
 - **BİLİMSEL SONUÇ:** Aşama 1 bulgusunun yaş biçimine ve demografiye ne kadar duyarlı olduğu, karar kuralına dokunmadan bilinir.
 - **UYGULAMA:** `scripts/posthoc_eval016.py`, `tests/test_posthoc_eval016.py` (E18–E20), `notebooks/23_eval016_posthoc.ipynb` → `reports/context/EVAL-016_posthoc.{md,json}`.
+
+## D-041 — Dondurulmuş aile için EVAL-016 kapanışı: sınırları belli iddia sabitlenir; gün-gruplu değerlendirme Faz 3'e taşınır
+DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · Alper'in kapsam yönlendirmesiyle: "Şimdilik yeni analiz eklemeyelim. Önce elimizdeki sonuçların bize gerçekten ne söylediğini ve ne söylemediğini sabitleyelim. Ardından yalnızca bilimsel sonucu değiştirebilecek eksiklere bakalım." · D-039'un yerine geçer · Ayrıntı: `docs/EVAL016_CONCLUSION.md`
+- **KARAR:**
+  1. Dondurulmuş aile için sonuç bildirimi `docs/EVAL016_CONCLUSION.md`'de sabitlenir.
+     - Desteklenen iddia: cnn10, beats ve wavlm_large skorları, ölçülen saat, tarih ve yaşın ötesinde etiketle ilişkili.
+     - cnn14 sınırda: yalnız birincil analizde.
+     - C1 (protokol) **kurulmadı**.
+  2. **N3 yapılmaz.** Ortam yolu sınırlılık olarak yazılır. Bu yüzden C1 "kurulmadı (N3 yapılmadı)" olarak kalır.
+  3. **Gün-gruplu değerlendirme ayrı bir Aşama 2 olarak yapılmaz.** Faz 3'ün değerlendirme tasarımına taşınır: dondurulmuş problar, Faz 3'ün baz çizgisi olarak aynı gün-gruplu split'lerde yeniden koşulur. Sonuç bildirime eklenir.
+  4. Dondurulmuş aile için başka bağlam analizi eklenmez (durma kuralı).
+  5. Prosedür yolu (S13) için veri ekibinin cevabı beklenir; analiz yapılmaz.
+- **NEDEN:**
+  - Sonucu değiştirebilecek eksiklerden yalnız gün parmak izi (G1) hem ucuz hem doğrudan yanıtlanabilir. O da Faz 3'te zaten gerekli: fine-tune modelleri bu yola daha açık, ve C3 karşılaştırmasının dondurulmuş baz çizgisi aynı split'lerde olmalı. [INFERENCE]
+  - N3, nefes belirsizliği (K13) nedeniyle kesin bir cevap vermiyordu. Dinleme denetimi ve yeni çıkarım gerektiriyordu.
+  - Gün düzeyindeki ortam yolu G1 ile büyük ölçüde örtüşüyor.
+- **ALTERNATİFLER:**
+  - D-039 (N3 + ayrı gün-gruplu CV): daha kapsamlı, ama sonucu değiştirme olasılığı düşük kısımları (N3) pahalı ve belirsiz.
+  - Hiçbir eksiği kapatmadan Faz 3'e geçmek: G1 açık kalır, Faz 3 sonuçları da aynı soruyla gölgelenir.
+- **RİSK:**
+  - C1 hiçbir zaman "sağlandı" olamaz. İddia bilinçli olarak dar tutulur.
+  - Gün-gruplu split'ler eğitim çeşitliliğini azaltır; Faz 3'ün sayıları Faz 2 ile doğrudan karşılaştırılamaz. Dondurulmuş problar iki split türünde de raporlanır.
+- **BİLİMSEL SONUÇ:** Proje savunulabilir, sınırları belli bir dondurulmuş-temsil bulgusuyla Faz 3'e geçer. Faz 3'ün asıl sorusu da netleşir: fine-tuning, gün-gruplu değerlendirmede bu bulguyu güçlendiriyor mu, yoksa bağlam ve gün yoluna mı kayıyor?
+- **UYGULAMA:** `docs/EVAL016_CONCLUSION.md`. Gün-gruplu split'ler ve dondurulmuş baz çizgisi `docs/PHASE3_DESIGN.md`'de (D-041 kabulünden sonra yazılır).
+

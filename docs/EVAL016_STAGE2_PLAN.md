@@ -1,7 +1,7 @@
 # EVAL-016 Aşama 2 — tasarım (N3 ve gün-gruplu CV) ve post hoc duyarlılıklar
 
 **Durum:**
-- Bölüm 1–4 (Aşama 2 tasarımı): **ÖNERİLDİ (D-039)**. Onaylanmadan Aşama 2'nin hiçbir hesaplaması (kare seçimi dahil) çalıştırılmaz.
+- Bölüm 1–4 (Aşama 2 tasarımı): **GERİ ÇEKİLDİ (D-039 → D-041, 18. tur); hiçbiri uygulanmadı.** Gün-gruplu değerlendirme Faz 3'e taşındı; N3 yapılmıyor. Belge karar geçmişi için korunuyor.
 - Bölüm 5 (post hoc duyarlılıklar PH1–PH3): **KABUL (D-040, 2026-10-11)**. Kod: `scripts/posthoc_eval016.py`, `notebooks/23_eval016_posthoc.ipynb`.
 
 **Yazıldığı an:** EVAL-016 Aşama 1 raporu (`reports/context/EVAL-016_context.md`) görüldükten **sonra**, Aşama 2'nin hiçbir sonucu hesaplanmadan **önce**. Bu yüzden belge bütünüyle **"Aşama 1 sonrası"** etiketlidir. Aşama 1 sonucuna bakılarak eklenen her öğe ayrıca işaretlendi (†).
