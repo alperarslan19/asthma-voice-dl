@@ -44,7 +44,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 
 N_SPLITS = 5
 N_REPEATS = 5
@@ -175,19 +175,46 @@ def day_groups(c: pd.DataFrame) -> np.ndarray:
     return np.where(d.isna(), "nodate_" + c["participant_id"].astype(str), d.fillna("")).astype(str)
 
 
+def grouped_folds(y: np.ndarray, groups: np.ndarray, n_splits: int, seed: int) -> np.ndarray:
+    """Gruplu, etikete göre dengeli fold ataması (sklearn'den BAĞIMSIZ; numpy default_rng ile belirlenimci).
+    Neden kendi uygulamamız: sklearn StratifiedGroupKFold(shuffle=True) sürüme göre farklı ve gerçek gün yapısında
+    (bazı günlerde 10+ sağlıklı) çok dengesiz fold'lar üretebiliyor — Colab'daki 1.6.1 bir iç doğrulamaya 0 sağlıklı
+    düşürdü (yerelde 1.9.1 dengeliydi). Yöntem: gruplar tohumlu rastgele sırada karıştırılır, sonra büyükten küçüğe
+    (eşitlikte karışık sıra) dizilir; her grup, eklendiğinde fold'ların sınıf başına doluluk oranlarının karelerinin
+    toplamını en az artıran fold'a verilir. Döner: örnek başına fold numarası."""
+    y = np.asarray(y)
+    g = np.asarray(groups)
+    ug, inv = np.unique(g, return_inverse=True)
+    classes = np.unique(y)
+    cnt = np.zeros((len(ug), len(classes)))
+    for ci, c in enumerate(classes):
+        cnt[:, ci] = np.bincount(inv, weights=(y == c).astype(float), minlength=len(ug))
+    target = cnt.sum(0) / n_splits
+    rng = np.random.default_rng(seed)
+    order = rng.permutation(len(ug))
+    order = order[np.argsort(-cnt[order].sum(1), kind="stable")]
+    fill = np.zeros((n_splits, len(classes)))
+    gfold = np.empty(len(ug), dtype=int)
+    for gi in order:
+        cost = [(((fill + np.eye(n_splits)[f][:, None] * cnt[gi]) / target) ** 2).sum() for f in range(n_splits)]
+        f = int(np.argmin(cost))
+        gfold[gi] = f
+        fill[f] += cnt[gi]
+    return gfold[inv]
+
+
 def make_repeat_day(c: pd.DataFrame, r: int) -> pd.DataFrame:
     """D-041 / D-042: gün-gruplu split. Dış VE iç fold'lar kayıt gününe göre gruplu (aynı günün bütün katılımcıları
-    aynı role düşer), etikete göre tabakalı. Tohumlar katılımcı-gruplu split'lerle aynı biçimde (r; 1000 + 10r + k)."""
+    aynı role düşer), etikete göre dengeli (grouped_folds). Tohumlar: dış r, iç 1000 + 10r + k."""
     ids = c["participant_id"].to_numpy()
     y = c["label"].to_numpy()
     g = day_groups(c)
     rows = []
-    outer = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=outer_seed(r))
-    for k, (tr, te) in enumerate(outer.split(ids, y, g)):
+    outer = grouped_folds(y, g, N_SPLITS, outer_seed(r))
+    for k in range(N_SPLITS):
+        tr, te = np.flatnonzero(outer != k), np.flatnonzero(outer == k)
         inner_fold = np.full(len(ids), -1)
-        inner = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=inner_seed(r, k))
-        for j, (_, iv) in enumerate(inner.split(ids[tr], y[tr], g[tr])):
-            inner_fold[tr[iv]] = j
+        inner_fold[tr] = grouped_folds(y[tr], g[tr], N_SPLITS, inner_seed(r, k))
         role = np.where(np.isin(np.arange(len(ids)), te), "test", "train")
         rows.append(pd.DataFrame({"participant_id": ids, "repeat": r, "outer_fold": k, "role": role,
                                   "inner_fold": inner_fold}))
@@ -199,7 +226,7 @@ def make_repeat_day(c: pd.DataFrame, r: int) -> pd.DataFrame:
 def check_repeat_day(s: pd.DataFrame, c: pd.DataFrame) -> None:
     """Gün-gruplu split kontrolleri. Katılımcı kontrolleri check_repeat ile aynı; ek olarak hiçbir kayıt günü hem
     train hem testte (ve hem iç train hem iç doğrulamada) olamaz. Gruplar eşit büyüklükte olmadığından sağlıklı sayısı
-    dengesi tam tutturulamaz: her test fold'unda ve iç doğrulamada en az 1 sağlıklı istenir, dağılım raporlanır."""
+    dengesi tam tutturulamaz: test fold'unda ve iç doğrulamada sağlıklı sayısı beklenenden en çok max(1.5, %50) sapabilir; iç doğrulamada ≥ 1."""
     cohort = set(c["participant_id"])
     assert len(s) == len(cohort) * N_SPLITS
     tests = s[s["role"] == "test"]
@@ -219,7 +246,11 @@ def check_repeat_day(s: pd.DataFrame, c: pd.DataFrame) -> None:
             assert not set(day[list(iv)]) & set(day[list(it)]), f"fold {k} iç {j}: iç doğrulamayla iç train aynı günü paylaşıyor"
         h_test = int((lab[list(te)] == 0).sum())
         h_val = int((lab[list(b.loc[b["is_inner_val"], "participant_id"])] == 0).sum())
-        assert h_test >= 1 and h_val >= 1, f"fold {k}: testte {h_test}, iç doğrulamada {h_val} sağlıklı"
+        exp_test = (lab == 0).sum() / N_SPLITS
+        exp_val = (lab[list(tr)] == 0).sum() / N_SPLITS
+        tol = lambda e: max(1.5, 0.5 * e)                  # noqa: E731  küçük sayılarda tamsayı payı
+        assert h_val >= 1 and abs(h_test - exp_test) <= tol(exp_test), f"fold {k}: testte {h_test} sağlıklı (beklenen ~{exp_test:.1f}; dengesiz)"
+        assert abs(h_val - exp_val) <= tol(exp_val), f"fold {k}: iç doğrulamada {h_val} sağlıklı (beklenen ~{exp_val:.1f}; dengesiz)"
 
 
 def summarize(s: pd.DataFrame, c: pd.DataFrame) -> list[dict]:
@@ -295,7 +326,7 @@ def main() -> None:
 
     manifest = {
         "decisions": ["D-003", "D-009", "D-024", "D-029"] + (["D-041", "D-042"] if args.group_by_day else []),
-        "grouping": ("kayıt günü (dış ve iç fold'lar; etikete göre tabakalı, StratifiedGroupKFold)" if args.group_by_day
+        "grouping": ("kayıt günü (dış ve iç fold'lar; etikete göre dengeli, grouped_folds — sklearn'den bağımsız)" if args.group_by_day
                      else "katılımcı (etiket × dönem × yaş grubu tabakalı)"),
         "n_day_groups": int(len(set(day_groups(c)))),
         "inputs_sha256": {"participant_context.csv": sha256_file(args.context),
