@@ -1,0 +1,121 @@
+{
+ "exp": "DIAG-001",
+ "arm": "cnn14",
+ "device": "cuda",
+ "gpu": "Tesla T4",
+ "torch": "2.11.0+cu130",
+ "epochs": 1,
+ "data": {
+  "mode": "calibrate",
+  "repeat": 0,
+  "fold": 0,
+  "n_train_participants": 216,
+  "n_eval_participants": 56,
+  "n_train_recordings": 1512,
+  "n_eval_recordings": 392,
+  "train_recordings_asthma_healthy": [
+   1260,
+   252
+  ],
+  "eval_recordings_asthma_healthy": [
+   322,
+   70
+  ],
+  "eval_participants_asthma_healthy": [
+   46,
+   10
+  ],
+  "pos_weight": 0.2,
+  "n_days_train": 42,
+  "n_days_eval": 11
+ },
+ "A_pretrained_fp16": {
+  "n_rows": 392,
+  "n_nonfinite": 0,
+  "first_bad_rows": []
+ },
+ "B_train": {
+  "completed": true,
+  "train_loss": [
+   0.2461
+  ],
+  "skipped_steps": [
+   1
+  ]
+ },
+ "B_first_nonfinite_step": null,
+ "C_nonfinite_state": {
+  "n": 0,
+  "names_first": [],
+  "kinds": []
+ },
+ "D_fp16": {
+  "n_rows": 392,
+  "n_nonfinite": 3,
+  "first_bad_rows": [
+   77,
+   91,
+   105
+  ]
+ },
+ "D_fp32": {
+  "n_rows": 392,
+  "n_nonfinite": 0,
+  "first_bad_rows": []
+ },
+ "E_trace": {
+  "row_is_first_eval_row": false,
+  "fp16_first_nonfinite_module": {
+   "module": "backbone.conv_block6.conv1",
+   "dtype": "float16",
+   "finite": false,
+   "max_abs": 64512.0
+  },
+  "fp32_any_nonfinite": false,
+  "fp32_largest": [
+   {
+    "module": "backbone.conv_block6.conv2",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 2709661.0
+   },
+   {
+    "module": "backbone.conv_block6.bn2",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 144358.359375
+   },
+   {
+    "module": "backbone.conv_block6.conv1",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 115090.6875
+   },
+   {
+    "module": "backbone.conv_block6.bn1",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 39253.59375
+   },
+   {
+    "module": "backbone.conv_block5.conv2",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 18185.236328125
+   },
+   {
+    "module": "backbone.conv_block5.bn2",
+    "dtype": "float32",
+    "finite": true,
+    "max_abs": 7877.61083984375
+   }
+  ],
+  "fp32_over_fp16_max": [
+   "backbone.conv_block6.conv1",
+   "backbone.conv_block6.conv2",
+   "backbone.conv_block6.bn2"
+  ]
+ },
+ "verdict": "H2: durum sağlam, fp16 değerlendirme taşıyor → değerlendirme bütün kollarda fp32",
+ "elapsed_s": 131.3
+}
