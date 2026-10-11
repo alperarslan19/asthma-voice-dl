@@ -1,0 +1,77 @@
+{
+ "arm": "cnn10_scratch",
+ "backbone_arm": "cnn10_scratch",
+ "repeat": 1,
+ "fold": 0,
+ "epochs": 9,
+ "seed": 3100,
+ "data": {
+  "mode": "cv",
+  "repeat": 1,
+  "fold": 0,
+  "n_train_participants": 272,
+  "n_eval_participants": 70,
+  "n_train_recordings": 1903,
+  "n_eval_recordings": 490,
+  "train_recordings_asthma_healthy": [
+   1581,
+   322
+  ],
+  "eval_recordings_asthma_healthy": [
+   399,
+   91
+  ],
+  "eval_participants_asthma_healthy": [
+   57,
+   13
+  ],
+  "pos_weight": 0.2037,
+  "n_days_train": 53,
+  "n_days_eval": 13
+ },
+ "final_train_loss": 0.21683254076879524,
+ "skipped_steps": 2,
+ "train_s": 100.2,
+ "total_s": 116.4,
+ "gpu_peak_gb_max": 0.65,
+ "eval_amp": false,
+ "sig": {
+  "splits": {
+   "outer_r0.csv": "d46c8875fb87ebc0",
+   "outer_r1.csv": "70753773c40c5f4e",
+   "outer_r2.csv": "07179c37b36fba06"
+  },
+  "context": "aafd262b6947619b",
+  "cache_index": "e41ed32ab435f3f7",
+  "checkpoint_sha256": "random_init",
+  "code": "1a5d5a03b4a7d01c",
+  "protocol": {
+   "version": "Faz 3 protokol\u00fc v2 (D-042 + D-043)",
+   "status": "KABUL",
+   "splits": "splits_day (g\u00fcn-gruplu, 3 tekrar \u00d7 5 fold)",
+   "fine_tune": "u\u00e7tan uca (WavLM \u00f6zellik kodlay\u0131c\u0131s\u0131 donuk)",
+   "epoch_rule": "kalibrasyon: i\u00e7 do\u011frulama kat\u0131l\u0131mc\u0131 AUC'si, 3'l\u00fc hareketli ort., 1-SE kural\u0131 (Hanley\u2013McNeil SE); \u0131s\u0131nma sabit epoch say\u0131s\u0131 (D-043)"
+  },
+  "common": {
+   "batch": 16,
+   "lr_head": 0.001,
+   "weight_decay": 0.0001,
+   "head_hidden": 256,
+   "head_dropout": 0.3,
+   "grad_clip": 1.0,
+   "eval_batch": 16,
+   "smooth": 3,
+   "base_seed": 3000,
+   "eval_amp": false
+  },
+  "arm_cfg": {
+   "backbone": "cnn10",
+   "init": "random",
+   "lr_backbone": 0.0001,
+   "warmup_epochs": 0,
+   "max_epochs": 40,
+   "micro_batch": 16,
+   "ckpt_every": 1
+  }
+ }
+}
