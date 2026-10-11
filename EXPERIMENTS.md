@@ -617,7 +617,8 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 | Alan | Değer |
 |---|---|
 | Tarih | 2026-10-11 (D-040 KABUL; **POST HOC**, Aşama 1 sonuçlarından sonra) |
-| DURUM | Kod ve testler hazır (E18–E20); **gerçek veride ÇALIŞTIRILMADI** |
+| DURUM | **Tamamlandı** (2026-10-11, Colab CPU, 15.5 dk; PH0 bütünlük geçti: en büyük \|Δ LR\| 8.5e-14) |
+| Sonuç | PH1 / PH2: cnn10, beats ve wavlm_large dayanıklı (beats yaş spline'da CV3 0.045, sınırda). **cnn14 duyarlı** (yaş spline'da CV3 0.067). OR'lar ayarlar arasında ±%10 içinde. MFCC'de CV3 hep > 0.05. PH3: 8 kolun hepsi yakınsadı, OR'lar Aşama 1 ile aynı → K19 sayısaldı, kapandı |
 | Soru | Aşama 1'in T1 bulgusu yaşın esnek ayarına (PH1) ve cinsiyet + sigaraya (PH2) duyarlı mı? K19'un sayısal bayrağı E2h yönünü etkiliyor mu (PH3)? |
 | Kural | Önceden yazıldı (`docs/EVAL016_STAGE2_PLAN.md` Bölüm 5); C1 / C2 kararlarını değiştirmez |
 | Kod / notebook | `scripts/posthoc_eval016.py`, `notebooks/23_eval016_posthoc.ipynb` (CPU) |
@@ -626,7 +627,7 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EVAL-016 Aşama 2 — N3 ve gün-gruplu CV
 | Alan | Değer |
 |---|---|
-| DURUM | **Tasarım ÖNERİLDİ (D-039)**; kod yok; hiçbir hesaplama yapılmadı |
+| DURUM | **Yapılmadı.** D-039 geri çekildi → D-041: N3 yok; gün-gruplu değerlendirme Faz 3'e taşındı. Sonuç bildirimi: `docs/EVAL016_CONCLUSION.md` |
 | Kapsam | cnn10, cnn14, beats, wavlm_base_plus, wavlm_large (Holm-T1 pozitif; K10) |
 | Tasarım | `docs/EVAL016_STAGE2_PLAN.md` |
 
