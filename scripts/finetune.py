@@ -29,7 +29,11 @@ KAYIT VE KURTARMA (proje kuralı)
     <out_root>/<arm>/r{r}_k{k}/ : latest.pt (her ckpt_every epoch'ta — CNN10 1, CNN14 5, SSL 2 — ve son epoch'ta; atomik: eğitilen parametreler, BatchNorm tamponları,
     optimizer, scaler, scheduler, RNG durumları, epoch), train_log.csv (epoch, kayıp, lr, adım, atlanan adım, süre, GPU GB),
     config.json (kol, tohum, imzalar). Fold bitince preds.csv + fold.json (atomik) yazılır; latest.pt silinir.
-    Yeniden çalıştırma: bitmiş fold atlanır; yarım kalan fold latest.pt'den sürer. "En iyi doğrulama checkpoint'i" yoktur:
+    Yeniden çalıştırma: bitmiş fold atlanır; yarım kalan fold latest.pt'den sürer.
+    --ckpt-root (Colab'da yerel disk, /content/ft_ckpt): latest.pt yalnız oraya yazılır; günlük, config, preds, fold.json
+    Drive'da kalır. Neden: Drive'da üzerine yazılan / silinen dosya çöp kutusuna gider ve kotadan sayılır; checkpoint'ler
+    (62 MB–3.7 GB, epoch başına) kotayı doldururdu. Bedeli: Colab makinesi değişirse yarım kalan fold aynı tohumla epoch
+    0'dan yeniden başlar (en çok bir fold kaybı); bitmiş fold'lar kaybolmaz. Bilimsel tarif değişmez. "En iyi doğrulama checkpoint'i" yoktur:
     tasarım gereği doğrulamaya göre seçim yapılmaz (D-027).
 
 SIZINTI KONTROLLERİ (assert)
@@ -63,7 +67,8 @@ import backbones as B  # noqa: E402
 from smoke_test_backbones import HOP_S, WIN_S, Cache  # noqa: E402
 
 # Faz 3 protokolü (docs/PHASE3_DESIGN.md; DECISIONS D-042). Kalibrasyon ve eğitim yalnız status == "KABUL" iken çalışır.
-PHASE3 = {"version": "Faz 3 protokolü v1 (D-042)", "status": "ÖNERİLDİ", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
+# 2026-10-11: D-042 KABUL (kullanıcı onayı; G1 ve SMK-002 sonuçları okunduktan sonra). Tarif değişmedi.
+PHASE3 = {"version": "Faz 3 protokolü v1 (D-042)", "status": "KABUL", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
           "fine_tune": "uçtan uca (WavLM özellik kodlayıcısı donuk)", "epoch_rule": "kalibrasyon: iç doğrulama kaybı, 3'lü hareketli ort. min"}
 COMMON = {"batch": 16, "lr_head": 1e-3, "weight_decay": 1e-4, "head_hidden": 256, "head_dropout": 0.3, "grad_clip": 1.0,
           "eval_batch": 16, "smooth": 3, "base_seed": 3000}
@@ -290,7 +295,8 @@ def set_rng_state(s: dict) -> None:
 
 # ----------------------------------------------------------------------------- eğitim döngüsü
 def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int, seed: int, workdir: Path, device: str,
-                 amp: bool = True, eval_each_epoch: bool = False, stop_after_epoch: int | None = None) -> dict:
+                 amp: bool = True, eval_each_epoch: bool = False, stop_after_epoch: int | None = None,
+                 ckpt_dir: Path | None = None) -> dict:
     """epochs kadar eğitir (kaldığı yerden sürer). eval_each_epoch: kalibrasyon için değerlendirme kümesinde kayıp / AUC.
     Döner: {'log': DataFrame, 'done': bool}."""
     from sklearn.metrics import roc_auc_score
@@ -305,8 +311,13 @@ def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int,
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     pos_w = torch.tensor(fd.pos_weight, device=device)
     lossf = nn.BCEWithLogitsLoss(pos_weight=pos_w)
-    ck, logf = workdir / "latest.pt", workdir / "train_log.csv"
+    ckpt_dir = ckpt_dir or workdir
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    ck, logf = ckpt_dir / "latest.pt", workdir / "train_log.csv"
     start, log = 0, []
+    if not ck.exists() and logf.exists():
+        print(f"  checkpoint yok ({ck}); önceki günlük var → fold aynı tohumla epoch 0'dan yeniden başlıyor "
+              "(yerel disk silinmiş olabilir: Colab makinesi değişti)", flush=True)
     B.set_determinism(seed)
     if ck.exists():
         st = torch.load(ck, map_location="cpu", weights_only=False)
@@ -429,7 +440,9 @@ def cmd_calibrate(args) -> None:
     out.mkdir(parents=True, exist_ok=True)
     atomic_write_text(out / "config.json", json.dumps({"arm": args.arm, "mode": "calibrate", "max_epochs": E, "seed": seed,
                                                        "data": fd.summary, "sig": signatures(args, cfg, m)}, indent=1, default=str))
-    res = run_training(m, fd, cache, cfg, E, seed, out, args.device, eval_each_epoch=True, stop_after_epoch=args.stop_after_epoch)
+    ckd = args.ckpt_root / args.arm / "calibration" if args.ckpt_root else out
+    res = run_training(m, fd, cache, cfg, E, seed, out, args.device, eval_each_epoch=True, stop_after_epoch=args.stop_after_epoch,
+                       ckpt_dir=ckd)
     if not res["done"]:
         print("durduruldu (test); yeniden çalıştırınca sürer")
         return
@@ -441,7 +454,7 @@ def cmd_calibrate(args) -> None:
               "val_auc_monitor_only": log.val_auc_monitor_only.round(4).tolist(), "data": fd.summary,
               "epoch_s_mean": float(log.epoch_s.mean()), "gpu_peak_gb_max": float(log.gpu_peak_gb.max())}
     atomic_write_text(res_path, json.dumps(result, indent=1))
-    (out / "latest.pt").unlink(missing_ok=True)
+    (ckd / "latest.pt").unlink(missing_ok=True)
     print(f"{args.arm}: sabit epoch = {e_star}" + (" (UYARI: üst sınırda — kayıp hâlâ düşüyor olabilir)" if at_edge else ""))
 
 
@@ -477,7 +490,8 @@ def cmd_train(args) -> None:
                                                                  "epochs": E, "seed": seed, "data": fd.summary, "sig": sig},
                                                                 indent=1, default=str))
             t0 = time.time()
-            res = run_training(m, fd, cache, cfg, E, seed, wd, args.device, stop_after_epoch=args.stop_after_epoch)
+            ckd = args.ckpt_root / args.arm / f"r{r}_k{k}" if args.ckpt_root else wd
+            res = run_training(m, fd, cache, cfg, E, seed, wd, args.device, stop_after_epoch=args.stop_after_epoch, ckpt_dir=ckd)
             if not res["done"]:
                 print("durduruldu (test); yeniden çalıştırınca sürer")
                 return
@@ -496,7 +510,7 @@ def cmd_train(args) -> None:
                 "gpu_peak_gb_max": float(log.gpu_peak_gb.max()), "sig": sig}, indent=1, default=str))
             if args.keep_final:
                 atomic_torch_save({"model": trainable_state(m), "epoch": E, "seed": seed}, wd / "final_trainable.pt")
-            (wd / "latest.pt").unlink(missing_ok=True)
+            (ckd / "latest.pt").unlink(missing_ok=True)
             print(f"{args.arm} r{r} k{k}: bitti ({time.time() - t0:.0f} s)", flush=True)
             del m
             if args.device.startswith("cuda"):
@@ -514,6 +528,8 @@ def main() -> None:
         p.add_argument("--cache-dir", required=True, type=Path)
         p.add_argument("--model-dir", type=Path)
         p.add_argument("--out-root", required=True, type=Path, help="Drive: experiments/phase3/finetune")
+        p.add_argument("--ckpt-root", type=Path, help="latest.pt için ayrı klasör (Colab: yerel disk /content/ft_ckpt); "
+                                                      "verilmezse --out-root içindeki fold klasörü")
         p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
         p.add_argument("--allow-unapproved", action="store_true", help="yalnız testler")
         p.add_argument("--random-init-test", action="store_true", help="yalnız testler: küçük rastgele modeller")
