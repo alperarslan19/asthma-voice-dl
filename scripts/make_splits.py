@@ -44,7 +44,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 
 N_SPLITS = 5
 N_REPEATS = 5
@@ -169,6 +169,59 @@ def check_repeat(s: pd.DataFrame, c: pd.DataFrame) -> None:
             print(f"UYARI fold {k}: iç doğrulamada yalnız {h_val} sağlıklı → early stopping / eşik çok gürültülü olur")
 
 
+def day_groups(c: pd.DataFrame) -> np.ndarray:
+    """Gün grubu = kayıt günü (D-024). Tarihi bilinmeyen katılımcı kendi başına bir gruptur (başka günle birleştirilmez)."""
+    d = c["recording_date"].astype("string")
+    return np.where(d.isna(), "nodate_" + c["participant_id"].astype(str), d.fillna("")).astype(str)
+
+
+def make_repeat_day(c: pd.DataFrame, r: int) -> pd.DataFrame:
+    """D-041 / D-042: gün-gruplu split. Dış VE iç fold'lar kayıt gününe göre gruplu (aynı günün bütün katılımcıları
+    aynı role düşer), etikete göre tabakalı. Tohumlar katılımcı-gruplu split'lerle aynı biçimde (r; 1000 + 10r + k)."""
+    ids = c["participant_id"].to_numpy()
+    y = c["label"].to_numpy()
+    g = day_groups(c)
+    rows = []
+    outer = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=outer_seed(r))
+    for k, (tr, te) in enumerate(outer.split(ids, y, g)):
+        inner_fold = np.full(len(ids), -1)
+        inner = StratifiedGroupKFold(n_splits=N_SPLITS, shuffle=True, random_state=inner_seed(r, k))
+        for j, (_, iv) in enumerate(inner.split(ids[tr], y[tr], g[tr])):
+            inner_fold[tr[iv]] = j
+        role = np.where(np.isin(np.arange(len(ids)), te), "test", "train")
+        rows.append(pd.DataFrame({"participant_id": ids, "repeat": r, "outer_fold": k, "role": role,
+                                  "inner_fold": inner_fold}))
+    s = pd.concat(rows, ignore_index=True)
+    s["is_inner_val"] = (s["role"] == "train") & (s["inner_fold"] == 0)
+    return s
+
+
+def check_repeat_day(s: pd.DataFrame, c: pd.DataFrame) -> None:
+    """Gün-gruplu split kontrolleri. Katılımcı kontrolleri check_repeat ile aynı; ek olarak hiçbir kayıt günü hem
+    train hem testte (ve hem iç train hem iç doğrulamada) olamaz. Gruplar eşit büyüklükte olmadığından sağlıklı sayısı
+    dengesi tam tutturulamaz: her test fold'unda ve iç doğrulamada en az 1 sağlıklı istenir, dağılım raporlanır."""
+    cohort = set(c["participant_id"])
+    assert len(s) == len(cohort) * N_SPLITS
+    tests = s[s["role"] == "test"]
+    assert tests["participant_id"].is_unique and set(tests["participant_id"]) == cohort, "her katılımcı tam bir kez testte"
+    day = pd.Series(day_groups(c), index=c["participant_id"])
+    lab = c.set_index("participant_id")["label"]
+    for k, b in s.groupby("outer_fold"):
+        tr = set(b.loc[b["role"] == "train", "participant_id"])
+        te = set(b.loc[b["role"] == "test", "participant_id"])
+        assert not (tr & te) and tr | te == cohort, f"fold {k}: katılımcı sızıntısı"
+        assert not set(day[list(tr)]) & set(day[list(te)]), f"fold {k}: aynı kayıt günü hem train hem testte (GÜN SIZINTISI)"
+        bt = b[b["role"] == "train"]
+        assert bt["inner_fold"].between(0, N_SPLITS - 1).all() and (b.loc[b["role"] == "test", "inner_fold"] == -1).all()
+        for j in range(N_SPLITS):
+            iv = set(bt.loc[bt["inner_fold"] == j, "participant_id"])
+            it = tr - iv
+            assert not set(day[list(iv)]) & set(day[list(it)]), f"fold {k} iç {j}: iç doğrulamayla iç train aynı günü paylaşıyor"
+        h_test = int((lab[list(te)] == 0).sum())
+        h_val = int((lab[list(b.loc[b["is_inner_val"], "participant_id"])] == 0).sum())
+        assert h_test >= 1 and h_val >= 1, f"fold {k}: testte {h_test}, iç doğrulamada {h_val} sağlıklı"
+
+
 def summarize(s: pd.DataFrame, c: pd.DataFrame) -> list[dict]:
     """Fold başına agrega sayılar (katılımcı ID'si yok)."""
     ci = c.set_index("participant_id")
@@ -207,6 +260,8 @@ def main() -> None:
     ap.add_argument("--out-dir", required=True, type=Path)
     ap.add_argument("--report-dir", required=True, type=Path)
     ap.add_argument("--n-repeats", type=int, default=N_REPEATS)
+    ap.add_argument("--group-by-day", action="store_true",
+                    help="D-041/D-042: dış ve iç fold'lar kayıt gününe göre gruplu (Faz 3 split'leri: splits_day/)")
     args = ap.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
     args.report_dir.mkdir(parents=True, exist_ok=True)
@@ -221,10 +276,15 @@ def main() -> None:
 
     files, folds = {}, {}
     for r in range(args.n_repeats):
-        s = make_repeat(c, strata, r)
-        check_repeat(s, c)
-        # Belirlenimcilik: aynı tohumla ikinci üretim birebir aynı olmalı
-        assert s.equals(make_repeat(c, strata, r)), f"r={r}: split belirlenimci değil"
+        if args.group_by_day:
+            s = make_repeat_day(c, r)
+            check_repeat_day(s, c)
+            assert s.equals(make_repeat_day(c, r)), f"r={r}: split belirlenimci değil"
+        else:
+            s = make_repeat(c, strata, r)
+            check_repeat(s, c)
+            # Belirlenimcilik: aynı tohumla ikinci üretim birebir aynı olmalı
+            assert s.equals(make_repeat(c, strata, r)), f"r={r}: split belirlenimci değil"
         path = args.out_dir / f"outer_r{r}.csv"
         s.to_csv(path, index=False, lineterminator="\n")
         files[path.name] = sha256_file(path)
@@ -234,7 +294,10 @@ def main() -> None:
               f"{[f['inner_val_healthy'] for f in folds[f'r{r}']]}")
 
     manifest = {
-        "decisions": ["D-003", "D-009", "D-024", "D-029"],
+        "decisions": ["D-003", "D-009", "D-024", "D-029"] + (["D-041", "D-042"] if args.group_by_day else []),
+        "grouping": ("kayıt günü (dış ve iç fold'lar; etikete göre tabakalı, StratifiedGroupKFold)" if args.group_by_day
+                     else "katılımcı (etiket × dönem × yaş grubu tabakalı)"),
+        "n_day_groups": int(len(set(day_groups(c)))),
         "inputs_sha256": {"participant_context.csv": sha256_file(args.context),
                           "recording_map.csv": sha256_file(args.recording_map)},
         "versions": {"python": platform.python_version(), "scikit-learn": sklearn.__version__,
@@ -258,6 +321,7 @@ def main() -> None:
          f"- Kohort: {manifest['cohort']['n']} katılımcı ({manifest['cohort']['asthma']} astım / "
          f"{manifest['cohort']['healthy']} sağlıklı); son sağlıklı kayıt günü {manifest['cohort']['last_healthy_recording_date']}",
          f"- Görev başına katılımcı: {manifest['cohort']['per_task_n']}",
+         f"- Gruplama: {manifest['grouping']}; kayıt günü grubu sayısı {manifest['n_day_groups']}",
          f"- {args.n_repeats} tekrar × {N_SPLITS} dış fold; her dış train içinde {N_SPLITS} iç fold (iç fold 0 = doğrulama)",
          f"- Tabakalar (etiket|dönem|yaş grubu, birleştirmeden sonra): {manifest['strata_after_merge']}",
          f"- Birleştirilen seyrek tabakalar: {merge_log if merge_log else 'yok'}",

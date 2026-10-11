@@ -649,7 +649,7 @@ def registry_rows(exp, summ, rep) -> list[dict]:
 # ----------------------------------------------------------------------------- main
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exp", required=True, choices=["EXP-016", "EXP-016S", "EXP-017", "EXP-018"])
+    ap.add_argument("--exp", required=True, choices=["EXP-016", "EXP-016S", "EXP-017", "EXP-018", "EXP-016DG"])
     ap.add_argument("--emb-root", required=True, type=Path)
     ap.add_argument("--backbones", default=",".join(BACKBONES))
     ap.add_argument("--mfcc-features", type=Path, help="features_cache.csv (EXP-016)")
@@ -674,10 +674,12 @@ def main() -> None:
     assert set(bbs) <= set(BACKBONES)
 
     arms: list[Arm] = []
-    if args.exp == "EXP-016":
+    if args.exp in ("EXP-016", "EXP-016DG"):
         assert args.mfcc_features, "EXP-016 MFCC kollarını gerektirir (--mfcc-features)"
         arms = [emb_arm(args.emb_root, b, "win4", None) for b in bbs] + mfcc_arms(args.mfcc_features)
-        role = "onaylayıcı (füzyon, 6 backbone vs 2 MFCC tabanı) + keşifsel (görev başına, çiftler)"
+        role = ("onaylayıcı (füzyon, 6 backbone vs 2 MFCC tabanı) + keşifsel (görev başına, çiftler)" if args.exp == "EXP-016" else
+                "Faz 3 baz çizgisi (D-041 / D-042): EXP-016'nın AYNI probu, gün-gruplu split'lerde (splits_day); D-035 fold başına "
+                "seçim bu split'lerin iç OOF tahminlerinden. Onaylayıcı değil; karşılaştırma testi yok")
     elif args.exp == "EXP-016S":
         for b in bbs:
             arms += [emb_arm(args.emb_root, b, "win4", None), emb_arm(args.emb_root, b, "win4", None, short_alt=True)]
@@ -768,6 +770,15 @@ def main() -> None:
         m = summ[(summ.arm == "mfcc_lr") & (summ.task == FUSION)].auc_mean.iloc[0]
         rep["regression_check"] = {"mfcc_lr_fusion_auc_mean": float(m), "delta": float(m - EXP011_LR_FUSION),
                                    "pass": bool(abs(m - EXP011_LR_FUSION) <= 0.01)}
+    elif args.exp == "EXP-016DG":
+        bb_present = [b for b in BACKBONES if b in arm_names]
+        params = {a.name: (getattr(a, "n_params", None) or PARAMS_APPROX.get(a.name)) for a in arms if a.name in BACKBONES}
+        cands = [b for b in D035_CANDIDATES if b in bb_present]
+        if cands:                                                            # gerçek koşuda üçü de var (notebook 24 assert eder)
+            sel = select_per_fold(inner_raw, C, splits, cands, params)          # yalnız iç OOF (dış test yok)
+            sel.to_csv(args.out_dir / "d035_selection.csv", index=False)
+            rep["d035_per_fold"] = sel.to_dict(orient="records")
+            rep["procedure_estimates"] = {"D-035 (BEATs / WavLM adayları)": procedure_estimate(sel, FT, cands)}
     elif args.exp == "EXP-017":
         curves = {}
         for b in [b for b in BACKBONES if b in SSL and b in arm_names]:
