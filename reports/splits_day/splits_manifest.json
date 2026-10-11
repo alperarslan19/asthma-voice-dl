@@ -1,0 +1,443 @@
+{
+  "decisions": [
+    "D-003",
+    "D-009",
+    "D-024",
+    "D-029",
+    "D-041",
+    "D-042"
+  ],
+  "grouping": "kayıt günü (dış ve iç fold'lar; etikete göre dengeli, grouped_folds — sklearn'den bağımsız)",
+  "n_day_groups": 66,
+  "inputs_sha256": {
+    "participant_context.csv": "aafd262b6947619b2f3938d1998b7a158f66728bb02864a36cc3028721c36508",
+    "recording_map.csv": "8072eadc47cd7961bd86df97399add3a5f350312192973aeb7d1d1bce02ab7d8"
+  },
+  "versions": {
+    "python": "3.13.16",
+    "scikit-learn": "1.6.1",
+    "numpy": "2.1.3",
+    "pandas": "2.2.3"
+  },
+  "git_commit": "15a0cbbd3c1d4476c13542794ddcc43d768ce7f8",
+  "n_splits": 5,
+  "n_repeats": 3,
+  "seeds": {
+    "outer": "random_state = r",
+    "inner": "random_state = 1000 + 10*r + k"
+  },
+  "cohort": {
+    "n": 342,
+    "asthma": 283,
+    "healthy": 59,
+    "last_healthy_recording_date": "2024-04-02",
+    "period": {
+      "0|early": 58,
+      "0|unknown": 1,
+      "1|early": 98,
+      "1|late": 185
+    },
+    "age_group": {
+      "0|<=40": 30,
+      "0|>40": 27,
+      "0|unknown": 2,
+      "1|<=40": 84,
+      "1|>40": 199
+    },
+    "per_task_n": {
+      "slot1": 342,
+      "slot2": 342,
+      "slot3": 342,
+      "slot4": 341,
+      "slot5": 342,
+      "slot6": 342,
+      "slot7": 342
+    }
+  },
+  "strata_after_merge": {
+    "0|early|<=40": 32,
+    "0|early|>40": 27,
+    "1|early|<=40": 31,
+    "1|early|>40": 67,
+    "1|late|<=40": 53,
+    "1|late|>40": 132
+  },
+  "merged_sparse_strata": [
+    {
+      "stratum": "0|early|unknown",
+      "n": 1,
+      "merged_into": "0|early|<=40"
+    },
+    {
+      "stratum": "0|unknown|unknown",
+      "n": 1,
+      "merged_into": "0|early|<=40"
+    }
+  ],
+  "split_files_sha256": {
+    "outer_r0.csv": "d46c8875fb87ebc0d56dfd9a65213cd09831ccca681ac37d03d38a0e6e791a39",
+    "outer_r1.csv": "70753773c40c5f4e0e06e0ed02e84a8de082c2c3cc844f50b87d331cb23a1bf6",
+    "outer_r2.csv": "07179c37b36fba067d398241969550aa4578e752cde8fd4cf3a27a5e8ae1a184"
+  },
+  "folds": {
+    "r0": [
+      {
+        "outer_fold": 0,
+        "n_test": 70,
+        "test_asthma": 57,
+        "test_healthy": 13,
+        "test_period": {
+          "late": 46,
+          "early": 24
+        },
+        "test_age_group": {
+          ">40": 45,
+          "<=40": 25
+        },
+        "test_all_7_tasks": 69,
+        "test_before_noon_descriptive": {
+          "asthma": 40,
+          "healthy": 5,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 216,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 1,
+        "n_test": 68,
+        "test_asthma": 56,
+        "test_healthy": 12,
+        "test_period": {
+          "early": 37,
+          "late": 31
+        },
+        "test_age_group": {
+          ">40": 49,
+          "<=40": 18,
+          "unknown": 1
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 42,
+          "healthy": 0,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 219,
+        "inner_val_asthma": 45,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 2,
+        "n_test": 69,
+        "test_asthma": 57,
+        "test_healthy": 12,
+        "test_period": {
+          "early": 36,
+          "late": 33
+        },
+        "test_age_group": {
+          ">40": 43,
+          "<=40": 26
+        },
+        "test_all_7_tasks": 69,
+        "test_before_noon_descriptive": {
+          "asthma": 42,
+          "healthy": 2,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 217,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 3,
+        "n_test": 67,
+        "test_asthma": 56,
+        "test_healthy": 11,
+        "test_period": {
+          "early": 36,
+          "late": 30,
+          "unknown": 1
+        },
+        "test_age_group": {
+          ">40": 47,
+          "<=40": 19,
+          "unknown": 1
+        },
+        "test_all_7_tasks": 67,
+        "test_before_noon_descriptive": {
+          "asthma": 35,
+          "healthy": 2,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 219,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 4,
+        "n_test": 68,
+        "test_asthma": 57,
+        "test_healthy": 11,
+        "test_period": {
+          "late": 45,
+          "early": 23
+        },
+        "test_age_group": {
+          ">40": 42,
+          "<=40": 26
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 37,
+          "healthy": 3,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 218,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      }
+    ],
+    "r1": [
+      {
+        "outer_fold": 0,
+        "n_test": 70,
+        "test_asthma": 57,
+        "test_healthy": 13,
+        "test_period": {
+          "late": 40,
+          "early": 30
+        },
+        "test_age_group": {
+          ">40": 44,
+          "<=40": 26
+        },
+        "test_all_7_tasks": 70,
+        "test_before_noon_descriptive": {
+          "asthma": 40,
+          "healthy": 5,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 217,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 9
+      },
+      {
+        "outer_fold": 1,
+        "n_test": 68,
+        "test_asthma": 56,
+        "test_healthy": 12,
+        "test_period": {
+          "early": 40,
+          "late": 28
+        },
+        "test_age_group": {
+          ">40": 43,
+          "<=40": 25
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 38,
+          "healthy": 3,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 219,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 9
+      },
+      {
+        "outer_fold": 2,
+        "n_test": 69,
+        "test_asthma": 57,
+        "test_healthy": 12,
+        "test_period": {
+          "early": 43,
+          "late": 25,
+          "unknown": 1
+        },
+        "test_age_group": {
+          ">40": 45,
+          "<=40": 22,
+          "unknown": 2
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 45,
+          "healthy": 0,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 218,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 9
+      },
+      {
+        "outer_fold": 3,
+        "n_test": 67,
+        "test_asthma": 56,
+        "test_healthy": 11,
+        "test_period": {
+          "late": 47,
+          "early": 20
+        },
+        "test_age_group": {
+          ">40": 49,
+          "<=40": 18
+        },
+        "test_all_7_tasks": 67,
+        "test_before_noon_descriptive": {
+          "asthma": 31,
+          "healthy": 1,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 218,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 11
+      },
+      {
+        "outer_fold": 4,
+        "n_test": 68,
+        "test_asthma": 57,
+        "test_healthy": 11,
+        "test_period": {
+          "late": 45,
+          "early": 23
+        },
+        "test_age_group": {
+          ">40": 45,
+          "<=40": 23
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 42,
+          "healthy": 3,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 218,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      }
+    ],
+    "r2": [
+      {
+        "outer_fold": 0,
+        "n_test": 69,
+        "test_asthma": 57,
+        "test_healthy": 12,
+        "test_period": {
+          "late": 35,
+          "early": 34
+        },
+        "test_age_group": {
+          ">40": 36,
+          "<=40": 33
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 36,
+          "healthy": 3,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 217,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 1,
+        "n_test": 69,
+        "test_asthma": 57,
+        "test_healthy": 12,
+        "test_period": {
+          "early": 44,
+          "late": 25
+        },
+        "test_age_group": {
+          ">40": 48,
+          "<=40": 20,
+          "unknown": 1
+        },
+        "test_all_7_tasks": 69,
+        "test_before_noon_descriptive": {
+          "asthma": 37,
+          "healthy": 0,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 217,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 2,
+        "n_test": 68,
+        "test_asthma": 56,
+        "test_healthy": 12,
+        "test_period": {
+          "late": 40,
+          "early": 28
+        },
+        "test_age_group": {
+          ">40": 46,
+          "<=40": 22
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 42,
+          "healthy": 2,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 219,
+        "inner_val_asthma": 45,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 3,
+        "n_test": 68,
+        "test_asthma": 56,
+        "test_healthy": 12,
+        "test_period": {
+          "late": 47,
+          "early": 20,
+          "unknown": 1
+        },
+        "test_age_group": {
+          ">40": 49,
+          "<=40": 18,
+          "unknown": 1
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 37,
+          "healthy": 2,
+          "unknown_hour": 1
+        },
+        "n_train_excl_val": 219,
+        "inner_val_asthma": 45,
+        "inner_val_healthy": 10
+      },
+      {
+        "outer_fold": 4,
+        "n_test": 68,
+        "test_asthma": 57,
+        "test_healthy": 11,
+        "test_period": {
+          "late": 38,
+          "early": 30
+        },
+        "test_age_group": {
+          ">40": 47,
+          "<=40": 21
+        },
+        "test_all_7_tasks": 68,
+        "test_before_noon_descriptive": {
+          "asthma": 44,
+          "healthy": 5,
+          "unknown_hour": 0
+        },
+        "n_train_excl_val": 218,
+        "inner_val_asthma": 46,
+        "inner_val_healthy": 10
+      }
+    ]
+  }
+}
