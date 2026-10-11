@@ -631,6 +631,30 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 | Kapsam | cnn10, cnn14, beats, wavlm_base_plus, wavlm_large (Holm-T1 pozitif; K10) |
 | Tasarım | `docs/EVAL016_STAGE2_PLAN.md` |
 
+## EXP-016DG / G1 — Dondurulmuş problar gün-gruplu split'lerde (Faz 3 baz çizgisi + gün parmak izi kontrolü)
+| Alan | Değer |
+|---|---|
+| DURUM | Kod ve sentetik testler hazır (F1, F11); **gerçek veride ÇALIŞTIRILMADI** |
+| Tasarım | D-041, D-042; `docs/PHASE3_DESIGN.md` 5.1 (okuma kuralı sonuçlardan önce) |
+| Ne | EXP-016'nın aynı probu `splits_day` (3 tekrar × 5 fold) üzerinde; D-035 fold başına seçim; ŝ_DG ile T1 |
+| Kod / notebook | `make_splits.py --group-by-day`, `run_probes.py --exp EXP-016DG`, `evaluate_phase3.py frozen-dg`; `notebooks/24_phase3_prep.ipynb` (CPU) |
+| Sonuç konumu | `reports/splits_day/`, `reports/phase3/EXP-016DG_frozen.{md,json}`, `reports/phase3/G1_frozen_daygrouped.{md,json}` |
+
+## SMK-002 — Faz 3 fine-tuning smoke testi
+| Alan | Değer |
+|---|---|
+| DURUM | Kod hazır; CPU'da küçük rastgele modellerle geçti (F10); **GPU'da ÇALIŞTIRILMADI** |
+| Kontroller | split sızıntı kapıları, ileri geçiş, gerçek eğitim döngüsüyle 2 küçük epoch, değerlendirme, checkpoint'ten aynı tahmin, GPU belleği < 14.5 GB, bütçe tahmini |
+| Kod / notebook | `scripts/smoke_test_finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 1 (T4) |
+
+## EXP-030 — Uçtan uca fine-tuning (Faz 3)
+| Alan | Değer |
+|---|---|
+| DURUM | **Tasarım ÖNERİLDİ (D-042)**; kod ve sentetik testler hazır (F1–F11); hiçbir eğitim yapılmadı |
+| Kollar | cnn10, cnn14, ssl (D-035 fold başına), cnn10_scratch |
+| Değerlendirme | E1, T1, C3 (keşifsel), C2, RQ2 — `docs/PHASE3_DESIGN.md` 5.2 |
+| Kod / notebook | `scripts/finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 2 |
+
 ---
 
 ## Planlanan deneyler (ID'ler başlarken verilecek)

@@ -371,6 +371,7 @@ DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model g
 
 ## D-027 — Confounding altında fine-tuning protokolü
 DURUM: ÖNERİLDİ — **değerlendirme aşamasına ertelendi (D-028)**; model geliştirme sırasında uygulanmaz · Tarih: 2026-10-08 (6. tur) · Ayrıntı: `docs/CONFOUND_CONTROL_DESIGN.md` Bölüm 6 (EXP-030)
+- **Not (18. tur):** Faz 3 tasarımı D-042'de (ÖNERİLDİ). Korunanlar: sabit epoch kuralı, sınıf-dengeli kayıp, 3 × 5 tekrar, eşleştirilmiş C3, Kol B'nin koşulu (sağlanmadı → Kol B yok). Değişenler: kısmi yerine **uçtan uca** fine-tune (Alper'in hedefi; Boll); split'ler gün-gruplu (D-041); SSL için öğrenme hızı 2e-5.
 - **Not (15. tur):** "Backbone seçimi: T1'e göre" maddesinin yerini **D-035** (KABUL, Faz 2 sonuçlarından önce) aldı; T1 sonucuna bakılarak geri dönülmez. Kol B'nin koşulu (G1+ ya da L3 kısmi test) geçerli ve EVAL-016'da değerlendirilir (D-037).
 - **KARAR:**
   - **Backbone seçimi:** EXP-021'de **T1'e göre** ilk 1–2 backbone. E1'e göre seçilmez; eşitlikte düşük kapasiteli olan seçilir.
@@ -699,7 +700,7 @@ DURUM: **KABUL** (2026-10-09, 13. tur — Alper **koşullu** onayladı: "BEATs/W
 - **UYGULAMA:** `run_probes.select_per_fold` (yalnız iç OOF tablosunu alır; iç satırların eğitim rolünde olduğunu assert eder) → `experiments/frozen_probe/d035_selection.csv`; `procedure_estimate` (dış test AUC'si yalnız değerlendirme için); testler: P6 (kurgulanmış örnek, eşitlik kuralı, sızıntı assert'i), P7 (dış test tahminleri bozulunca seçim birebir aynı).
 
 ## D-036 — Sıfırdan CNN10'un zamanlaması: Faz 3'ün aynı pipeline'ında kontrol kolu
-DURUM: **ÖNERİLDİ — Faz 3 tasarımında karara bağlanacak** (Alper, 15. tur: "şimdilik sonraya bırakalım; Faz 3 tasarımında kontrol kolu olarak değerlendiririz") · 2026-10-10, 14. tur · D-012 basamak 3'ün **sırasını** değiştirir; RQ2 ve D-035 madde 1 (CNN10 sıfırdan–pretrained eşi) korunur · Faz 2 sonuçları görüldükten sonra yazıldı (Alper'in önceliği: ana yol fine-tuning)
+DURUM: **ÖNERİLDİ → D-042'de karara bağlanıyor** (kontrol kolu `cnn10_scratch` olarak önerildi) · ilk durum: ÖNERİLDİ — Faz 3 tasarımında karara bağlanacak (Alper, 15. tur: "şimdilik sonraya bırakalım; Faz 3 tasarımında kontrol kolu olarak değerlendiririz") · 2026-10-10, 14. tur · D-012 basamak 3'ün **sırasını** değiştirir; RQ2 ve D-035 madde 1 (CNN10 sıfırdan–pretrained eşi) korunur · Faz 2 sonuçları görüldükten sonra yazıldı (Alper'in önceliği: ana yol fine-tuning)
 - **KARAR:**
   1. Sıfırdan CNN10, fine-tuning'den önce ayrı bir basamak olarak koşulmaz.
   2. Faz 3'ün eğitim pipeline'ında **önceden belirlenmiş bir kontrol kolu** olur: aynı kod (`random_init`), aynı split'ler ve tohumlar, aynı hiperparametre ve epoch / early stopping kuralı, aynı tahmin kayıtları. Kural Faz 3 tasarım belgesinde, sonuçlardan önce yazılır.
@@ -917,4 +918,61 @@ DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · Alper'in kapsam yönlendirmesiyl
   - Gün-gruplu split'ler eğitim çeşitliliğini azaltır; Faz 3'ün sayıları Faz 2 ile doğrudan karşılaştırılamaz. Dondurulmuş problar iki split türünde de raporlanır.
 - **BİLİMSEL SONUÇ:** Proje savunulabilir, sınırları belli bir dondurulmuş-temsil bulgusuyla Faz 3'e geçer. Faz 3'ün asıl sorusu da netleşir: fine-tuning, gün-gruplu değerlendirmede bu bulguyu güçlendiriyor mu, yoksa bağlam ve gün yoluna mı kayıyor?
 - **UYGULAMA:** `docs/EVAL016_CONCLUSION.md`. Gün-gruplu split'ler ve dondurulmuş baz çizgisi `docs/PHASE3_DESIGN.md`'de (D-041 kabulünden sonra yazılır).
+
+## D-042 — Faz 3 (EXP-030) tasarımı: gün-gruplu split'lerde uçtan uca fine-tuning
+DURUM: **ÖNERİLDİ** (2026-10-11, 18. tur) · **EVAL-016 Aşama 1 raporundan sonra** yazıldı ("T1 sonrası", D-037 madde 3) · Alper: "önerilerine uyalım; eğitim kodlarını yazabilirsin" (gün-gruplu değerlendirme ve D-041 kabul edildi) · D-027'nin yerine geçer; D-036'yı karara bağlar · Ayrıntı: `docs/PHASE3_DESIGN.md`
+- **KARAR (önerilen; † = ilk kez bu kararda):**
+  1. **Split:** gün-gruplu, 3 tekrar × 5 fold (dış ve iç fold'lar kayıt gününe göre gruplu, etikete göre tabakalı).
+  2. **Kollar:**
+     - cnn10 ve cnn14 (D-035, sabit);
+     - ssl: fold başına D-035 seçimi, gün-gruplu iç OOF'tan (EXP-016DG);
+     - **cnn10_scratch** † (D-036 kontrol kolu).
+     - D-027 Kol B yok: önceden yazılmış koşulu sağlanmadı.
+  3. **Uçtan uca fine-tune** †: bütün katmanlar eğitilir; WavLM'in konvolüsyonel özellik kodlayıcısı donuk.
+  4. **Tarif:**
+     - girdi: her kayıttan rastgele 4 s parça;
+     - temsil: PANNs'te fc1; SSL'de katman ortalamalarının öğrenilebilir ağırlıklı toplamı †;
+     - baş: MLP (256 †, dropout 0.3);
+     - kayıp: sınıf-dengeli BCE;
+     - optimizasyon: Adam, wd 1e-4, batch 16;
+     - öğrenme hızı: PANNs 1e-4; SSL 2e-5 + %10 ısınma †; baş 1e-3 †;
+     - fp16, gradyan normu ≤ 1 †;
+     - augmentation, SpecAugment ve layerdrop kapalı.
+  5. **Epoch:** kol başına bir kez, tekrar 0 / fold 0'ın iç doğrulama kaybının 3'lü hareketli ortalamasının en küçük olduğu epoch (üst sınır PANNs 40, SSL 20). Dış fold'larda erken durdurma ve checkpoint seçimi yok.
+  6. **Değerlendirme (sonuçlardan önce sabit):**
+     - G1: EXP-016DG + T1; okuma kuralı PHASE3_DESIGN 5.1;
+     - E1;
+     - T1 (ŝ_FT);
+     - C3: eşleştirilmiş LR farkı, katılımcı bootstrap'ı; keşifsel;
+     - C2: kısmi test ve L5;
+     - RQ2: cnn10 − cnn10_scratch.
+  7. **Kapılar:**
+     - SMK-002 PASS olmadan GPU eğitimi yok;
+     - `finetune.PHASE3["status"]` KABUL olmadan kalibrasyon ve eğitim yok;
+     - checkpoint, log ve kaldığı yerden devam kuralları.
+- **NEDEN:**
+  - Alper'in araştırma hedefi uçtan uca fine-tuning.
+  - Gün-gruplu split, eğitimde gün izi yolunu kapatır: sentetik F11'de bu yol katılımcı-gruplu CV'de T1'i p = 3.6e-9 ile yanlışlıkla anlamlı yaptı; gün-gruplu CV'de p = 0.26. [FACT, sentetik]
+  - Sabit epoch ve doğrulamaya göre seçim yapmamak, bağlamla karışmış metriğin kestirmeyi ödüllendirmesini engeller (D-027).
+  - SSL için 1e-4, küçük veride ön-eğitimli temsili bozma riski taşır. [INFERENCE]
+  - Sıfırdan CNN10 ucuz ve RQ2'yi cevaplar.
+- **ALTERNATİFLER:**
+  - Kısmi fine-tune (D-027): daha az aşırı uyum ve daha ucuz, ama "uçtan uca" soruyu cevaplamaz. Bütçe aşılırsa ablasyon olarak kalır.
+  - Katılımcı-gruplu split: Faz 2 ile karşılaştırılabilir, gün izi açık.
+  - Doğrulama AUC'siyle erken durdurma (Boll): kestirmeyi ödüllendirir.
+  - Fold başına epoch kalibrasyonu: daha temiz, ~2 kat GPU.
+  - SSL'de Boll'un 1e-4'ü: tek tarif, ama yüksek risk.
+- **RİSK:**
+  - Uçtan uca fine-tune aşırı uyabilir. Sabit epoch ve iç doğrulama eğrisi bunu sınırlar, ama sıfırlamaz.
+  - Kalibrasyon tek bir fold'un iç ayrımına dayanıyor.
+  - Gün-gruplu split'te E1 Faz 2'den düşük çıkabilir; karşılaştırma aynı split'lerdeki dondurulmuş baz çizgisiyle yapılır.
+  - Bütçe ~10 T4 saati [INFERENCE]; aşılırsa önce CNN14 çıkarılır (D-035 madde 6).
+- **BİLİMSEL SONUÇ:** Faz 3'ün cevabı "AUC arttı mı?" değil, şudur: gün-gruplu değerlendirmede fine-tuning bağlamdan bağımsız bilgiyi artırıyor mu (C3), yoksa bağlama mı kayıyor (C2)? Olumsuz sonuç da raporlanır.
+- **UYGULAMA:**
+  - `scripts/make_splits.py --group-by-day`;
+  - `scripts/run_probes.py --exp EXP-016DG`;
+  - `scripts/evaluate_phase3.py frozen-dg`;
+  - `scripts/finetune.py`, `scripts/smoke_test_finetune.py`;
+  - `tests/test_phase3.py` (F1–F11);
+  - `notebooks/24_phase3_prep.ipynb` (CPU), `notebooks/25_phase3_finetune.ipynb` (T4).
 
