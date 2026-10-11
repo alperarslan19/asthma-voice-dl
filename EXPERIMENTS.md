@@ -671,7 +671,9 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## DIAG-001 — CNN14 "sonlu olmayan logit" teşhisi
 | Alan | Değer |
 |---|---|
-| DURUM | Kod hazır (CPU testi F14; harness S15); **GPU'da ÇALIŞTIRILMADI** |
+| DURUM | **Tamamlandı** (2026-10-11, T4, 131 s; `reports/phase3/DIAG-001_cnn14_nonfinite.md`). Okuma **H2** |
+| Sonuç | Eğitim durumu sağlam (bozuk parametre / tampon 0). Eğitim sonrası fp16 değerlendirmede 3 / 392 kayıt sonlu değil, fp32'de 0. İlk taşan: `conv_block6.conv1`; fp32'de `conv_block6` aktivasyonları ~2.7 × 10⁶ (fp16 sınırı 65 504) |
+| Düzeltme (önceden yazılı eşleme) | Değerlendirme bütün kollarda fp32 (`COMMON["eval_amp"] = False`) |
 | Gözlem | cnn14 kalibrasyonu 1. epoch'un iç değerlendirmesinde durdu. Eğitim kaybı sonluydu. Ön işleme zaten fp32. SMK-002 değerlendirmeyi fp32 sınamıştı → fp16 değerlendirme yolu gerçek CNN14 ile sınanmamıştı |
 | Hipotezler ve önceden yazılı eşleme (D-043) | H1 BatchNorm tamponları fp16 taşmasıyla bozuluyor → CNN14 fp32; H2 yalnız fp16 değerlendirme taşıyor → değerlendirme fp32 (bütün kollar); H3 / yeniden üretilemedi → birlikte bakılır |
 | Kod / notebook | `scripts/diagnose_nonfinite.py`; notebook 25 Bölüm 1b |
@@ -679,7 +681,7 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EXP-030 — Uçtan uca fine-tuning (Faz 3)
 | Alan | Değer |
 |---|---|
-| DURUM | D-042 KABUL; kalibrasyon yapıldı (CAL-001). **D-043 ÖNERİLDİ** (epoch kuralı, ısınma, CNN14) → onaya ve DIAG-001'e kadar dış fold eğitimi yok. Kod ve testler F1–F14; harness S14–S15 |
+| DURUM | D-042 + D-043 KABUL; kalibrasyon yapıldı (CAL-001; CNN14 yeniden kalibre edilecek); DIAG-001 = H2 → değerlendirme fp32. Dış fold eğitimi başlayabilir. Kod ve testler F1–F14; harness S14–S15 |
 | Kollar | cnn10, cnn14, ssl (D-035 fold başına), cnn10_scratch |
 | Değerlendirme | E1, T1, C3 (keşifsel), C2, RQ2 — `docs/PHASE3_DESIGN.md` 5.2 |
 | Kod / notebook | `scripts/finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 2 |

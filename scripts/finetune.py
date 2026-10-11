@@ -68,15 +68,16 @@ import backbones as B  # noqa: E402
 from smoke_test_backbones import HOP_S, WIN_S, Cache  # noqa: E402
 
 # Faz 3 protokolü (docs/PHASE3_DESIGN.md; DECISIONS D-042, D-043). Kalibrasyon ve eğitim yalnız status == "KABUL" iken çalışır.
-# 2026-10-11: D-042 KABUL. Aynı gün, kalibrasyondan sonra (hiçbir dış fold eğitilmeden): D-043 ÖNERİLDİ — epoch kuralı
-# (kayıp → katılımcı AUC'si, 1-SE) ve ısınmanın toplam epoch'tan bağımsız olması. v1 kuralı "epochs_v1_loss" olarak saklanır.
-PHASE3 = {"version": "Faz 3 protokolü v2 (D-042 + D-043)", "status": "ÖNERİLDİ", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
+# 2026-10-11: D-042 KABUL. Aynı gün, kalibrasyondan sonra (hiçbir dış fold eğitilmeden): D-043 — epoch kuralı
+# (kayıp → katılımcı AUC'si, 1-SE), ısınmanın toplam epoch'tan bağımsız olması, DIAG-001 = H2 → değerlendirme fp32.
+# D-043 KABUL: bu değişikliği içeren PR'ın birleştirilmesi Alper'in onayıdır. v1 kuralı "epochs_v1_loss" olarak saklanır.
+PHASE3 = {"version": "Faz 3 protokolü v2 (D-042 + D-043)", "status": "KABUL", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
           "fine_tune": "uçtan uca (WavLM özellik kodlayıcısı donuk)",
           "epoch_rule": "kalibrasyon: iç doğrulama katılımcı AUC'si, 3'lü hareketli ort., 1-SE kuralı (Hanley–McNeil SE); "
                         "ısınma sabit epoch sayısı (D-043)"}
 COMMON = {"batch": 16, "lr_head": 1e-3, "weight_decay": 1e-4, "head_hidden": 256, "head_dropout": 0.3, "grad_clip": 1.0,
           "eval_batch": 16, "smooth": 3, "base_seed": 3000,
-          "eval_amp": True}                                   # D-043: DIAG-001 sonucuna göre (ön-belirlenmiş eşleme) değişebilir
+          "eval_amp": False}       # D-043 / DIAG-001 = H2: CNN14 conv_block6 değerlendirmede fp16 sınırını aşıyor → bütün kollarda fp32
 ARMS = {
     "cnn10":           {"backbone": "cnn10", "init": "pretrained", "lr_backbone": 1e-4, "warmup_epochs": 0, "max_epochs": 40,
                         "micro_batch": 16, "ckpt_every": 1},

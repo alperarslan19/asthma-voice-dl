@@ -982,7 +982,7 @@ DURUM: **KABUL** (2026-10-11, 20. tur; G1 ve SMK-002 sonuçları okunduktan sonr
   - **Mühendislik değişikliği (bilimsel tarif değil) [DECISION]:** checkpoint'ler (`latest.pt`) Colab'ın yerel diskinde (`--ckpt-root /content/ft_ckpt`). Neden: Drive'da üzerine yazılan / silinen dosyalar çöp kutusuna gider ve kotadan sayılır [FROM OFFICIAL DOCS: Google Drive yardım — çöp kutusundaki dosyalar depolama alanı kullanır; Colab'daki davranış topluluk raporu, NEEDS VERIFICATION]; epoch başına 62 MB–3.7 GB checkpoint kotayı doldururdu. Bedel: Colab makinesi değişirse yarım kalan fold aynı tohumla baştan başlar (en çok bir fold; wavlm_large'da ≤ ~50 dk). Bitmiş fold'lar (preds, fold.json) Drive'da. F12 ve notebook harness'i (S14) devam ve baştan başlamanın aynı tahmini verdiğini gösterdi (CPU).
 
 ## D-043 — Faz 3 epoch kuralı ve ısınma düzeltmesi; CNN14 teşhisi (CAL-001 sonrası)
-DURUM: **ÖNERİLDİ** (2026-10-11, 21. tur) · **Post hoc:** kalibrasyon eğrileri (yalnız tekrar 0 / fold 0'ın İÇ doğrulaması) görüldükten sonra, **hiçbir dış fold eğitilmeden** yazıldı; dış test verisi görülmedi · D-042 madde 4–5'i değiştirir · Alper: "Overfit riski var mı? … önden önlem almayı ve bazı şeyleri değiştirmeyi mi önerirsin?"
+DURUM: **KABUL** (2026-10-11, 22. tur; `finetune.PHASE3` "KABUL" yapan PR'ın birleştirilmesi Alper'in onayıdır. Alper DIAG-001'i çalıştırıp sonucu iletti, itiraz etmedi) · önerildi: 21. tur · **Post hoc:** kalibrasyon eğrileri (yalnız tekrar 0 / fold 0'ın İÇ doğrulaması) görüldükten sonra, **hiçbir dış fold eğitilmeden** yazıldı; dış test verisi görülmedi · D-042 madde 4–5'i değiştirir · Alper: "Overfit riski var mı? … önden önlem almayı ve bazı şeyleri değiştirmeyi mi önerirsin?"
 - **KARAR (önerilen):**
   1. **Epoch kuralı v2:** iç doğrulama katılımcı AUC'sinin 3'lü hareketli ortalaması (MA). En yüksek MA'dan, o noktadaki Hanley–McNeil SE'si kadar aşağıdaki eşiği geçen **en küçük** epoch (1-SE kuralı). Kol başına bir kez; dış fold'larda erken durdurma ve checkpoint seçimi yine yok. v1 (kayıp) seçimi her raporda yanında yazılır.
      - Kayıtlı eğrilere uygulanınca (v1 → v2): cnn10 5 → 7, cnn10_scratch 1 → 9, beats 1 → 8, wavlm_base_plus 1 → 1, wavlm_large 1 → 9. CNN14 yeniden kalibre edilir.
@@ -1017,4 +1017,10 @@ DURUM: **ÖNERİLDİ** (2026-10-11, 21. tur) · **Post hoc:** kalibrasyon eğril
   - `diagnose_nonfinite.py` (DIAG-001).
   - `smoke_test_finetune.py`: T4 fp16 değerlendirmeyi de sınar.
   - `tests/test_phase3.py` F13–F14; notebook 25 Bölüm 1b.
+- **Kabul notu — DIAG-001 sonucu (2026-10-11, T4) [FACT]:**
+  - Okuma **H2**: eğitim durumu sağlam (sonlu olmayan parametre / tampon yok; 1 epoch'ta 1 atlanan adım). Önceden eğitilmiş model fp16'da 0 / 392 sorunlu kayıt.
+  - 1 epoch eğitimden sonra fp16'da 3 / 392 kayıt sonlu değil, fp32'de 0 / 392. İlk taşan modül `conv_block6.conv1` (fp16 en çok 64 512). fp32'de `conv_block6` aktivasyonları 2.7 milyona kadar çıkıyor.
+  - Önceden yazılı eşlemeyle **değerlendirme bütün kollarda fp32** (`COMMON["eval_amp"] = False`). Eğitim fp16 kalıyor.
+  - Diğer kolların kalibrasyon eğrileri fp16 değerlendirmeyle ölçüldü; değerler sonluydu ve fark ihmal edilebilir [INFERENCE] → yeniden koşulmaz.
+  - **İzlenecek:** CNN14'ün son bloğundaki çok büyük aktivasyonlar, bu kayıtlarda uç logit'lere yol açabilir (T1'de uç ŝ) ve eğitimde fp16 taşmasıyla atlanan adımları artırabilir. Her epoch'ta sonlu durum kontrolü var (bozulursa durur). Atlanan adım sayısı `fold.json`'da raporlanır.
 

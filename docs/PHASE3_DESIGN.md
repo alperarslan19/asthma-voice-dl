@@ -1,7 +1,7 @@
 # Faz 3 — Uçtan uca fine-tuning: tasarım (EXP-030)
 
 **Durum:** **KABUL (D-042)**, 2026-10-11, 20. tur (önerildi: 18. tur; G1 ve SMK-002 sonuçları okunduktan sonra kabul edildi, tarif değişmedi).
-**Değişiklik önerisi (D-043, ÖNERİLDİ, 21. tur; post hoc, dış fold eğitiminden önce):** kalibrasyonda (CAL-001) kayıp kuralı 4 / 5 kolda 1. epoch'u seçti. Epoch kuralı iç doğrulama AUC'si + 1-SE olur; ısınma sabit epoch sayısı olur; CNN14 önce DIAG-001 ile teşhis edilir. Aşağıdaki "Epoch sayısı" satırı v1'dir; geçerli kural için DECISIONS D-043. EVAL-016 Aşama 1 raporundan **sonra** yazıldı, yani "T1 sonrası" etiketli (D-037 madde 3).
+**Değişiklik (D-043, KABUL, 22. tur; post hoc, dış fold eğitiminden önce; DIAG-001 = H2 → değerlendirme fp32):** kalibrasyonda (CAL-001) kayıp kuralı 4 / 5 kolda 1. epoch'u seçti. Epoch kuralı iç doğrulama AUC'si + 1-SE olur; ısınma sabit epoch sayısı olur; CNN14 önce DIAG-001 ile teşhis edilir. Aşağıdaki "Epoch sayısı" satırı v1'dir; geçerli kural için DECISIONS D-043. EVAL-016 Aşama 1 raporundan **sonra** yazıldı, yani "T1 sonrası" etiketli (D-037 madde 3).
 
 - Sonuçlardan önce sabitlenmiş ve burada yalnız uygulanan kurallar:
   - backbone seçimi (D-035);

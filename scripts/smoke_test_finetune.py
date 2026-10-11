@@ -83,7 +83,8 @@ def smoke_arm(arm: str, args, cache: Cache) -> dict:
         P1 = F.predict_recordings(m, cache, small.rows_eval, args.device, amp=False)
         eval_s_per_rec = (time.time() - t0) / len(small.rows_eval)
         try:                                          # D-043: eğitimde kullanılan fp16 değerlendirme yolu da sınanır (CAL-001'de
-            P16 = F.predict_recordings(m, cache, small.rows_eval, args.device, amp=True)   # CNN14 burada durdu)
+            P16 = F.predict_recordings(m, cache, small.rows_eval, args.device,      # CNN14 burada durdu; eğitimin
+                                       amp=cfg.get("amp", True) and F.COMMON["eval_amp"])  # kullandığı yol sınanır)
             fp16_ok, fp16_diff = True, float(np.abs(P16.logit.to_numpy() - P1.logit.to_numpy()).max())
         except AssertionError as e:
             fp16_ok, fp16_diff = False, str(e)[:200]
