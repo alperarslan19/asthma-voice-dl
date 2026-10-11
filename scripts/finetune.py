@@ -22,7 +22,8 @@ MODEL
     eğitim: Adam (weight decay 1e-4), batch 16 (gerekirse birikimli), fp16 autocast + GradScaler, gradyan normu ≤ 1.0;
             augmentation, SpecAugment ve layerdrop KAPALI (D-016); dropout varsayılan.
     epoch : sabit; kolun kalibrasyon koşusunda (tekrar 0, fold 0'ın iç train / iç doğrulama ayrımı) iç doğrulama
-            kaybının 3 epoch'luk hareketli ortalamasının en küçük olduğu epoch (D-027). Dış fold'larda erken durdurma ve
+            katılımcı AUC'sinin 3 epoch'luk hareketli ortalamasına 1-SE kuralı (D-043; v1'deki kayıp kuralı CAL-001'de
+            bozuk çıktı ve kayıt için hesaplanır). Isınma sabit epoch sayısı (SSL 2). Dış fold'larda erken durdurma ve
             checkpoint seçimi YOK; son epoch'un modeli test edilir.
 
 KAYIT VE KURTARMA (proje kuralı)
@@ -66,24 +67,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import backbones as B  # noqa: E402
 from smoke_test_backbones import HOP_S, WIN_S, Cache  # noqa: E402
 
-# Faz 3 protokolü (docs/PHASE3_DESIGN.md; DECISIONS D-042). Kalibrasyon ve eğitim yalnız status == "KABUL" iken çalışır.
-# 2026-10-11: D-042 KABUL (kullanıcı onayı; G1 ve SMK-002 sonuçları okunduktan sonra). Tarif değişmedi.
-PHASE3 = {"version": "Faz 3 protokolü v1 (D-042)", "status": "KABUL", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
-          "fine_tune": "uçtan uca (WavLM özellik kodlayıcısı donuk)", "epoch_rule": "kalibrasyon: iç doğrulama kaybı, 3'lü hareketli ort. min"}
+# Faz 3 protokolü (docs/PHASE3_DESIGN.md; DECISIONS D-042, D-043). Kalibrasyon ve eğitim yalnız status == "KABUL" iken çalışır.
+# 2026-10-11: D-042 KABUL. Aynı gün, kalibrasyondan sonra (hiçbir dış fold eğitilmeden): D-043 ÖNERİLDİ — epoch kuralı
+# (kayıp → katılımcı AUC'si, 1-SE) ve ısınmanın toplam epoch'tan bağımsız olması. v1 kuralı "epochs_v1_loss" olarak saklanır.
+PHASE3 = {"version": "Faz 3 protokolü v2 (D-042 + D-043)", "status": "ÖNERİLDİ", "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
+          "fine_tune": "uçtan uca (WavLM özellik kodlayıcısı donuk)",
+          "epoch_rule": "kalibrasyon: iç doğrulama katılımcı AUC'si, 3'lü hareketli ort., 1-SE kuralı (Hanley–McNeil SE); "
+                        "ısınma sabit epoch sayısı (D-043)"}
 COMMON = {"batch": 16, "lr_head": 1e-3, "weight_decay": 1e-4, "head_hidden": 256, "head_dropout": 0.3, "grad_clip": 1.0,
-          "eval_batch": 16, "smooth": 3, "base_seed": 3000}
+          "eval_batch": 16, "smooth": 3, "base_seed": 3000,
+          "eval_amp": True}                                   # D-043: DIAG-001 sonucuna göre (ön-belirlenmiş eşleme) değişebilir
 ARMS = {
-    "cnn10":           {"backbone": "cnn10", "init": "pretrained", "lr_backbone": 1e-4, "warmup_frac": 0.0, "max_epochs": 40,
+    "cnn10":           {"backbone": "cnn10", "init": "pretrained", "lr_backbone": 1e-4, "warmup_epochs": 0, "max_epochs": 40,
                         "micro_batch": 16, "ckpt_every": 1},
-    "cnn10_scratch":   {"backbone": "cnn10", "init": "random", "lr_backbone": 1e-4, "warmup_frac": 0.0, "max_epochs": 40,
+    "cnn10_scratch":   {"backbone": "cnn10", "init": "random", "lr_backbone": 1e-4, "warmup_epochs": 0, "max_epochs": 40,
                         "micro_batch": 16, "ckpt_every": 1},
-    "cnn14":           {"backbone": "cnn14", "init": "pretrained", "lr_backbone": 1e-4, "warmup_frac": 0.0, "max_epochs": 40,
+    "cnn14":           {"backbone": "cnn14", "init": "pretrained", "lr_backbone": 1e-4, "warmup_epochs": 0, "max_epochs": 40,
                         "micro_batch": 16, "ckpt_every": 5},
-    "beats":           {"backbone": "beats", "init": "pretrained", "lr_backbone": 2e-5, "warmup_frac": 0.1, "max_epochs": 20,
+    "beats":           {"backbone": "beats", "init": "pretrained", "lr_backbone": 2e-5, "warmup_epochs": 2, "max_epochs": 20,
                         "micro_batch": 16, "ckpt_every": 2},
-    "wavlm_base_plus": {"backbone": "wavlm_base_plus", "init": "pretrained", "lr_backbone": 2e-5, "warmup_frac": 0.1,
+    "wavlm_base_plus": {"backbone": "wavlm_base_plus", "init": "pretrained", "lr_backbone": 2e-5, "warmup_epochs": 2,
                         "max_epochs": 20, "micro_batch": 16, "ckpt_every": 2},
-    "wavlm_large":     {"backbone": "wavlm_large", "init": "pretrained", "lr_backbone": 2e-5, "warmup_frac": 0.1,
+    "wavlm_large":     {"backbone": "wavlm_large", "init": "pretrained", "lr_backbone": 2e-5, "warmup_epochs": 2,
                         "max_epochs": 20, "micro_batch": 8, "ckpt_every": 2},
 }
 SSL_CANDIDATES = ["beats", "wavlm_base_plus", "wavlm_large"]          # D-035
@@ -246,9 +251,19 @@ def make_optimizer(m: FTModel, cfg: dict):
                             weight_decay=COMMON["weight_decay"])
 
 
-def make_scheduler(opt, total_steps: int, warmup_frac: float):
-    w = int(round(warmup_frac * total_steps))
+def make_scheduler(opt, steps_per_epoch: int, warmup_epochs: float):
+    """Doğrusal ısınma, sonra sabit. D-043: ısınma SABİT bir epoch sayısıdır (toplam epoch'a bağlı değil). Böylece E epoch'luk
+    eğitim, kalibrasyon koşusunun ilk E epoch'uyla AYNI öğrenme hızı yolunu izler (v1'de ısınma toplamın %10'uydu:
+    kalibrasyonun 1. epoch'u yarım ısınmadaydı, 1 epoch'luk eğitimde ise ısınma 10 adımda bitiyordu)."""
+    w = int(round(warmup_epochs * steps_per_epoch))
     return torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / w) if w > 0 else 1.0)
+
+
+def nonfinite_state(m: nn.Module) -> list[str]:
+    """Sonlu olmayan değer içeren parametre ve tamponların adları (BatchNorm koşu istatistikleri dahil)."""
+    bad = [n for n, p in m.named_parameters() if not torch.isfinite(p).all()]
+    bad += [n for n, b in m.named_buffers() if b.is_floating_point() and not torch.isfinite(b).all()]
+    return bad
 
 
 @torch.no_grad()
@@ -273,7 +288,16 @@ def predict_recordings(m: FTModel, cache: Cache, rows, device: str, amp: bool) -
                 lg = m(W[i:i + COMMON["eval_batch"]].to(device), L[i:i + COMMON["eval_batch"]].to(device))
             logits.append(lg.float().cpu())
         lg = torch.cat(logits)
-        assert lg.shape == (len(ws),) and torch.isfinite(lg).all(), f"satır {r}: sonlu olmayan logit"
+        assert lg.shape == (len(ws),)
+        if not torch.isfinite(lg).all():                       # bastırma YOK: neden bilinmeden düzeltme yapılmaz (DIAG-001)
+            msg = f"satır {r}: sonlu olmayan logit ({int((~torch.isfinite(lg)).sum())}/{len(ws)} pencere; fp16={use_amp}"
+            bad = nonfinite_state(m)
+            msg += f"; sonlu olmayan parametre/tampon: {bad[:6]}" if bad else "; parametre ve tamponlar sonlu"
+            if use_amp:
+                with torch.autocast(device_type="cuda", enabled=False):
+                    l32 = m(W[:COMMON["eval_batch"]].to(device), L[:COMMON["eval_batch"]].to(device)).float()
+                msg += f"; fp32'de ilk {len(l32)} pencere sonlu: {bool(torch.isfinite(l32).all())}"
+            raise AssertionError(msg + ") → scripts/diagnose_nonfinite.py")
         out.append({"row": int(r), "n_windows": len(ws), "logit": float(lg.mean())})
     return pd.DataFrame(out)
 
@@ -295,19 +319,21 @@ def set_rng_state(s: dict) -> None:
 
 # ----------------------------------------------------------------------------- eğitim döngüsü
 def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int, seed: int, workdir: Path, device: str,
-                 amp: bool = True, eval_each_epoch: bool = False, stop_after_epoch: int | None = None,
-                 ckpt_dir: Path | None = None) -> dict:
+                 amp: bool | None = None, eval_each_epoch: bool = False, stop_after_epoch: int | None = None,
+                 ckpt_dir: Path | None = None, on_step=None) -> dict:
     """epochs kadar eğitir (kaldığı yerden sürer). eval_each_epoch: kalibrasyon için değerlendirme kümesinde kayıp / AUC.
     Döner: {'log': DataFrame, 'done': bool}."""
     from sklearn.metrics import roc_auc_score
     workdir.mkdir(parents=True, exist_ok=True)
+    amp = cfg.get("amp", True) if amp is None else amp
     use_amp = amp and device.startswith("cuda")
+    eval_amp = amp and COMMON["eval_amp"]
     batch, micro = COMMON["batch"], cfg["micro_batch"]
     assert batch % micro == 0
     assert batch // micro >= 1                  # birikim: batch = micro × (batch // micro)
     steps_per_epoch = math.ceil(len(fd.rows_train) / batch)
     opt = make_optimizer(m, cfg)
-    sch = make_scheduler(opt, steps_per_epoch * epochs, cfg["warmup_frac"])
+    sch = make_scheduler(opt, steps_per_epoch, cfg["warmup_epochs"])
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     pos_w = torch.tensor(fd.pos_weight, device=device)
     lossf = nn.BCEWithLogitsLoss(pos_weight=pos_w)
@@ -366,6 +392,8 @@ def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int,
                 skipped += 1
             sch.step()
             n_steps += 1
+            if on_step is not None:                             # yalnız teşhis (diagnose_nonfinite.py)
+                on_step(ep, n_steps, float(loss.detach()), sc0, float(scaler.get_scale()) if use_amp else 1.0)
         assert n_seen == len(order) and n_steps == steps_per_epoch
         row = {"epoch": ep + 1, "train_loss": tot / n_seen, "lr_backbone": opt.param_groups[0]["lr"],
                "lr_head": opt.param_groups[1]["lr"], "steps": n_steps, "skipped_steps": skipped,
@@ -373,8 +401,10 @@ def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int,
                "gpu_peak_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2) if device.startswith("cuda") else 0.0}
         assert math.isfinite(row["train_loss"]), f"epoch {ep + 1}: eğitim kaybı sonlu değil"
         assert skipped < n_steps, f"epoch {ep + 1}: bütün adımlar atlandı (fp16 taşması)"
+        bad = nonfinite_state(m)
+        assert not bad, f"epoch {ep + 1}: sonlu olmayan parametre / tampon (ilk 8): {bad[:8]} → scripts/diagnose_nonfinite.py"
         if eval_each_epoch:
-            P = predict_recordings(m, cache, fd.rows_eval, device, amp)
+            P = predict_recordings(m, cache, fd.rows_eval, device, eval_amp)
             ye = fd.label[fd.pid_of_row[P.row].to_numpy()].to_numpy().astype(np.float32)
             lg = torch.tensor(P.logit.to_numpy(), dtype=torch.float32)
             row["val_loss"] = float(nn.BCEWithLogitsLoss(pos_weight=torch.tensor(fd.pos_weight))(lg, torch.from_numpy(ye)))
@@ -393,14 +423,43 @@ def run_training(m: FTModel, fd: FoldData, cache: Cache, cfg: dict, epochs: int,
     return {"log": pd.DataFrame(log), "done": True}
 
 
-def choose_epochs(val_loss: list[float], smooth: int) -> int:
-    """D-027 / D-042: iç doğrulama kaybının `smooth` epoch'luk ortalanmış hareketli ortalamasının en küçük olduğu epoch
-    (1'den sayılır). Kenarlarda pencere kırpılır. Eşitlikte küçük epoch."""
-    v = np.asarray(val_loss, float)
+def moving_avg(v, smooth: int) -> np.ndarray:
+    """Ortalanmış hareketli ortalama; kenarlarda pencere kırpılır."""
+    v = np.asarray(v, float)
     assert len(v) >= 1 and np.isfinite(v).all()
     h = smooth // 2
-    ma = np.array([v[max(0, i - h): i + h + 1].mean() for i in range(len(v))])
-    return int(np.argmin(ma)) + 1
+    return np.array([v[max(0, i - h): i + h + 1].mean() for i in range(len(v))])
+
+
+def choose_epochs(val_loss: list[float], smooth: int) -> int:
+    """v1 kuralı (D-042; D-043 ile yerini AUC kuralına bıraktı, kayıt için hesaplanır): iç doğrulama kaybının hareketli
+    ortalamasının en küçük olduğu epoch (1'den sayılır). Eşitlikte küçük epoch."""
+    return int(np.argmin(moving_avg(val_loss, smooth))) + 1
+
+
+def hanley_se(auc: float, n_pos: int, n_neg: int) -> float:
+    """AUC'nin standart hatası, Hanley & McNeil (1982). n_pos: yüksek skor beklenen sınıf (astım), n_neg: sağlıklı."""
+    q1, q2 = auc / (2 - auc), 2 * auc * auc / (1 + auc)
+    v = (auc * (1 - auc) + (n_pos - 1) * (q1 - auc * auc) + (n_neg - 1) * (q2 - auc * auc)) / (n_pos * n_neg)
+    return float(math.sqrt(max(v, 0.0)))
+
+
+def select_epochs(cal: dict, smooth: int | None = None) -> dict:
+    """D-043 epoch kuralı (kalibrasyon eğrilerinden; dış fold'lardan hiçbir şey kullanılmaz):
+    iç doğrulama katılımcı AUC'sinin `smooth`'lu hareketli ortalaması (MA); en yüksek MA'dan, o noktadaki Hanley–McNeil
+    SE'si kadar aşağıdaki eşiği geçen EN KÜÇÜK epoch (1-SE kuralı: gürültüye karşı tutumlu seçim).
+    Neden kayıp değil: sınıf-dengeli BCE, görülmemiş günlerde aşırı güvenli logit'lerle şişiyor ve sıralamayı ölçmüyor;
+    v1'de beş kolun dördünde 1. epoch'u seçti (CAL-001). Uç noktalarımız (E1, T1) sıralamaya / ölçeğe dayalı."""
+    smooth = smooth or COMMON["smooth"]
+    auc = np.asarray(cal["val_auc_monitor_only"], float)
+    n_pos, n_neg = cal["data"]["eval_participants_asthma_healthy"]
+    ma = moving_avg(auc, smooth)
+    se = hanley_se(float(ma.max()), int(n_pos), int(n_neg))
+    thr = float(ma.max()) - se
+    e = int(np.argmax(ma >= thr)) + 1
+    return {"epochs": e, "rule": "auc_ma_1se", "auc_ma_max": float(ma.max()), "auc_ma_argmax": int(np.argmax(ma)) + 1,
+            "se": se, "threshold": thr, "auc_ma_at_epochs": float(ma[e - 1]), "n_curve": int(len(auc)),
+            "at_max_edge": e == len(auc), "epochs_v1_loss": choose_epochs(cal["val_loss"], smooth)}
 
 
 # ----------------------------------------------------------------------------- komutlar
@@ -420,6 +479,36 @@ def resolve_backbone_arm(arm: str, r: int, k: int, selection: Path | None) -> st
     hit = sel[(sel.repeat == r) & (sel.fold == k)]
     assert len(hit) == 1 and hit.selected.iloc[0] in SSL_CANDIDATES, f"r{r} k{k}: D-035 seçimi yok"
     return str(hit.selected.iloc[0])
+
+
+def epochs_override(args) -> int | None:
+    """Yalnız testler: --force-epochs, --allow-unapproved olmadan kullanılamaz."""
+    if getattr(args, "force_epochs", None):
+        assert args.allow_unapproved, "--force-epochs yalnız testlerde"
+        return int(args.force_epochs)
+    return None
+
+
+def cmd_select(args) -> None:
+    """Kalibrasyon eğrilerinden (Drive) iki kuralın seçimini yazdırır; sonuç üretmez, kapıya tabi değil."""
+    rows = []
+    for f in sorted(args.out_root.glob("*/calibration/calibration.json")):
+        cal = json.loads(f.read_text())
+        s = select_epochs(cal)
+        rows.append({"kol": f.parent.parent.name, "v2 epoch (AUC 1-SE)": s["epochs"], "v1 epoch (kayıp)": s["epochs_v1_loss"],
+                     "AUC MA en yüksek (epoch)": f"{s['auc_ma_max']:.3f} (e{s['auc_ma_argmax']})", "SE": round(s["se"], 3),
+                     "seçilen epoch'ta AUC MA": round(s["auc_ma_at_epochs"], 3), "eğri": s["n_curve"],
+                     "val kaybı min / son": f"{min(cal['val_loss']):.3f} / {cal['val_loss'][-1]:.3f}",
+                     "eğitim kaybı son": round(cal["train_loss"][-1], 3), "üst sınırda": s["at_max_edge"]})
+    T = pd.DataFrame(rows)
+    print(T.to_string(index=False))
+    if args.report_dir:
+        args.report_dir.mkdir(parents=True, exist_ok=True)
+        md = ["# CAL-001 — Faz 3 kalibrasyon eğrileri ve epoch seçimi (otomatik üretildi; katılımcı ID'si içermez)", "",
+              f"Kural: {PHASE3['epoch_rule']} ({PHASE3['version']}, {PHASE3['status']}). v1 (kayıp) kaydı için yanında.", "",
+              "| " + " | ".join(T.columns) + " |", "|" + "---|" * len(T.columns)]
+        md += ["| " + " | ".join(str(v) for v in r) + " |" for r in T.itertuples(index=False)]
+        (args.report_dir / "CAL-001_epoch_selection.md").write_text("\n".join(md) + "\n")
 
 
 def cmd_calibrate(args) -> None:
@@ -447,12 +536,13 @@ def cmd_calibrate(args) -> None:
         print("durduruldu (test); yeniden çalıştırınca sürer")
         return
     log = res["log"]
-    e_star = choose_epochs(log.val_loss.tolist(), COMMON["smooth"])
-    at_edge = e_star == E
-    result = {"arm": args.arm, "epochs": e_star, "max_epochs": E, "at_max_edge": at_edge, "rule": PHASE3["epoch_rule"],
+    result = {"arm": args.arm, "max_epochs": E, "rule": PHASE3["epoch_rule"],
               "val_loss": log.val_loss.round(5).tolist(), "train_loss": log.train_loss.round(5).tolist(),
               "val_auc_monitor_only": log.val_auc_monitor_only.round(4).tolist(), "data": fd.summary,
               "epoch_s_mean": float(log.epoch_s.mean()), "gpu_peak_gb_max": float(log.gpu_peak_gb.max())}
+    sel = select_epochs(result)
+    e_star, at_edge = sel["epochs"], sel["at_max_edge"]
+    result.update({"epochs": e_star, "at_max_edge": at_edge, "selection": sel})
     atomic_write_text(res_path, json.dumps(result, indent=1))
     (ckd / "latest.pt").unlink(missing_ok=True)
     print(f"{args.arm}: sabit epoch = {e_star}" + (" (UYARI: üst sınırda — kayıp hâlâ düşüyor olabilir)" if at_edge else ""))
@@ -469,7 +559,7 @@ def cmd_train(args) -> None:
             cfg = ARMS[arm_bb]
             cal = args.out_root / arm_bb / "calibration" / "calibration.json"
             assert cal.exists(), f"{arm_bb}: kalibrasyon yok ({cal}); önce `finetune.py calibrate --arm {arm_bb}`"
-            E = json.loads(cal.read_text())["epochs"]
+            E = epochs_override(args) or select_epochs(json.loads(cal.read_text()))["epochs"]   # D-043: eğrilerden
             wd = args.out_root / args.arm / f"r{r}_k{k}"
             if (wd / "fold.json").exists():
                 print(f"{args.arm} r{r} k{k}: bitmiş, atlandı")
@@ -492,10 +582,11 @@ def cmd_train(args) -> None:
             t0 = time.time()
             ckd = args.ckpt_root / args.arm / f"r{r}_k{k}" if args.ckpt_root else wd
             res = run_training(m, fd, cache, cfg, E, seed, wd, args.device, stop_after_epoch=args.stop_after_epoch, ckpt_dir=ckd)
+            eval_amp = cfg.get("amp", True) and COMMON["eval_amp"]
             if not res["done"]:
                 print("durduruldu (test); yeniden çalıştırınca sürer")
                 return
-            P = predict_recordings(m, cache, fd.rows_eval, args.device, amp=True)
+            P = predict_recordings(m, cache, fd.rows_eval, args.device, amp=eval_amp)
             P["participant_id"] = fd.pid_of_row[P.row].to_numpy()
             P["slot"] = fd.slot_of_row[P.row].to_numpy()
             P["label"] = fd.label[P.participant_id].to_numpy()
@@ -507,7 +598,7 @@ def cmd_train(args) -> None:
                 "arm": args.arm, "backbone_arm": arm_bb, "repeat": r, "fold": k, "epochs": E, "seed": seed, "data": fd.summary,
                 "final_train_loss": float(log.train_loss.iloc[-1]), "skipped_steps": int(log.skipped_steps.sum()),
                 "train_s": float(log.epoch_s.sum()), "total_s": round(time.time() - t0, 1),
-                "gpu_peak_gb_max": float(log.gpu_peak_gb.max()), "sig": sig}, indent=1, default=str))
+                "gpu_peak_gb_max": float(log.gpu_peak_gb.max()), "eval_amp": eval_amp, "sig": sig}, indent=1, default=str))
             if args.keep_final:
                 atomic_torch_save({"model": trainable_state(m), "epoch": E, "seed": seed}, wd / "final_trainable.pt")
             (ckd / "latest.pt").unlink(missing_ok=True)
@@ -520,6 +611,9 @@ def cmd_train(args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
+    ps = sub.add_parser("select", help="kalibrasyon eğrilerinden epoch seçimi (yalnız okur)")
+    ps.add_argument("--out-root", required=True, type=Path)
+    ps.add_argument("--report-dir", type=Path)
     for name in ("calibrate", "train"):
         p = sub.add_parser(name)
         p.add_argument("--arm", required=True, choices=list(ARMS) + ["ssl"])
@@ -541,8 +635,11 @@ def main() -> None:
             p.add_argument("--folds", default="0,1,2,3,4")
             p.add_argument("--selection", type=Path, help="--arm ssl: EXP-016DG d035_selection.csv")
             p.add_argument("--keep-final", action="store_true", help="fold sonunda eğitilen ağırlıkları sakla (Drive alanı)")
+            p.add_argument("--force-epochs", type=int, help="yalnız testler (--allow-unapproved ile)")
     args = ap.parse_args()
-    if args.cmd == "calibrate":
+    if args.cmd == "select":
+        cmd_select(args)
+    elif args.cmd == "calibrate":
         assert args.arm != "ssl", "kalibrasyon somut bir kol için yapılır (beats / wavlm_base_plus / wavlm_large)"
         cmd_calibrate(args)
     else:

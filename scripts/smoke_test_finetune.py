@@ -6,7 +6,7 @@ Her kol için (cnn10, cnn10_scratch, cnn14, beats, wavlm_base_plus, wavlm_large)
     T2 batch: 4 s parçalar (B, win) float32; kısa kayıt dolgu + uzunluk; ileri geçiş (B,) sonlu logit (fp16 autocast)
     T3 eğitim: gerçek eğitim döngüsüyle (run_training) 2 küçük epoch (64 kayıt = 4 adım / epoch): kayıp sonlu,
        gövde ve baş parametreleri değişiyor, atlanan adım < adım; checkpoint yazılıyor
-    T4 değerlendirme: 8 değerlendirme kaydının bütün pencereleri → sonlu kayıt logit'i
+    T4 değerlendirme: 8 değerlendirme kaydının bütün pencereleri → sonlu kayıt logit'i (fp32 VE fp16; D-043)
     T5 kurtarma: checkpoint'ten kurulan yeni model aynı tahmini veriyor (fp32, en büyük fark < 1e-4)
     T6 bellek ve süre: tepe GPU belleği < 14.5 GB (T4); adım süresi → tam epoch ve fold süresi tahmini (bütçe)
 Bir kol FAIL ise o kolun kalibrasyonu ve eğitimi başlatılmaz (notebook 25 durur). Eşik gevşetilerek geçirilmez.
@@ -82,8 +82,14 @@ def smoke_arm(arm: str, args, cache: Cache) -> dict:
         t0 = time.time()
         P1 = F.predict_recordings(m, cache, small.rows_eval, args.device, amp=False)
         eval_s_per_rec = (time.time() - t0) / len(small.rows_eval)
-        Ck["T4_eval"] = {"status": "PASS" if np.isfinite(P1.logit).all() and len(P1) == 8 else "FAIL",
-                         "windows_per_recording_mean": float(P1.n_windows.mean())}
+        try:                                          # D-043: eğitimde kullanılan fp16 değerlendirme yolu da sınanır (CAL-001'de
+            P16 = F.predict_recordings(m, cache, small.rows_eval, args.device, amp=True)   # CNN14 burada durdu)
+            fp16_ok, fp16_diff = True, float(np.abs(P16.logit.to_numpy() - P1.logit.to_numpy()).max())
+        except AssertionError as e:
+            fp16_ok, fp16_diff = False, str(e)[:200]
+        Ck["T4_eval"] = {"status": "PASS" if np.isfinite(P1.logit).all() and len(P1) == 8 and fp16_ok else "FAIL",
+                         "windows_per_recording_mean": float(P1.n_windows.mean()), "fp16_eval_finite": fp16_ok,
+                         "fp16_vs_fp32_max_abs_diff": fp16_diff}
         # T5
         st = torch.load(wd / "latest.pt", map_location="cpu", weights_only=False)
         B.set_determinism(0)
