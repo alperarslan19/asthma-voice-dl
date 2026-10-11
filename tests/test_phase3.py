@@ -7,7 +7,7 @@ Bu testlerin geçmesi modellerin gerçek ağırlıklarla doğru eğitileceğini 
 
     F1  gün-gruplu split: hiçbir gün hem train hem testte (dış ve iç); her katılımcı tekrar başına bir kez testte; belirlenimci
     F2  FoldData sızıntı kapıları: gün paylaşan (katılımcı-gruplu) split reddedilir; kalibrasyon kipi dış testi hiç görmez
-    F3  epoch kuralı (choose_epochs): hareketli ortalama, kenar, eşitlik
+    F3  v1 epoch kuralı (choose_epochs; kayıt için): hareketli ortalama, kenar, eşitlik
     F4  protokol kapısı: status KABUL değilken kalibrasyon / eğitim reddedilir (koddaki statüden bağımsız sınanır);
         KABUL iken kapı geçer
     F5  kalibrasyon → sabit epoch; eğitim → preds.csv + fold.json; bitmiş fold yeniden çalıştırmada atlanır;
@@ -21,6 +21,9 @@ Bu testlerin geçmesi modellerin gerçek ağırlıklarla doğru eğitileceğini 
     F11 G1'in mantığı, doğrusu bilinen veriyle: gömme YALNIZ kayıt gününün izini taşıyor (astım bilgisi yok; günlerin çoğu
         tek etiketli). Katılımcı-gruplu CV'de T1 yanlış pozitif veriyor (gün eşleri eğitimde); gün-gruplu CV'de vermiyor.
         Yani gün-gruplu kontrol, korumak istediği mekanizmayı gerçekten yakalıyor.
+    F13 D-043 epoch kuralı (iç doğrulama AUC'si, 3'lü hareketli ort., 1-SE; Hanley–McNeil SE) ve ısınmanın toplam epoch'tan
+        bağımsızlığı (1 epoch'luk eğitim = 20 epoch'luk kalibrasyonun ilk epoch'u); eğitim epoch'u eğrilerden hesaplanır
+    F14 sonlu olmayan parametre / tampon yakalanır ve adıyla raporlanır; teşhis betiği (DIAG-001) CPU'da çalışır
     F12 --ckpt-root (Colab yerel disk): latest.pt yalnız orada, Drive klasöründe hiç yok; kesinti + devam aynı tahmini veriyor;
         yerel checkpoint kaybolursa (makine değişti) fold epoch 0'dan yeniden başlıyor ve yine aynı tahmini veriyor
 """
@@ -161,60 +164,119 @@ def test_calibrate_train_resume(fx, work: Path) -> None:
     run(*ft_args(fx, out, "calibrate", "--arm", "beats", "--max-epochs", "3"))
     cal = json.loads((out / "beats" / "calibration" / "calibration.json").read_text())
     assert 1 <= cal["epochs"] <= 3 and len(cal["val_loss"]) == 3 and not (out / "beats" / "calibration" / "latest.pt").exists()
-    # tam (kesintisiz) koşu
+    assert cal["epochs"] == F.select_epochs(cal)["epochs"] and cal["selection"]["epochs_v1_loss"] == F.choose_epochs(cal["val_loss"], 3)
+    # eğitim, epoch'u kayıttaki sayıdan değil eğrilerden hesaplar (D-043): kayıttaki sayıyı boz → yine eğri kuralı
+    cal_bad = dict(cal, epochs=99)
+    (out / "beats" / "calibration" / "calibration.json").write_text(json.dumps(cal_bad))
     run(*ft_args(fx, out, "train", "--arm", "beats", "--repeats", "0", "--folds", "1"))
     wd = out / "beats" / "r0_k1"
-    P = pd.read_csv(wd / "preds.csv")
+    P0 = pd.read_csv(wd / "preds.csv")
     S = pd.read_csv(fx["splits"] / "outer_r0.csv")
     b = S[S.outer_fold == 1]
-    assert set(P.participant_id) == set(b[b.role == "test"].participant_id), "F5: test katılımcıları eksik / fazla"
-    assert not set(P.participant_id) & set(b[b.role == "train"].participant_id)
-    assert np.isfinite(P.logit).all() and (P.n_windows >= 1).all() and not (wd / "latest.pt").exists()
+    assert set(P0.participant_id) == set(b[b.role == "test"].participant_id), "F5: test katılımcıları eksik / fazla"
+    assert not set(P0.participant_id) & set(b[b.role == "train"].participant_id)
+    assert np.isfinite(P0.logit).all() and (P0.n_windows >= 1).all() and not (wd / "latest.pt").exists()
     fj = json.loads((wd / "fold.json").read_text())
-    assert fj["epochs"] == cal["epochs"]
+    assert fj["epochs"] == F.select_epochs(cal)["epochs"], "F5: eğitim epoch'u D-043 kuralından gelmedi"
     r2 = run(*ft_args(fx, out, "train", "--arm", "beats", "--repeats", "0", "--folds", "1"))
     assert "atlandı" in r2.stdout
-    print(f"  F5 geçti (kalibrasyon {cal['epochs']} epoch; {len(P)} kayıt tahmini; bitmiş fold atlandı)", flush=True)
-    # kesinti + devam: aynı fold'u ayrı bir klasörde 1 epoch'ta durdur, sonra sürdür
-    if cal["epochs"] >= 2:
-        out2 = work / "ft_resume"
-        shutil.copytree(out / "beats" / "calibration", out2 / "beats" / "calibration")
-        r = run(*ft_args(fx, out2, "train", "--arm", "beats", "--repeats", "0", "--folds", "1", "--stop-after-epoch", "1"))
-        assert "durduruldu" in r.stdout and (out2 / "beats" / "r0_k1" / "latest.pt").exists()
-        r = run(*ft_args(fx, out2, "train", "--arm", "beats", "--repeats", "0", "--folds", "1"))
-        assert "devam: epoch 1" in r.stdout
-        P2 = pd.read_csv(out2 / "beats" / "r0_k1" / "preds.csv")
-        d = np.abs(P.sort_values("row").logit.to_numpy() - P2.sort_values("row").logit.to_numpy()).max()
-        assert d < 1e-5, f"F6: devam eden koşu farklı tahmin verdi (en büyük fark {d})"
-        print(f"  F6 geçti (kesinti + devam = kesintisiz; en büyük fark {d:.1e})", flush=True)
-        # F12: checkpoint ayrı (yerel) klasörde
-        out3, ckr = work / "ft_local", work / "local_ckpt"
-        shutil.copytree(out / "beats" / "calibration", out3 / "beats" / "calibration")
-        a3 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr)
-        r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3, "--stop-after-epoch", "1"))
-        assert (ckr / "beats" / "r0_k1" / "latest.pt").exists() and not list(out3.rglob("*.pt")), "F12: checkpoint Drive klasörüne yazıldı"
-        r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3))
-        assert "devam: epoch 1" in r.stdout and not (ckr / "beats" / "r0_k1" / "latest.pt").exists()
-        P3 = pd.read_csv(out3 / "beats" / "r0_k1" / "preds.csv")
-        d3 = np.abs(P.sort_values("row").logit.to_numpy() - P3.sort_values("row").logit.to_numpy()).max()
-        # makine değişti: yerel checkpoint kayboldu, Drive'daki günlük duruyor
-        out4, ckr4 = work / "ft_lost", work / "local_ckpt4"
-        shutil.copytree(out / "beats" / "calibration", out4 / "beats" / "calibration")
-        a4 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr4)
-        run(*ft_args(fx, out4, "train", "--arm", "beats", *a4, "--stop-after-epoch", "1"))
-        shutil.rmtree(ckr4)
-        r = run(*ft_args(fx, out4, "train", "--arm", "beats", *a4))
-        assert "epoch 0'dan yeniden" in r.stdout and "devam:" not in r.stdout
-        P4 = pd.read_csv(out4 / "beats" / "r0_k1" / "preds.csv")
-        lg = pd.read_csv(out4 / "beats" / "r0_k1" / "train_log.csv")
-        assert lg.epoch.tolist() == list(range(1, cal["epochs"] + 1)), "F12: yeniden başlayan fold'un günlüğü tutarsız"
-        d4 = np.abs(P.sort_values("row").logit.to_numpy() - P4.sort_values("row").logit.to_numpy()).max()
-        assert d3 < 1e-5 and d4 < 1e-5, f"F12: yerel checkpoint yolu farklı tahmin verdi ({d3}, {d4})"
-        print(f"  F12 geçti (--ckpt-root: Drive klasöründe .pt yok; devam fark {d3:.1e}; checkpoint kaybında baştan fark {d4:.1e})",
-              flush=True)
+    r3 = run(REPO / "scripts/finetune.py", "select", "--out-root", out, "--report-dir", work / "sel_rep")
+    assert "beats" in r3.stdout and (work / "sel_rep" / "CAL-001_epoch_selection.md").exists()
+    print(f"  F5 geçti (kalibrasyon → {fj['epochs']} epoch, eğrilerden; {len(P0)} kayıt tahmini; bitmiş fold atlandı; select raporu)",
+          flush=True)
+    # F6 / F12: devam testleri için sabit 3 epoch (yalnız testler: --force-epochs)
+    FE = ("--force-epochs", "3")
+    ref = work / "ft_ref"
+    shutil.copytree(out / "beats" / "calibration", ref / "beats" / "calibration")
+    run(*ft_args(fx, ref, "train", "--arm", "beats", "--repeats", "0", "--folds", "1", *FE))
+    P = pd.read_csv(ref / "beats" / "r0_k1" / "preds.csv")
+    out2 = work / "ft_resume"
+    shutil.copytree(out / "beats" / "calibration", out2 / "beats" / "calibration")
+    r = run(*ft_args(fx, out2, "train", "--arm", "beats", "--repeats", "0", "--folds", "1", *FE, "--stop-after-epoch", "1"))
+    assert "durduruldu" in r.stdout and (out2 / "beats" / "r0_k1" / "latest.pt").exists()
+    r = run(*ft_args(fx, out2, "train", "--arm", "beats", "--repeats", "0", "--folds", "1", *FE))
+    assert "devam: epoch 1" in r.stdout
+    P2 = pd.read_csv(out2 / "beats" / "r0_k1" / "preds.csv")
+    d = np.abs(P.sort_values("row").logit.to_numpy() - P2.sort_values("row").logit.to_numpy()).max()
+    assert d < 1e-5, f"F6: devam eden koşu farklı tahmin verdi (en büyük fark {d})"
+    print(f"  F6 geçti (kesinti + devam = kesintisiz; en büyük fark {d:.1e})", flush=True)
+    # F12: checkpoint ayrı (yerel) klasörde
+    out3, ckr = work / "ft_local", work / "local_ckpt"
+    shutil.copytree(out / "beats" / "calibration", out3 / "beats" / "calibration")
+    a3 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr, *FE)
+    r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3, "--stop-after-epoch", "1"))
+    assert (ckr / "beats" / "r0_k1" / "latest.pt").exists() and not list(out3.rglob("*.pt")), "F12: checkpoint Drive klasörüne yazıldı"
+    r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3))
+    assert "devam: epoch 1" in r.stdout and not (ckr / "beats" / "r0_k1" / "latest.pt").exists()
+    P3 = pd.read_csv(out3 / "beats" / "r0_k1" / "preds.csv")
+    d3 = np.abs(P.sort_values("row").logit.to_numpy() - P3.sort_values("row").logit.to_numpy()).max()
+    # makine değişti: yerel checkpoint kayboldu, Drive'daki günlük duruyor
+    out4, ckr4 = work / "ft_lost", work / "local_ckpt4"
+    shutil.copytree(out / "beats" / "calibration", out4 / "beats" / "calibration")
+    a4 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr4, *FE)
+    run(*ft_args(fx, out4, "train", "--arm", "beats", *a4, "--stop-after-epoch", "1"))
+    shutil.rmtree(ckr4)
+    r = run(*ft_args(fx, out4, "train", "--arm", "beats", *a4))
+    assert "epoch 0'dan yeniden" in r.stdout and "devam:" not in r.stdout
+    P4 = pd.read_csv(out4 / "beats" / "r0_k1" / "preds.csv")
+    lg = pd.read_csv(out4 / "beats" / "r0_k1" / "train_log.csv")
+    assert lg.epoch.tolist() == [1, 2, 3], "F12: yeniden başlayan fold'un günlüğü tutarsız"
+    d4 = np.abs(P.sort_values("row").logit.to_numpy() - P4.sort_values("row").logit.to_numpy()).max()
+    assert d3 < 1e-5 and d4 < 1e-5, f"F12: yerel checkpoint yolu farklı tahmin verdi ({d3}, {d4})"
+    print(f"  F12 geçti (--ckpt-root: Drive klasöründe .pt yok; devam fark {d3:.1e}; checkpoint kaybında baştan fark {d4:.1e})",
+          flush=True)
+    # --force-epochs onaysız koşuda kullanılamaz
+    r = run(*[a for a in ft_args(fx, work / "fx_no", "train", "--arm", "beats", *FE) if a != "--allow-unapproved"], ok=False)
+    assert r.returncode != 0
+
+
+def test_selection_rule_and_warmup() -> None:
+    """F13: D-043 epoch kuralı (AUC 1-SE) ve ısınmanın toplam epoch'tan bağımsızlığı."""
+    assert abs(F.hanley_se(0.8, 46, 10) - 0.0659) < 5e-4                  # Hanley & McNeil (1982) formülü, elle hesap
+    cal = {"val_auc_monitor_only": [0.6, 0.7, 0.8, 0.85, 0.86, 0.86, 0.85], "val_loss": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+           "data": {"eval_participants_asthma_healthy": [46, 10]}}
+    s = F.select_epochs(cal)
+    assert s["auc_ma_argmax"] == 5 and s["epochs"] == 4 and s["epochs_v1_loss"] == 1, s   # MA: .65 .70 .78 .84 .86 .86 .86
+    flat = dict(cal, val_auc_monitor_only=[0.70, 0.72, 0.71, 0.73, 0.72])
+    assert F.select_epochs(flat)["epochs"] == 1                            # gürültü içinde düz eğri → en tutumlu seçim
+    big = dict(cal, data={"eval_participants_asthma_healthy": [4000, 4000]})
+    assert F.select_epochs(big)["epochs"] == 5                            # SE → 0: 1-SE kuralı argmax'a iner
+    lrs = {}
+    for total in (1, 20):                                                  # 95 adım / epoch, 2 epoch ısınma
+        opt = torch.optim.SGD([torch.nn.Parameter(torch.zeros(1))], lr=1.0)
+        sch = F.make_scheduler(opt, 95, 2)
+        seq = []
+        for _ in range(95 * total):
+            seq.append(opt.param_groups[0]["lr"]); opt.step(); sch.step()
+        lrs[total] = seq
+    assert lrs[1] == lrs[20][:95], "ısınma toplam epoch'a bağlı (v1 hatası)"
+    assert abs(lrs[20][94] - 95 / 190) < 1e-9 and lrs[20][189] == 1.0 and lrs[20][-1] == 1.0
+    assert all(c["warmup_epochs"] in (0, 2) for c in F.ARMS.values())
+    print("  F13 geçti (AUC 1-SE kuralı; v1 kaydı; ısınma toplam epoch'tan bağımsız: 1 epoch'luk yol = 20 epoch'luğun başı)", flush=True)
+
+
+def test_nonfinite(fx, work: Path) -> None:
+    """F14: sonlu olmayan durum yakalanır ve açıklanır (bastırılmaz); teşhis betiği CPU'da rapor yazar."""
+    cache = Cache(fx["cache"])
+    fd = F.FoldData(fx["splits"], fx["ctx"], cache, 0, 0, "cv")
+    torch.manual_seed(0)
+    m = F.build_model("cnn10", None, "cpu", random_init_test=True)
+    assert F.nonfinite_state(m) == []
+    bn = next(n for n, b in m.named_buffers() if n.endswith("running_var"))
+    dict(m.named_buffers())[bn].fill_(float("nan"))
+    assert bn in F.nonfinite_state(m)
+    try:
+        F.predict_recordings(m, cache, fd.rows_eval[:2], "cpu", amp=False)
+    except AssertionError as e:
+        assert "sonlu olmayan logit" in str(e) and bn in str(e), e
     else:
-        print("  F6 ATLANDI (kalibrasyon 1 epoch seçti; devam testi için ≥ 2 gerekir) — testi yeniden kurun", flush=True)
-        raise AssertionError("F6 çalıştırılamadı")
+        raise AssertionError("F14: bozuk tampon değerlendirmede yakalanmadı")
+    rep = work / "diag"
+    run(REPO / "scripts/diagnose_nonfinite.py", "--arm", "cnn10", "--splits-dir", fx["splits"], "--context", fx["ctx"],
+        "--cache-dir", fx["cache"], "--report-dir", rep, "--device", "cpu", "--random-init-test", "--max-eval-rows", "6")
+    R = json.loads((rep / "DIAG-001_cnn10_nonfinite.json").read_text())
+    assert R["C_nonfinite_state"]["n"] == 0 and "yeniden üretilemedi" in R["verdict"], R["verdict"]
+    print(f"  F14 geçti (bozuk BatchNorm tamponu adıyla raporlandı; teşhis betiği: {R['verdict'][:40]}…)", flush=True)
 
 
 def test_families(fx) -> None:
@@ -358,10 +420,12 @@ def main() -> None:
         test_ssl_resolution(work)
         test_families(fx)
         test_calibrate_train_resume(fx, work)
+        test_selection_rule_and_warmup()
+        test_nonfinite(fx, work)
         test_learnable(fx)
         test_smk002(fx, work)
         test_g1_known_truth(work)
-        print("Tüm Faz 3 kontrolleri geçti (F1–F12). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
+        print("Tüm Faz 3 kontrolleri geçti (F1–F14). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
