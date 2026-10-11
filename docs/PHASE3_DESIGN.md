@@ -1,6 +1,6 @@
 # Faz 3 — Uçtan uca fine-tuning: tasarım (EXP-030)
 
-**Durum:** **ÖNERİLDİ (D-042)**, 2026-10-11, 18. tur. EVAL-016 Aşama 1 raporundan **sonra** yazıldı, yani "T1 sonrası" etiketli (D-037 madde 3).
+**Durum:** **KABUL (D-042)**, 2026-10-11, 20. tur (önerildi: 18. tur; G1 ve SMK-002 sonuçları okunduktan sonra kabul edildi, tarif değişmedi). EVAL-016 Aşama 1 raporundan **sonra** yazıldı, yani "T1 sonrası" etiketli (D-037 madde 3).
 
 - Sonuçlardan önce sabitlenmiş ve burada yalnız uygulanan kurallar:
   - backbone seçimi (D-035);
@@ -94,6 +94,7 @@
 - **Checkpoint:** `latest.pt` atomik yazılır: CNN10'da her epoch, SSL'de 2, CNN14'te 5 epoch'ta bir (Drive'a yazma süresi ve alanı; kesintide en çok bu kadar epoch kaybolur). İçinde eğitilen parametreler, BatchNorm tamponları, optimizer, scaler, scheduler, RNG durumları ve epoch var.
 - **Log ve yapılandırma:** `train_log.csv` (epoch, kayıp, lr, adım, atlanan adım, süre, GPU GB) ve `config.json` (kol, tohum, imzalar: split, bağlam, önbellek, checkpoint sha256, kod).
 - **Fold bitince:** `preds.csv` ve `fold.json` yazılır, `latest.pt` silinir (Drive alanı).
+- **Checkpoint yeri (D-042 kabul notu; mühendislik):** Colab'da `latest.pt` yalnız yerel diskte (`--ckpt-root /content/ft_ckpt`); günlük, yapılandırma, `preds.csv` ve `fold.json` Drive'da. Drive'da silinen / üzerine yazılan dosyalar çöpe gidip kotadan sayıldığı için. Makine değişirse yarım kalan fold aynı tohumla baştan başlar (en çok bir fold kaybı).
   - Yeniden çalıştırmada bitmiş fold atlanır; yarım kalan fold kaldığı yerden sürer. CPU'da sürdürülen koşu kesintisiz koşuyla bire bir aynı (F6). GPU'da cuDNN nedeniyle çok küçük farklar olabilir [INFERENCE].
   - Bir fold farklı bir yapılandırmayla yarım kalmışsa (imza ya da epoch farklı) script durur.
 - **"En iyi doğrulama checkpoint'i" yok.** Tasarım gereği doğrulamaya göre seçim yapılmıyor; kalibrasyonun bütün eğrisi loglanıyor.

@@ -8,7 +8,8 @@ Bu testlerin geçmesi modellerin gerçek ağırlıklarla doğru eğitileceğini 
     F1  gün-gruplu split: hiçbir gün hem train hem testte (dış ve iç); her katılımcı tekrar başına bir kez testte; belirlenimci
     F2  FoldData sızıntı kapıları: gün paylaşan (katılımcı-gruplu) split reddedilir; kalibrasyon kipi dış testi hiç görmez
     F3  epoch kuralı (choose_epochs): hareketli ortalama, kenar, eşitlik
-    F4  protokol kapısı: status KABUL değilken kalibrasyon / eğitim reddedilir
+    F4  protokol kapısı: status KABUL değilken kalibrasyon / eğitim reddedilir (koddaki statüden bağımsız sınanır);
+        KABUL iken kapı geçer
     F5  kalibrasyon → sabit epoch; eğitim → preds.csv + fold.json; bitmiş fold yeniden çalıştırmada atlanır;
         bütün test katılımcıları tahmin alır, eğitim katılımcıları almaz
     F6  kesinti + devam: 1 epoch sonra durdurulan eğitim, kaldığı yerden sürünce kesintisiz eğitimle AYNI tahminleri verir (CPU)
@@ -20,6 +21,8 @@ Bu testlerin geçmesi modellerin gerçek ağırlıklarla doğru eğitileceğini 
     F11 G1'in mantığı, doğrusu bilinen veriyle: gömme YALNIZ kayıt gününün izini taşıyor (astım bilgisi yok; günlerin çoğu
         tek etiketli). Katılımcı-gruplu CV'de T1 yanlış pozitif veriyor (gün eşleri eğitimde); gün-gruplu CV'de vermiyor.
         Yani gün-gruplu kontrol, korumak istediği mekanizmayı gerçekten yakalıyor.
+    F12 --ckpt-root (Colab yerel disk): latest.pt yalnız orada, Drive klasöründe hiç yok; kesinti + devam aynı tahmini veriyor;
+        yerel checkpoint kaybolursa (makine değişti) fold epoch 0'dan yeniden başlıyor ve yine aynı tahmini veriyor
 """
 from __future__ import annotations
 
@@ -132,12 +135,25 @@ def test_choose_epochs() -> None:
 
 
 def test_gate(fx, work: Path) -> None:
-    assert F.PHASE3["status"] != "KABUL" or True
-    if F.PHASE3["status"] != "KABUL":
+    saved = F.PHASE3["status"]
+    try:
+        F.PHASE3["status"] = "ÖNERİLDİ"
+        try:
+            F.protocol_gate(False)
+        except SystemExit as e:
+            assert "onaylanmadı" in str(e)
+        else:
+            raise AssertionError("F4: onaysız protokolde kapı geçti")
+        F.protocol_gate(True)                                                # yalnız testler: --allow-unapproved
+        F.PHASE3["status"] = "KABUL"
+        F.protocol_gate(False)
+    finally:
+        F.PHASE3["status"] = saved
+    if saved != "KABUL":                                                     # uçtan uca: komut satırı da reddediyor
         r = run(*[a for a in ft_args(fx, work / "gate", "calibrate", "--arm", "cnn10") if a != "--allow-unapproved"], ok=False)
         assert r.returncode != 0 and "onaylanmadı" in (r.stdout + r.stderr), r.stderr[-1000:]
         assert not (work / "gate").exists()
-    print(f"  F4 geçti (protokol {F.PHASE3['status']}: onaysız kalibrasyon reddedildi)", flush=True)
+    print(f"  F4 geçti (kapı: ÖNERİLDİ → reddedildi, KABUL → geçti; koddaki statü {saved})", flush=True)
 
 
 def test_calibrate_train_resume(fx, work: Path) -> None:
@@ -171,6 +187,31 @@ def test_calibrate_train_resume(fx, work: Path) -> None:
         d = np.abs(P.sort_values("row").logit.to_numpy() - P2.sort_values("row").logit.to_numpy()).max()
         assert d < 1e-5, f"F6: devam eden koşu farklı tahmin verdi (en büyük fark {d})"
         print(f"  F6 geçti (kesinti + devam = kesintisiz; en büyük fark {d:.1e})", flush=True)
+        # F12: checkpoint ayrı (yerel) klasörde
+        out3, ckr = work / "ft_local", work / "local_ckpt"
+        shutil.copytree(out / "beats" / "calibration", out3 / "beats" / "calibration")
+        a3 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr)
+        r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3, "--stop-after-epoch", "1"))
+        assert (ckr / "beats" / "r0_k1" / "latest.pt").exists() and not list(out3.rglob("*.pt")), "F12: checkpoint Drive klasörüne yazıldı"
+        r = run(*ft_args(fx, out3, "train", "--arm", "beats", *a3))
+        assert "devam: epoch 1" in r.stdout and not (ckr / "beats" / "r0_k1" / "latest.pt").exists()
+        P3 = pd.read_csv(out3 / "beats" / "r0_k1" / "preds.csv")
+        d3 = np.abs(P.sort_values("row").logit.to_numpy() - P3.sort_values("row").logit.to_numpy()).max()
+        # makine değişti: yerel checkpoint kayboldu, Drive'daki günlük duruyor
+        out4, ckr4 = work / "ft_lost", work / "local_ckpt4"
+        shutil.copytree(out / "beats" / "calibration", out4 / "beats" / "calibration")
+        a4 = ("--repeats", "0", "--folds", "1", "--ckpt-root", ckr4)
+        run(*ft_args(fx, out4, "train", "--arm", "beats", *a4, "--stop-after-epoch", "1"))
+        shutil.rmtree(ckr4)
+        r = run(*ft_args(fx, out4, "train", "--arm", "beats", *a4))
+        assert "epoch 0'dan yeniden" in r.stdout and "devam:" not in r.stdout
+        P4 = pd.read_csv(out4 / "beats" / "r0_k1" / "preds.csv")
+        lg = pd.read_csv(out4 / "beats" / "r0_k1" / "train_log.csv")
+        assert lg.epoch.tolist() == list(range(1, cal["epochs"] + 1)), "F12: yeniden başlayan fold'un günlüğü tutarsız"
+        d4 = np.abs(P.sort_values("row").logit.to_numpy() - P4.sort_values("row").logit.to_numpy()).max()
+        assert d3 < 1e-5 and d4 < 1e-5, f"F12: yerel checkpoint yolu farklı tahmin verdi ({d3}, {d4})"
+        print(f"  F12 geçti (--ckpt-root: Drive klasöründe .pt yok; devam fark {d3:.1e}; checkpoint kaybında baştan fark {d4:.1e})",
+              flush=True)
     else:
         print("  F6 ATLANDI (kalibrasyon 1 epoch seçti; devam testi için ≥ 2 gerekir) — testi yeniden kurun", flush=True)
         raise AssertionError("F6 çalıştırılamadı")
@@ -320,7 +361,7 @@ def main() -> None:
         test_learnable(fx)
         test_smk002(fx, work)
         test_g1_known_truth(work)
-        print("Tüm Faz 3 kontrolleri geçti (F1–F11). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
+        print("Tüm Faz 3 kontrolleri geçti (F1–F12). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
