@@ -655,10 +655,31 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 | Kontroller | split sızıntı kapıları, ileri geçiş, gerçek eğitim döngüsüyle 2 küçük epoch, değerlendirme, checkpoint'ten aynı tahmin, GPU belleği < 14.5 GB, bütçe tahmini |
 | Kod / notebook | `scripts/smoke_test_finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 1 (T4) |
 
+## CAL-001 — Faz 3 epoch kalibrasyonu (tekrar 0 / fold 0'ın iç ayrımı)
+| Alan | Değer |
+|---|---|
+| DURUM | 2026-10-11, Colab T4, notebook 25 Bölüm 2. Beş kol tamamlandı; **cnn14 1. epoch'un değerlendirmesinde durdu** ("sonlu olmayan logit") → DIAG-001 |
+| Veri | iç train 216 katılımcı (1512 kayıt; 1260 / 252), iç doğrulama 56 katılımcı (46 / 10), 42 / 11 gün; pos_weight 0.2 |
+| Sabit tahminci | iç doğrulama sınıf-dengeli BCE 0.237 (öğrenmeyen model) |
+| Sonuç (val kaybı min · val AUC MA3 en yüksek (epoch) · eğitim kaybı son) | cnn10 0.241 · 0.81 (e31) · 0.058; cnn10_scratch 0.236 · 0.78 (e13) · 0.118; beats 0.235 · 0.92 (e11) · 0.013; wavlm_base_plus 0.232 · 0.73 (e19) · 0.011; wavlm_large 0.227 · 0.86 (e14) · 0.025 |
+| **Olumsuz bulgu** | v1 kuralı (kayıp) 4 / 5 kolda 1. epoch'u seçti (cnn10: 5). Kayıp 2. epoch'tan sonra artarken AUC yükseldi: aşırı güvenli logit'ler (eğitim kaybı → ~0.01: ezberleme), sıralama yine iyileşiyor. Hiçbir kol iç doğrulama kaybında sabit tahminciyi anlamlı biçimde geçmedi |
+| Seçim (v1 kayıp → v2 AUC 1-SE; D-043) | cnn10 5 → 7; cnn10_scratch 1 → 9; beats 1 → 8; wavlm_base_plus 1 → 1; wavlm_large 1 → 9 |
+| Gözlemler (keşifsel, tek ayrım) | wavlm_base_plus fine-tune AUC'si 0.67–0.73'te kaldı (dondurulmuş prob iç AUC ~0.86, farklı küme). beats ~0.89–0.92, dondurulmuşa yakın. AUC SE 0.04–0.08 → kollar arası ve epoch'lar arası farklar çoğunlukla gürültü düzeyinde |
+| Süre | epoch (eğitim / iç değerlendirme, s): cnn10 9 / 4, beats 34 / 29, wavlm_base_plus 42 / 40, wavlm_large 116 / 80; GPU tepe 0.63 / 3.87 / 5.17 / 9.66 GB |
+| Sonuç konumu | Drive `experiments/phase3/finetune/<kol>/calibration/calibration.json`; rapor `reports/phase3/CAL-001_epoch_selection.md` (notebook 25 Bölüm 1b) |
+
+## DIAG-001 — CNN14 "sonlu olmayan logit" teşhisi
+| Alan | Değer |
+|---|---|
+| DURUM | Kod hazır (CPU testi F14; harness S15); **GPU'da ÇALIŞTIRILMADI** |
+| Gözlem | cnn14 kalibrasyonu 1. epoch'un iç değerlendirmesinde durdu. Eğitim kaybı sonluydu. Ön işleme zaten fp32. SMK-002 değerlendirmeyi fp32 sınamıştı → fp16 değerlendirme yolu gerçek CNN14 ile sınanmamıştı |
+| Hipotezler ve önceden yazılı eşleme (D-043) | H1 BatchNorm tamponları fp16 taşmasıyla bozuluyor → CNN14 fp32; H2 yalnız fp16 değerlendirme taşıyor → değerlendirme fp32 (bütün kollar); H3 / yeniden üretilemedi → birlikte bakılır |
+| Kod / notebook | `scripts/diagnose_nonfinite.py`; notebook 25 Bölüm 1b |
+
 ## EXP-030 — Uçtan uca fine-tuning (Faz 3)
 | Alan | Değer |
 |---|---|
-| DURUM | **D-042 KABUL** (2026-10-11); kod ve sentetik testler hazır (F1–F12; notebook harness S14); kalibrasyon ve eğitim Colab'da başlayacak |
+| DURUM | D-042 KABUL; kalibrasyon yapıldı (CAL-001). **D-043 ÖNERİLDİ** (epoch kuralı, ısınma, CNN14) → onaya ve DIAG-001'e kadar dış fold eğitimi yok. Kod ve testler F1–F14; harness S14–S15 |
 | Kollar | cnn10, cnn14, ssl (D-035 fold başına), cnn10_scratch |
 | Değerlendirme | E1, T1, C3 (keşifsel), C2, RQ2 — `docs/PHASE3_DESIGN.md` 5.2 |
 | Kod / notebook | `scripts/finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 2 |

@@ -981,3 +981,40 @@ DURUM: **KABUL** (2026-10-11, 20. tur; G1 ve SMK-002 sonuçları okunduktan sonr
   - Bütçe: SMK-002'nin tahmini en çok epoch'ta ≈ 12 saat eğitim + ≈ 1.5 saat kalibrasyon (üst sınır; değerlendirme payı dahil) [INFERENCE]. ~10 saati aşabilir. Gerçek epoch sayıları kalibrasyondan sonra bilinir; madde "aşılırsa önce CNN14 çıkarılır" o zaman, gerçek sayılarla uygulanır (CNN14 zaten sırada en sonda).
   - **Mühendislik değişikliği (bilimsel tarif değil) [DECISION]:** checkpoint'ler (`latest.pt`) Colab'ın yerel diskinde (`--ckpt-root /content/ft_ckpt`). Neden: Drive'da üzerine yazılan / silinen dosyalar çöp kutusuna gider ve kotadan sayılır [FROM OFFICIAL DOCS: Google Drive yardım — çöp kutusundaki dosyalar depolama alanı kullanır; Colab'daki davranış topluluk raporu, NEEDS VERIFICATION]; epoch başına 62 MB–3.7 GB checkpoint kotayı doldururdu. Bedel: Colab makinesi değişirse yarım kalan fold aynı tohumla baştan başlar (en çok bir fold; wavlm_large'da ≤ ~50 dk). Bitmiş fold'lar (preds, fold.json) Drive'da. F12 ve notebook harness'i (S14) devam ve baştan başlamanın aynı tahmini verdiğini gösterdi (CPU).
 
+## D-043 — Faz 3 epoch kuralı ve ısınma düzeltmesi; CNN14 teşhisi (CAL-001 sonrası)
+DURUM: **ÖNERİLDİ** (2026-10-11, 21. tur) · **Post hoc:** kalibrasyon eğrileri (yalnız tekrar 0 / fold 0'ın İÇ doğrulaması) görüldükten sonra, **hiçbir dış fold eğitilmeden** yazıldı; dış test verisi görülmedi · D-042 madde 4–5'i değiştirir · Alper: "Overfit riski var mı? … önden önlem almayı ve bazı şeyleri değiştirmeyi mi önerirsin?"
+- **KARAR (önerilen):**
+  1. **Epoch kuralı v2:** iç doğrulama katılımcı AUC'sinin 3'lü hareketli ortalaması (MA). En yüksek MA'dan, o noktadaki Hanley–McNeil SE'si kadar aşağıdaki eşiği geçen **en küçük** epoch (1-SE kuralı). Kol başına bir kez; dış fold'larda erken durdurma ve checkpoint seçimi yine yok. v1 (kayıp) seçimi her raporda yanında yazılır.
+     - Kayıtlı eğrilere uygulanınca (v1 → v2): cnn10 5 → 7, cnn10_scratch 1 → 9, beats 1 → 8, wavlm_base_plus 1 → 1, wavlm_large 1 → 9. CNN14 yeniden kalibre edilir.
+  2. **Isınma sabit epoch sayısı** (SSL 2 epoch; PANNs yok). Böylece E epoch'luk eğitim, kalibrasyonun ilk E epoch'uyla aynı öğrenme hızı yolunu izler. Mevcut SSL kalibrasyonları zaten tam bu yolla koştu (20 epoch × %10 = 2 epoch) → yeniden koşulmaz.
+  3. **CNN14:** önce DIAG-001 (teşhis). Düzeltme, sonuç görülmeden yazılan eşlemeyle:
+     - H1, eğitim durumu bozuluyor (sonlu olmayan parametre / BatchNorm tamponu): CNN14 fp32 eğitilir ve değerlendirilir.
+     - H2, durum sağlam, yalnız fp16 değerlendirme taşıyor: değerlendirme bütün kollarda fp32.
+     - H3 ya da yeniden üretilemedi: durulur, birlikte bakılır.
+     - Düzeltme bütçeye sığmazsa D-035 madde 6 (önce CNN14 çıkarılır); olumsuz sonuç olarak raporlanır.
+  4. **Düzenlileştirme eklenmez** (label smoothing, katman bazlı LR, augmentation, önce-lineer-prob-sonra-fine-tune). Tarifin geri kalanı D-042'deki gibi.
+- **NEDEN:**
+  - **v1 kuralı bozuk bir sonuç verdi [FACT, CAL-001].** Hiçbir şey öğrenmemiş sabit tahmincinin iç doğrulama kaybı 0.237. En iyi kayıplar: cnn10 0.241 (sabit tahminciden kötü), beats 0.235, wavlm_base_plus 0.232, wavlm_large 0.227 (ancak biraz iyi). Kayıp 2. epoch'tan itibaren artıyor. Aynı sürede katılımcı AUC'si yükseliyor (beats MA 0.64 → 0.92, wavlm_large 0.68 → 0.86, cnn10 0.65 → 0.81). Kayıp burada sıralamayı değil, görülmemiş günlerdeki aşırı güvenli logit'leri ölçüyor [INFERENCE]. Uç noktalarımız (E1 AUC, T1'de ŝ/SD) sıralamaya ve ölçeğe dayalı.
+  - **E = 1'in sonucu yanıltırdı [INFERENCE].** 1. epoch AUC'leri 0.62–0.70; dondurulmuş probların iç AUC'si ~0.88 (D-035, aynı fold). C3, "fine-tuning kötüleştiriyor" diye yazardı; oysa bu, baş katmanı yarım eğitilmiş bir modelin sonucu olurdu. cnn10_scratch'in 1. epoch AUC'si 0.27 → RQ2 anlamsızlaşırdı.
+  - **Isınma kusuru [FACT, kod].** v1'de ısınma toplam adımın %10'uydu. Kalibrasyonun 1. epoch'u ısınmanın ortasındaydı (LR 1e-5). 1 epoch'luk gerçek eğitimde ise ısınma 10 adımda biterdi. Kalibrasyonun ölçtüğü model, eğitilecek modelle aynı değildi.
+  - **1-SE kuralı [FROM PAPER: Breiman ve ark. 1984; Hastie, Tibshirani & Friedman 2009, §7.10]:** gürültülü bir ölçütte en iyi noktayı kovalamak yerine, ondan istatistiksel olarak ayırt edilemeyen en tutumlu (en kısa) eğitimi seçer. SE [FROM PAPER: Hanley & McNeil 1982] 10 sağlıklı katılımcıyla 0.04–0.08; epoch'tan epoch'a AUC oynaması 0.03–0.04 (scratch'te 0.15). Yani argmax büyük ölçüde gürültü seçerdi.
+  - **D-027'nin gerekçesinin düzeltilmesi [INFERENCE]:** "doğrulama AUC'si kestirmeyi ödüllendirir" endişesi kayıp için de aynen geçerli. İkisi de aynı doğrulama kümesinde etiketle uyumu ölçüyor. Koruma metrikten değil, şunlardan geliyor: (a) iç doğrulamanın gün-ayrık olması; (b) kol başına tek bir sayı; (c) fold başına seçim olmaması; (d) sonradan T1 / C2. Bu D-042 tasarımında gözden kaçmıştı.
+- **ALTERNATİFLER:**
+  - v1'i olduğu gibi koşmak (protokole bağlılık): soruyu cevaplamaz (yukarıda).
+  - AUC MA argmax (31 / 13 / 11 / 19 / 14 epoch): gürültüyü kovalar, ~2–3 kat süre.
+  - Önceden sabit bir epoch (ör. 10, bütün kollar): basit ama keyfi; PANNs ve SSL kollarının farklı eğrilerini yok sayar.
+  - Kaybı sıcaklık / kesişim düzeltmesinden sonra ölçmek: doğru yönde ama daha karmaşık; sonuçta sıralamaya yaklaşır.
+  - Düzenlileştirme ya da LP-FT [FROM PAPER: Kumar ve ark. 2022]: aşırı güveni azaltabilir. Ama yeni ayar boyutları ve yeni kalibrasyon gerektirir. AUC şu an bozulmuyor; ihtiyaç gösterilmedi.
+- **RİSK:**
+  - **Çatallanan yollar.** Kural, eğriler görüldükten sonra seçildi. Azaltma: dış test hiç görülmedi; aday kuralların seçimleri burada yazılı; kural dış eğitimden önce sabit.
+  - İç doğrulama 56 katılımcı / 10 sağlıklı ve tek bir ayrım → epoch seçimi belirsiz.
+  - wavlm_base_plus E = 1, çünkü eğrisi düz (0.67 → 0.73). Yalnız 1 / 15 fold'da kullanılıyor.
+  - Aşırı güvenli logit'ler katılımcı skorunda uç değer üretebilir. T1 (Firth) tanımı değişmez; ŝ dağılımı raporda betimlenir.
+  - Bütçe v2 ile ≈ 4–5 T4 saati [INFERENCE] (cnn10 ~20 dk, scratch ~25 dk, ssl ~2 sa, CNN14 ~1–1.5 sa dahil). D-042 sınırının altında.
+- **BİLİMSEL SONUÇ:** Faz 3 amaçlanan soruyu sorabilir hâle gelir. Sapma etiketlidir ve v1'in sonucu (CAL-001) olumsuz bir bulgu olarak korunur: sınıf-dengeli kayıp, bu tasarımda epoch seçimi için uygun bir ölçüt değil.
+- **UYGULAMA:**
+  - `finetune.py`: `select_epochs`, `hanley_se`, `make_scheduler(steps_per_epoch, warmup_epochs)`, `nonfinite_state`, `select` alt komutu; protokol v2, ÖNERİLDİ.
+  - `diagnose_nonfinite.py` (DIAG-001).
+  - `smoke_test_finetune.py`: T4 fp16 değerlendirmeyi de sınar.
+  - `tests/test_phase3.py` F13–F14; notebook 25 Bölüm 1b.
+
