@@ -1,0 +1,517 @@
+{
+ "exp": "SMK-002",
+ "env": {
+  "torch": "2.11.0+cu130",
+  "device": "cuda",
+  "random_init_test": false,
+  "gpu": "Tesla T4"
+ },
+ "protocol": {
+  "version": "Faz 3 protokolü v1 (D-042)",
+  "status": "ÖNERİLDİ",
+  "splits": "splits_day (gün-gruplu, 3 tekrar × 5 fold)",
+  "fine_tune": "uçtan uca (WavLM özellik kodlayıcısı donuk)",
+  "epoch_rule": "kalibrasyon: iç doğrulama kaybı, 3'lü hareketli ort. min"
+ },
+ "common": {
+  "batch": 16,
+  "lr_head": 0.001,
+  "weight_decay": 0.0001,
+  "head_hidden": 256,
+  "head_dropout": 0.3,
+  "grad_clip": 1.0,
+  "eval_batch": 16,
+  "smooth": 3,
+  "base_seed": 3000
+ },
+ "results": [
+  {
+   "arm": "cnn10",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      16,
+      128000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      16
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.2258,
+      0.2067
+     ],
+     "val_loss": [
+      0.3771,
+      0.3455
+     ],
+     "skipped_steps": [
+      0,
+      0
+     ],
+     "body_params_changed": "28/30",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 62.1
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 0.65,
+     "s_per_step_incl_val8": 0.1,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 0.2,
+     "est_fold_min_at_max_epochs": 8.2,
+     "max_epochs": 40,
+     "micro_batch": 16
+    }
+   },
+   "n_params": 6435344,
+   "n_trainable": 5351888,
+   "status": "PASS"
+  },
+  {
+   "arm": "cnn10_scratch",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      16,
+      128000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      16
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.2151,
+      0.2149
+     ],
+     "val_loss": [
+      0.3807,
+      0.5417
+     ],
+     "skipped_steps": [
+      0,
+      0
+     ],
+     "body_params_changed": "28/30",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 62.1
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 0.66,
+     "s_per_step_incl_val8": 0.1,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 0.2,
+     "est_fold_min_at_max_epochs": 8.1,
+     "max_epochs": 40,
+     "micro_batch": 16
+    }
+   },
+   "n_params": 6435344,
+   "n_trainable": 5351888,
+   "status": "PASS"
+  },
+  {
+   "arm": "beats",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      16,
+      64000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      16
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.249,
+      0.2063
+     ],
+     "val_loss": [
+      0.3805,
+      0.3568
+     ],
+     "skipped_steps": [
+      0,
+      0
+     ],
+     "body_params_changed": "240/240",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 1086.4
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 4.25,
+     "s_per_step_incl_val8": 0.35,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 0.69,
+     "est_fold_min_at_max_epochs": 14.6,
+     "max_epochs": 20,
+     "micro_batch": 16
+    }
+   },
+   "n_params": 90510461,
+   "n_trainable": 90510461,
+   "status": "PASS"
+  },
+  {
+   "arm": "wavlm_base_plus",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      16,
+      64000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      16
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.2503,
+      0.2196
+     ],
+     "val_loss": [
+      0.3673,
+      0.3025
+     ],
+     "skipped_steps": [
+      0,
+      0
+     ],
+     "body_params_changed": "239/240",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 1084.8
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 5.55,
+     "s_per_step_incl_val8": 0.425,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 0.84,
+     "est_fold_min_at_max_epochs": 17.8,
+     "max_epochs": 20,
+     "micro_batch": 16
+    }
+   },
+   "n_params": 94580605,
+   "n_trainable": 90380157,
+   "status": "PASS"
+  },
+  {
+   "arm": "wavlm_large",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      8,
+      64000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      8
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.2471,
+      0.2117
+     ],
+     "val_loss": [
+      0.2997,
+      0.3039
+     ],
+     "skipped_steps": [
+      0,
+      0
+     ],
+     "body_params_changed": "465/468",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 3738.7
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 11.71,
+     "s_per_step_incl_val8": 1.175,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 2.33,
+     "est_fold_min_at_max_epochs": 49.0,
+     "max_epochs": 20,
+     "micro_batch": 8
+    }
+   },
+   "n_params": 315717849,
+   "n_trainable": 311511257,
+   "status": "PASS"
+  },
+  {
+   "arm": "cnn14",
+   "checks": {
+    "T1_split": {
+     "status": "PASS",
+     "mode": "cv",
+     "repeat": 0,
+     "fold": 0,
+     "n_train_participants": 272,
+     "n_eval_participants": 70,
+     "n_train_recordings": 1904,
+     "n_eval_recordings": 489,
+     "train_recordings_asthma_healthy": [
+      1582,
+      322
+     ],
+     "eval_recordings_asthma_healthy": [
+      398,
+      91
+     ],
+     "eval_participants_asthma_healthy": [
+      57,
+      13
+     ],
+     "pos_weight": 0.2035,
+     "n_days_train": 53,
+     "n_days_eval": 13
+    },
+    "T2_forward": {
+     "status": "PASS",
+     "wav": [
+      16,
+      128000
+     ],
+     "n_short": 4,
+     "logit_shape": [
+      16
+     ],
+     "device": "cuda:0"
+    },
+    "T3_train": {
+     "status": "PASS",
+     "train_loss": [
+      0.2534,
+      0.2027
+     ],
+     "val_loss": [
+      0.3959,
+      0.3078
+     ],
+     "skipped_steps": [
+      0,
+      1
+     ],
+     "body_params_changed": "40/42",
+     "head_params_changed": "6/6"
+    },
+    "T4_eval": {
+     "status": "PASS",
+     "windows_per_recording_mean": 4.625
+    },
+    "T5_resume": {
+     "status": "PASS",
+     "max_abs_diff": 0.0,
+     "checkpoint_mb": 966.9
+    },
+    "T6_budget": {
+     "status": "PASS",
+     "gpu_peak_gb": 6.91,
+     "s_per_step_incl_val8": 0.15,
+     "steps_per_epoch_full": 119,
+     "est_epoch_min": 0.3,
+     "est_fold_min_at_max_epochs": 12.3,
+     "max_epochs": 40,
+     "micro_batch": 16
+    }
+   },
+   "n_params": 82365968,
+   "n_trainable": 81282512,
+   "status": "PASS"
+  }
+ ],
+ "code_sha256": "59656ceeff2fa46b",
+ "date": "2026-10-11"
+}
