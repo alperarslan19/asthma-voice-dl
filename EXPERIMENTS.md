@@ -635,6 +635,7 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 | Alan | Değer |
 |---|---|
 | DURUM | Kod ve sentetik testler hazır (F1, F11); **gerçek veride ÇALIŞTIRILMADI** |
+| 1. deneme (2026-10-11, Colab) | **Durdu (split kontrolü):** sklearn 1.6.1'in `StratifiedGroupKFold(shuffle=True)`'u gerçek gün yapısında çok dengesiz fold'lar üretti (test fold'larında 1–24 sağlıklı; bir iç doğrulamada 0) ve kontrol split'i yazmadan durdu. Yerelde 1.9.1 dengeliydi → sürüme bağlı. Yerelde 1.6.1 ile birebir yeniden üretildi. Düzeltme: sklearn'den bağımsız, belirlenimci gruplu atama (`grouped_folds`; büyük günler önce, sınıf doluluğunu dengeleyen fold). Gerçek bağlam yapısında test fold'larında 11–13 sağlıklı, iç doğrulamalarda 9–11; iki sklearn sürümünde de aynı dosyalar. Kontrol sıkılaştırıldı (sağlıklı sayısı beklenenden en çok max(1.5, %50) sapabilir). Hiçbir prob çalışmamıştı |
 | Tasarım | D-041, D-042; `docs/PHASE3_DESIGN.md` 5.1 (okuma kuralı sonuçlardan önce) |
 | Ne | EXP-016'nın aynı probu `splits_day` (3 tekrar × 5 fold) üzerinde; D-035 fold başına seçim; ŝ_DG ile T1 |
 | Kod / notebook | `make_splits.py --group-by-day`, `run_probes.py --exp EXP-016DG`, `evaluate_phase3.py frozen-dg`; `notebooks/24_phase3_prep.ipynb` (CPU) |
