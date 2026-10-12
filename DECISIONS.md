@@ -1024,3 +1024,23 @@ DURUM: **KABUL** (2026-10-11, 22. tur; `finetune.PHASE3` "KABUL" yapan PR'ın bi
   - Diğer kolların kalibrasyon eğrileri fp16 değerlendirmeyle ölçüldü; değerler sonluydu ve fark ihmal edilebilir [INFERENCE] → yeniden koşulmaz.
   - **İzlenecek:** CNN14'ün son bloğundaki çok büyük aktivasyonlar, bu kayıtlarda uç logit'lere yol açabilir (T1'de uç ŝ) ve eğitimde fp16 taşmasıyla atlanan adımları artırabilir. Her epoch'ta sonlu durum kontrolü var (bozulursa durur). Atlanan adım sayısı `fold.json`'da raporlanır.
 
+## D-044 — Faz 3 kapanışı ve yol haritası
+DURUM: **ÖNERİLDİ** (2026-10-12, 24. tur) · EXP-030 sonuçlarından sonra · Ayrıntı: `docs/PHASE3_CONCLUSION.md`
+- **KARAR (önerilen):**
+  1. Faz 3 kapanır. Bu veriyle yeni model / tarif araması yapılmaz.
+  2. **Aşama A (öncelik):** birleşik proje raporu ve ana mesajın yazımı ("kayıt bağlamı başarıyı nasıl şişirir"); veri ekibine geri bildirim ve G3 sorusu.
+  3. **Aşama B:** bağlamı dengeli ya da katılımcı içi yeni veri talebi. Mevcut hat dış doğrulama için hazır.
+  4. **Aşama C (isteğe bağlı):** hasta içi klinik değişken sorusu; önce fizibilite, ayrı tasarım belgesiyle.
+- **NEDEN:**
+  - C3 üç kolda belirsiz, ΔE1 ayırt edilemiyor. Belirsizlik veri boyutundan (57 sağlıklı) ve bağlam-etiket iç içeliğinden geliyor; model aramasıyla azalmaz [INFERENCE].
+  - Bağlam referansı (0.94) her ses modelinden yüksek.
+  - Fine-tune'da bağlama kayma işaretleri (C2, sabah / öğleden sonra) ve aşırı güven (O1).
+- **ALTERNATİFLER:**
+  - Faz 3'ü genişletmek (LP-FT, augmentation, daha çok tekrar): pahalı; sonucu değiştirme olasılığı düşük.
+  - Doğrudan yeni soruya (Aşama C) geçmek: mevcut bulgu yazıya dökülmeden kaybolabilir.
+- **RİSK:**
+  - Ana mesaj "olumsuz / uyarıcı" türde; yayın hedefi buna göre seçilmeli.
+  - Aşama B veri ekibine bağlı, zamanı belirsiz.
+- **BİLİMSEL SONUÇ:** Projenin savunulabilir çıktısı bir sınıflandırıcı değil, bu tür verilerde başarının nasıl yanlış okunabileceğini gösteren, sınırları belli bir bulgu ve yeniden kullanılabilir bir değerlendirme hattıdır.
+- **UYGULAMA:** `docs/PHASE3_CONCLUSION.md`; onaydan sonra Aşama A için rapor iskeleti.
+
