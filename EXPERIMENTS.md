@@ -694,6 +694,20 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 
 ---
 
+## EXP-031 — Makale reposunun denetimi (post hoc, betimsel)
+| Alan | Değer |
+|---|---|
+| DURUM | **Tamamlandı** (2026-10-12; kullanıcı isteği: "ne yaptıklarını ayrıntılı analiz edelim") |
+| Tür | Post hoc, betimsel; hipotez testi ya da karar kapısı değil. Repodaki kod çalıştırılmadı, yalnız okundu |
+| A — Görev 1 yeniden üretimi | Aynı kod ayarları + repo özellikleri: en iyi AUC 0.64–0.72 (makale Tablo 4: 0.66–0.77, Tablo 2: 0.65–0.74). Birebir çıkmıyor. En iyi model, 12 temel modelin medyanından +0.04 / +0.09 |
+| B — Bağlam (onların özellikleri) | Yalnız tarih 0.886 / 0.851 (katılımcı / gün-gruplu CV); tarih + yaş 0.917 / 0.894. 7 ses füzyonu LR 0.791 / 0.754, SVM 0.758 / 0.708, RF 0.737 / 0.721. T1 (bağlam tarih + yaş, **saat yok**) gün-gruplu: OR/SD ≈ 2.0, CV3 p 0.006–0.029 |
+| C — Veri hizalama | 20250704 temizlenmiş klinik dosyada klinik blok kimlikle hizasız (spirometri 283 / 284 başka kimlikte; 46 sağlıklıda astımlı spirometrisi). Etiket / yaş / cinsiyet doğru. Tez dosyaları, 18–24 Temmuz dosyaları ve makalenin özellik tablosu bizim `clinical_data.csv` ile uyumlu. **Bizim analizlerimiz etkilenmiyor** |
+| Astım içi (onların raporları, doğru hizalı) | Cinsiyet AUC 0.92–0.96; GINA / AKT / semptom / ilaç medyan 0.50–0.56; FEV1% / FVC% / FEV1/FVC R² < 0; yaş R² ≤ 0.05 |
+| Diğer | Tablo 3 özgüllükleri aritmetik olarak imkânsız; GINA 47 / 237 = `GINA_class_new`; ses dosyaları 342 (283 / 59), makale 344; SFT tarihi = kayıt tarihi (astımlı 277 / 284), sağlıklıda SFT kaydı yok |
+| Belge / kod | `docs/PAPER_REPO_AUDIT.md`; `scripts/paper_repo_audit/`; `reports/paper_repo_audit/` (yalnız toplu) |
+
+---
+
 ## Planlanan deneyler (ID'ler başlarken verilecek)
 
 **Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**

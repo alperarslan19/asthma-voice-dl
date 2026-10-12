@@ -1044,3 +1044,15 @@ DURUM: **ÖNERİLDİ** (2026-10-12, 24. tur) · EXP-030 sonuçlarından sonra ·
 - **BİLİMSEL SONUÇ:** Projenin savunulabilir çıktısı bir sınıflandırıcı değil, bu tür verilerde başarının nasıl yanlış okunabileceğini gösteren, sınırları belli bir bulgu ve yeniden kullanılabilir bir değerlendirme hattıdır.
 - **UYGULAMA:** `docs/PHASE3_CONCLUSION.md`; onaydan sonra Aşama A için rapor iskeleti.
 
+## D-045 — Makale reposu denetiminin sonuçları: veri ekibine bildirim ve Aşama C notu
+DURUM: **ÖNERİLDİ** (2026-10-12, 25. tur) · EXP-031 sonrası · Ayrıntı: `docs/PAPER_REPO_AUDIT.md` · post hoc
+- **KARAR (önerilen):**
+  1. Veri ekibine yazılı bildirim: (a) 20250704 temizlenmiş klinik dosyada klinik blok kimlikle hizasız; (b) `GINA_class_new` türetme kuralı; (c) 344 / 60 vs 342 / 59; (d) sağlıklılarda SFT ve SFT–kayıt sırası, bronkodilatör; (e) makale tablolarını üreten özellik sürümü ve kod.
+  2. EXP-031 bulguları Aşama A raporuna "dış hat kontrolü" olarak girer (onların özellikleriyle: tarih tek başına sesten iyi; gün gruplaması AUC'yi düşürüyor; seçim iyimserliği).
+  3. Aşama C için not: 44 MFCC özelliğiyle astım içi klinik hedeflerin önseli düşük (doğru hizalı sonuçlar şansta). Aşama C açılırsa yalnız derin temsillerle, tek ve önceden yazılı bir hedefle (ör. FEV1%), cinsiyet pozitif kontrolüyle.
+  4. Proje verisi değişmez: etiket, yaş, tarih ve klinik değişkenler için kaynak `clinical_data.csv` olarak kalır.
+- **NEDEN:** Hizalama sorunu, o dosyayı kullanan her analizi geçersiz kılar ve veri ekibinin başka çalışmalarını etkileyebilir. Bizim kaynağımız üç bağımsız kaynakla uyumlu [FACT].
+- **ALTERNATİFLER:** Yalnız bizim raporda belirtmek (veri ekibi habersiz kalır); makale yazarlarıyla doğrudan iletişim (veri ekibi üzerinden daha uygun).
+- **RİSK:** Hatalı olan dosyanın 20250704 dosyası olduğu güçlü çıkarım ama kesin değil; bildirim "doğrulama isteği" diliyle yazılmalı.
+- **BİLİMSEL SONUÇ:** Makalenin Görev 1 bulgusu kendi özellikleriyle de bağlamdan ayrılamıyor; astım içi klinik ilişki bu özelliklerle yok.
+- **UYGULAMA:** Bildirim metni (Alper onayıyla); Aşama A rapor iskeletine bölüm.
