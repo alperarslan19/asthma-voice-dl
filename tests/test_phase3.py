@@ -24,6 +24,7 @@ Bu testlerin geçmesi modellerin gerçek ağırlıklarla doğru eğitileceğini 
     F13 D-043 epoch kuralı (iç doğrulama AUC'si, 3'lü hareketli ort., 1-SE; Hanley–McNeil SE) ve ısınmanın toplam epoch'tan
         bağımsızlığı (1 epoch'luk eğitim = 20 epoch'luk kalibrasyonun ilk epoch'u); eğitim epoch'u eğrilerden hesaplanır
     F14 sonlu olmayan parametre / tampon yakalanır ve adıyla raporlanır; teşhis betiği (DIAG-001) CPU'da çalışır
+    F15 evaluate_phase3.py finetune (E1, T1, C3, C2, RQ2, O1), doğrusu bilinen sentetik tahminlerle; eksik fold reddedilir
     F12 --ckpt-root (Colab yerel disk): latest.pt yalnız orada, Drive klasöründe hiç yok; kesinti + devam aynı tahmini veriyor;
         yerel checkpoint kaybolursa (makine değişti) fold epoch 0'dan yeniden başlıyor ve yine aynı tahmini veriyor
 """
@@ -409,6 +410,74 @@ def test_g1_known_truth(work: Path) -> None:
           flush=True)
 
 
+def test_eval_finetune(work: Path) -> None:
+    """F15: evaluate_phase3.py finetune, doğrusu bilinen sentetik tahminlerle. Bağlam (gün) etiketle güçlü ilişkili.
+    FT cnn10 / ssl: bağlamın ötesinde güçlü katılımcı sinyali; dondurulmuş eşler zayıf → C3 pozitif beklenir.
+    cnn10_scratch: yalnız gürültü → T1 anlamsız, RQ2 cnn10 lehine. cnn14 FT = dondurulmuş eşle aynı bilgi → C3 pozitif değil."""
+    import run_probes as RP
+    root = work / "f15"
+    root.mkdir()
+    fx = build_day_fingerprint_fixture(root, seed=7)
+    run(REPO / "scripts/make_splits.py", "--context", fx["ctx"], "--recording-map", root / "rm.csv", "--out-dir", root / "sd",
+        "--report-dir", root / "sr", "--n-repeats", "3", "--group-by-day")
+    C = pd.read_csv(fx["ctx"]).set_index("participant_id")
+    rng = np.random.default_rng(11)
+    sig = pd.Series(rng.normal(0, 1, len(C)), index=C.index) + 1.6 * (C.label - C.label.mean())   # bağlamdan bağımsız sinyal
+    weak = 0.25 * sig + rng.normal(0, 1, len(C))
+    ctx_sha = RP.sha256_short(fx["ctx"])
+    sel_rows = []
+    for r in range(3):
+        S = pd.read_csv(root / "sd" / f"outer_r{r}.csv")
+        ssha = RP.sha256_short(root / "sd" / f"outer_r{r}.csv")
+        te = S[S.role == "test"].set_index("participant_id").outer_fold
+        for arm, base in [("cnn10", weak), ("cnn14", weak), ("beats", weak)]:          # dondurulmuş EXP-016DG ara sonuçları
+            d = root / "probe" / "partial"
+            d.mkdir(parents=True, exist_ok=True)
+            rows = [{"participant_id": p, "task": t, "fold": int(te[p]), "arm": arm, "repeat": r,
+                     "prob": float(1 / (1 + np.exp(-(base[p] + rng.normal(0, 0.3)))))} for p in te.index for t in range(1, 8)]
+            pd.DataFrame(rows).to_csv(d / f"{arm}_r{r}_test.csv", index=False)
+            (d / f"{arm}_r{r}.json").write_text(json.dumps({"split_sha256": ssha, "context_sha256": ctx_sha}))
+        for k in range(5):
+            sel_rows.append({"repeat": r, "fold": k, "selected": "beats"})
+            ids = te[te == k].index
+            for arm, base, bb in [("cnn10", sig, "cnn10"), ("ssl", sig, "beats"), ("cnn10_scratch", None, "cnn10_scratch"),
+                                  ("cnn14", weak, "cnn14")]:
+                wd = root / "ft" / arm / f"r{r}_k{k}"
+                wd.mkdir(parents=True)
+                P = [{"row": i, "n_windows": 3, "participant_id": p, "slot": sl, "label": int(C.label[p]), "arm": arm,
+                      "backbone_arm": bb, "repeat": r, "fold": k,
+                      "logit": float((2.0 * base[p] if base is not None else 0.0) + rng.normal(0, 0.5 if base is not None else 1.0))}
+                     for i, (p, sl) in enumerate((p, sl) for p in ids for sl in range(1, 8))]
+                pd.DataFrame(P).to_csv(wd / "preds.csv", index=False)
+                (wd / "fold.json").write_text(json.dumps({"arm": arm, "backbone_arm": bb, "repeat": r, "fold": k, "epochs": 7,
+                                                          "final_train_loss": 0.1, "skipped_steps": 0, "total_s": 10.0,
+                                                          "eval_amp": False,
+                                                          "sig": {"splits": {f"outer_r{r}.csv": ssha}, "context": ctx_sha}}))
+    pd.DataFrame(sel_rows).to_csv(root / "sel.csv", index=False)
+    run(REPO / "scripts/evaluate_phase3.py", "finetune", "--ft-root", root / "ft", "--probe-dir", root / "probe", "--selection", root / "sel.csv",
+        "--splits-dir", root / "sd", "--context", fx["ctx"], "--report-dir", root / "rep", "--out-dir", root / "out",
+        "--frozen-backbones", "cnn10,cnn14,beats", "--n-boot", "200", "--n-boot-c3", "200", "--n-perms", "200", "--n-jobs", "2")
+    R = json.loads((root / "rep" / "EXP-030_finetune.json").read_text())
+    A = R["arms"]
+    assert A["cnn10"]["t1"]["p_lrt"] < 1e-3 and A["cnn10"]["t1"]["or_sd"] > 1, A["cnn10"]["t1"]
+    assert A["cnn10_scratch"]["t1"]["p_lrt"] > 0.01, A["cnn10_scratch"]["t1"]
+    assert A["cnn10"]["c3"]["verdict"] == "pozitif" and A["ssl"]["c3"]["verdict"] == "pozitif", (A["cnn10"]["c3"], A["ssl"]["c3"])
+    assert A["cnn14"]["c3"]["verdict"] != "pozitif" or A["cnn14"]["c3"]["ci"][0] < 1, A["cnn14"]["c3"]
+    assert "c3" not in A["cnn10_scratch"] and R["rq2"]["mean"] > 0.1 and R["rq2"]["nb_p"] < 0.05, R["rq2"]
+    assert A["ssl"]["backbones_used"] == {"beats": 15}
+    md = (root / "rep" / "EXP-030_finetune.md").read_text()
+    assert "## C3" in md and "## O1" in md and not any(str(p) in md for p in C.index)
+    # bütünlük: eksik fold reddedilir
+    (root / "ft" / "cnn14" / "r2_k4" / "fold.json").unlink()
+    r = run(REPO / "scripts/evaluate_phase3.py", "finetune", "--ft-root", root / "ft", "--probe-dir", root / "probe", "--selection",
+            root / "sel.csv", "--splits-dir", root / "sd", "--context", fx["ctx"], "--report-dir", root / "rep2",
+            "--frozen-backbones", "cnn10,cnn14,beats", "--n-boot", "50", "--n-boot-c3", "50", "--n-perms", "50", ok=False)
+    assert r.returncode != 0 and "fold bitmemiş" in r.stderr, r.stderr[-500:]
+    print(f"  F15 geçti (FT değerlendirmesi: güçlü kol T1 p {A['cnn10']['t1']['p_lrt']:.1e}, C3 {A['cnn10']['c3']['verdict']}; "
+          f"gürültü kolu p {A['cnn10_scratch']['t1']['p_lrt']:.2f}; RQ2 Δ {R['rq2']['mean']:+.2f}; cnn14 C3 {A['cnn14']['c3']['verdict']}; "
+          "eksik fold reddedildi)", flush=True)
+
+
 def main() -> None:
     work = Path(tempfile.mkdtemp(prefix="test_phase3_"))
     try:
@@ -425,7 +494,8 @@ def main() -> None:
         test_learnable(fx)
         test_smk002(fx, work)
         test_g1_known_truth(work)
-        print("Tüm Faz 3 kontrolleri geçti (F1–F14). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
+        test_eval_finetune(work)
+        print("Tüm Faz 3 kontrolleri geçti (F1–F15). Not: sentetik veri ve küçük rastgele modeller; gerçek eğitim SMK-002 ister.")
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

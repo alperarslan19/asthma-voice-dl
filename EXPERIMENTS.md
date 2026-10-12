@@ -681,7 +681,12 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EXP-030 — Uçtan uca fine-tuning (Faz 3)
 | Alan | Değer |
 |---|---|
-| DURUM | D-042 + D-043 KABUL; kalibrasyon yapıldı (CAL-001; CNN14 yeniden kalibre edilecek); DIAG-001 = H2 → değerlendirme fp32. Dış fold eğitimi başlayabilir. Kod ve testler F1–F14; harness S14–S15 |
+| DURUM | **Eğitim tamamlandı** (2026-10-11, T4; 4 kol × 15 fold; `reports/phase3/finetune_runs/`). **Değerlendirme (notebook 26) bekliyor** — sonuçlar Drive'daki `preds.csv`'lerde, henüz okunmadı |
+| CNN14 kalibrasyonu (fp32 değerlendirme) | v2 → 9 epoch (AUC MA en yüksek 0.77 @ e31, SE 0.072; e9'da 0.70); v1 kayıp kuralı → 1. Val kaybı 0.26 → 1.5–1.8, eğitim kaybı 0.25 → 0.02: diğer kollarla aynı örüntü |
+| Eğitim özeti (epoch · son eğitim kaybı ort ± SD · atlanan adım toplamı · süre) | cnn10 7 · 0.172 ± 0.010 · 11 · 23 dk; cnn10_scratch 9 · 0.221 ± 0.009 · 11 · 29 dk; cnn14 9 · 0.102 ± 0.010 · 38 · 55 dk; ssl (beats 12, wavlm_large 2, wavlm_base_plus 1 fold) 1–9 · 0.055 ± 0.050 · 14 · 150 dk. Toplam ≈ 4.3 T4 saati (kalibrasyon hariç) |
+| Gözlem (eğitim kaybı) | Sabit tahminci ≈ 0.23. cnn10_scratch 9 epoch'ta yalnız 0.22'ye indi → sıfırdan model eğitim verisini bile zar zor öğrendi (RQ2 yorumunda önemli). SSL / beats 0.03–0.05 → eğitim verisini neredeyse ezberledi. Eğitim kaybı tek başına aşırı uyumu göstermez; test tarafı O1 ve E1'de |
+| Mühendislik notu | ssl kolunda GPU bellek tepesi aynı oturumda fold'dan fold'a ~0.8 GB arttı (3.9 → 13.9 GB): kanca kaynaklı referans döngüleri [INFERENCE]. Sonuçları etkilemez; `gc.collect()` eklendi |
+| Değerlendirme | `evaluate_phase3.py finetune` (E1, T1, C3, C2, RQ2 — PHASE3_DESIGN 5.2) + **O1 aşırı uyum / kalibrasyon (betimsel, post hoc: kullanıcı sorusu)**; testler F15, harness S16; notebook 26 (CPU) |
 | Kollar | cnn10, cnn14, ssl (D-035 fold başına), cnn10_scratch |
 | Değerlendirme | E1, T1, C3 (keşifsel), C2, RQ2 — `docs/PHASE3_DESIGN.md` 5.2 |
 | Kod / notebook | `scripts/finetune.py`; `notebooks/25_phase3_finetune.ipynb` Bölüm 2 |

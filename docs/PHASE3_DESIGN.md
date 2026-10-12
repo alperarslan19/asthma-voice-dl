@@ -89,6 +89,9 @@
 - **C2 (bağlam kullanımı):** ŝ_FT için etiket-içi permütasyon kısmi testi (EVAL-016 S10) ve L5 hasta-içi PM katsayısı. Aynı lensler ŝ_dondurulmuş için de raporlanır.
 - **RQ2 (ön-eğitim):** cnn10 − cnn10_scratch, fold düzeyinde eşleştirilmiş ΔAUC (Nadeau–Bengio) ve iki kolun T1'i.
 - **Sunum:** E1 artışı tek başına başarı sayılmaz (C3). Bütün kollar ve olumsuz sonuçlar raporlanır.
+- **Eklenen betimsel okumalar (post hoc, 2026-10-12; karar kuralı yok):**
+  - **O1 aşırı uyum / kalibrasyon:** test kalibrasyon eğimi (y ~ ŝ; < 1 aşırı güven), ortalama |ŝ|, son eğitim kaybı. Kullanıcının aşırı uyum sorusu üzerine.
+  - **ΔE1 FT − dondurulmuş:** fold-eşli, Nadeau–Bengio. E1'i dondurulmuş eşle yan yana okumak için; C3'ün yerine geçmez.
 
 ## 6. Kayıt, kurtarma, kapılar
 

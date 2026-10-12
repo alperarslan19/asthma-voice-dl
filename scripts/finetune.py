@@ -49,6 +49,7 @@ SIZINTI KONTROLLERİ (assert)
 from __future__ import annotations
 
 import argparse
+import gc
 import hashlib
 import json
 import math
@@ -604,8 +605,9 @@ def cmd_train(args) -> None:
                 atomic_torch_save({"model": trainable_state(m), "epoch": E, "seed": seed}, wd / "final_trainable.pt")
             (ckd / "latest.pt").unlink(missing_ok=True)
             print(f"{args.arm} r{r} k{k}: bitti ({time.time() - t0:.0f} s)", flush=True)
-            del m
-            if args.device.startswith("cuda"):
+            del m, res, P
+            gc.collect()                                # kanca kaynaklı referans döngüleri: fold'dan fold'a GPU belleği
+            if args.device.startswith("cuda"):          # birikiyordu (EXP-030: ssl tepe 3.9 → 13.9 GB) [INFERENCE]
                 torch.cuda.empty_cache()
 
 
