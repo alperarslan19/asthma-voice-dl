@@ -1,0 +1,227 @@
+{
+  "exp": "EXP-032",
+  "step": "0a",
+  "params": {
+    "SR": 32000,
+    "WIN_S": 0.025,
+    "HOP_S": 0.01,
+    "DIGITAL_SILENCE_DB": -100.0,
+    "SILENCE_DB": 35.0,
+    "SNR_GATE_DB": 20.0,
+    "FLOOR_MARGIN_DB": 10.0,
+    "EDGE_S": 0.05,
+    "GUARD_S": 0.15,
+    "ROOMTONE_MARGIN_DB": 3.0,
+    "VOICING_R": 0.45,
+    "F0_RANGE": [
+      60.0,
+      400.0
+    ],
+    "MIN_RUN_S": {
+      "A1": 0.06,
+      "A2": 0.1
+    },
+    "MIN_TOTAL_S": {
+      "A1": 2.0,
+      "A2": 3.0
+    },
+    "TRACK_S": 10.0,
+    "XFADE_S": 0.01,
+    "NFFT_B": 2048,
+    "HOP_B": 320,
+    "LOW_FRAC_B": 0.1,
+    "SEED": 0,
+    "GATE": {
+      "sex_auc_max": 0.6,
+      "sex_auc_over_context": 0.05,
+      "a1_b_median_abs_db": 3.0,
+      "inclusion_gap_pp": 10.0,
+      "listen_speech_frac": {
+        "A1": 0.1,
+        "A2": 0.2,
+        "B": 0.1
+      }
+    },
+    "BAND_CENTERS_HZ": [
+      125.0,
+      157.5,
+      198.4,
+      250.0,
+      315.0,
+      396.9,
+      500.0,
+      630.0,
+      793.7,
+      1000.0,
+      1259.9,
+      1587.4,
+      2000.0,
+      2519.8,
+      3174.8,
+      4000.0,
+      5039.7,
+      6349.6,
+      8000.0
+    ]
+  },
+  "n_recordings": 2393,
+  "n_participants": 342,
+  "label_counts": {
+    "astım": 283,
+    "sağlıklı": 59
+  },
+  "versions": {
+    "python": "3.13.16",
+    "numpy": "2.1.3",
+    "scipy": "1.16.3",
+    "pandas": "2.2.3"
+  },
+  "seconds": 771.9,
+  "gain_check": {
+    "median_abs_diff_db": 0.0,
+    "max_abs_diff_db": 3.552713678800501e-15
+  },
+  "recordings": {
+    "snr_db": "medyan 33.35 [p10 16.56, p90 42.88]",
+    "floor_db": "medyan -47.17 [p10 -56.61, p90 -32.27]",
+    "active_frac": "medyan 0.71 [p10 0.52, p90 0.99]",
+    "n_low_snr_no_bg": 375,
+    "n_with_digital_silence": 85,
+    "A1_s_per_rec": "medyan 0.00 [p10 0.00, p90 0.69]",
+    "A2_s_per_rec": "medyan 0.00 [p10 0.00, p90 1.20]"
+  },
+  "median_s_by_slot": {
+    "1": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    },
+    "2": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    },
+    "3": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    },
+    "4": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    },
+    "5": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    },
+    "6": {
+      "A1_s": 0.0,
+      "A2_s": 0.24
+    },
+    "7": {
+      "A1_s": 0.0,
+      "A2_s": 0.0
+    }
+  },
+  "inclusion": {
+    "A1": {
+      "sağlıklı": {
+        "n": 59,
+        "dahil": 4,
+        "oran": 0.068,
+        "toplam_s": "medyan 0.38 [p10 0.00, p90 1.71]"
+      },
+      "astım": {
+        "n": 283,
+        "dahil": 73,
+        "oran": 0.258,
+        "toplam_s": "medyan 0.86 [p10 0.00, p90 4.32]"
+      },
+      "astım-erken": {
+        "n": 98,
+        "dahil": 23,
+        "oran": 0.235,
+        "toplam_s": "medyan 1.03 [p10 0.00, p90 2.86]"
+      },
+      "astım-geç": {
+        "n": 185,
+        "dahil": 50,
+        "oran": 0.27,
+        "toplam_s": "medyan 0.72 [p10 0.00, p90 4.68]"
+      },
+      "gap_pp": 19.0,
+      "gap_flag": true
+    },
+    "A2": {
+      "sağlıklı": {
+        "n": 59,
+        "dahil": 10,
+        "oran": 0.169,
+        "toplam_s": "medyan 0.92 [p10 0.00, p90 4.16]"
+      },
+      "astım": {
+        "n": 283,
+        "dahil": 95,
+        "oran": 0.336,
+        "toplam_s": "medyan 1.48 [p10 0.10, p90 7.60]"
+      },
+      "astım-erken": {
+        "n": 98,
+        "dahil": 35,
+        "oran": 0.357,
+        "toplam_s": "medyan 1.97 [p10 0.00, p90 6.21]"
+      },
+      "astım-geç": {
+        "n": 185,
+        "dahil": 60,
+        "oran": 0.324,
+        "toplam_s": "medyan 1.24 [p10 0.10, p90 8.45]"
+      },
+      "gap_pp": 16.7,
+      "gap_flag": true
+    },
+    "B": {
+      "sağlıklı": {
+        "n": 59,
+        "dahil": 58,
+        "oran": 0.983,
+        "toplam_s": "—"
+      },
+      "astım": {
+        "n": 283,
+        "dahil": 283,
+        "oran": 1.0,
+        "toplam_s": "—"
+      },
+      "astım-erken": {
+        "n": 98,
+        "dahil": 98,
+        "oran": 1.0,
+        "toplam_s": "—"
+      },
+      "astım-geç": {
+        "n": 185,
+        "dahil": 185,
+        "oran": 1.0,
+        "toplam_s": "—"
+      },
+      "gap_pp": 1.7,
+      "gap_flag": false
+    }
+  },
+  "B_n_valid_recordings": "medyan 6.00 [p10 5.00, p90 7.00]",
+  "consistency_A1_B": {
+    "n": 77,
+    "median_abs_db_per_participant": "medyan 4.36 [p10 1.46, p90 9.95]",
+    "overall_median_db": 4.363271663350277,
+    "pass": false
+  },
+  "listening": {
+    "n_participants": 30,
+    "n_files": 90,
+    "dir": "listening/"
+  },
+  "outputs_sha256": {
+    "intervals.csv": "c239b0198845b62b",
+    "rec_stats.csv": "603b733d1266ee80",
+    "features.csv": "1cc0e107ec758bbd",
+    "tracks_32k.f32": "59cb0ab59e2cc22a"
+  }
+}
