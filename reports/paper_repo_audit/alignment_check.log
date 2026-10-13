@@ -1,0 +1,21 @@
+satır: OURS 348, K0704 348, MASTER katılımcı 342, TEZ 284
+[K0704 vs OURS] aynı kimlikte etiket eşit 1.000 | yaş eşit 0.980 | cinsiyet eşit 0.986
+[MASTER vs OURS] eşleşen 342 | etiket eşit 1.000
+[K0704 spirometri üçlüsü] dolu 284: aynı kimlikte 1, BAŞKA kimlikte 283, OURS'ta yok 0
+   başka kimliğe gidenlerin OURS'taki sahibi (1=astım): {1: 283} | K0704'te düştüğü satırın etiketi: {0: 46, 1: 237}
+   sağlıklı: spirometri dolu K0704 46/64 | OURS 0/64 ; astım basamağı dolu K0704 54 | OURS 0
+   astım: spirometri dolu K0704 238/284 | OURS 284/284 ; astım basamağı dolu K0704 229 | OURS 283
+   basamak ikisi de dolu 228: aynı kimlikte eşit 0.325 (rastgele eşleşme beklentisi Σp² = 0.368)
+[TEZ vs OURS] age          n=284 eşit 1.000
+[TEZ vs OURS] fev1perc     n=284 eşit 0.993
+[TEZ vs OURS] fvcperc      n=284 eşit 0.993
+[TEZ vs OURS] fev1fvcperc  n=284 eşit 1.000
+[TEZ vs OURS] asthmastep   n=283 eşit 1.000
+[TEZ vs OURS] cinsiyet eşit 1.000
+makale (astım): FVC% 86.0, FEV1% 78.15, FEV1/FVC 75.89, IgE 52.95, Eos% 2.20
+   FVC(Yüzde)           OURS medyan 86.00 | K0704 medyan 86.00
+   FEV1(Yüzde)          OURS medyan 78.15 | K0704 medyan 76.40
+   FEV1/FVC (Yüzde)     OURS medyan 75.89 | K0704 medyan 74.67
+   Total Ig E Sonuç:    OURS medyan 52.95 | K0704 medyan 51.80
+   Eozinofil (%):       OURS medyan 2.20 | K0704 medyan 2.20
+cinsiyet oranı (satır = 0 sağlıklı / 1 astım): {'erkek': {0: 0.356, 1: 0.306}, 'kadın': {0: 0.644, 1: 0.694}}
