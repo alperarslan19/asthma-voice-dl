@@ -711,7 +711,8 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EXP-032 — Arka plan (ortam sesi) Adım 0: çıkarma, kalite kapısı, bilgi testi
 | Alan | Değer |
 |---|---|
-| DURUM | **Hazır, çalıştırılmadı** (2026-10-13); 0a–0b → kör dinleme → D-046 KABUL → 0c |
+| DURUM | **0a–0b tamamlandı (2026-10-13), kapılar KALDI; 0c çalıştırılmadı** (iptal önerildi, D-046 notu) |
+| **Sonuç 0a–0b (OLUMSUZ)** | Kayıtların konuşma oranı medyan 0.71 (p90 0.99); 375 / 2393 kayıt SNR ≤ 20 dB. Kayıt başına A1 / A2 medyan 0 s. Dahil olan: A1 77 / 342 (sağlıklı 4 / 59), A2 105 / 342 (sağlıklı 10 / 59) → gruplar arası 17–19 puan dengesizlik. Cinsiyet sızıntısı (gün-gruplu AUC): A1 0.62–0.67, A2 0.69–0.78, B 0.81–0.93 (konuşma pozitif kontrolü 0.91; bağlam 0.44) → üç türde de kapı KALDI. A1–B tutarlılık medyan 4.4 dB (KALDI). Kör dinleme (Alper, gayriresmî): bazılarında insan sesi, çoğunda nefes, azında saf arka plan. Okuma [INFERENCE]: bu protokolde (10 s'de 10 tekrar) temiz arka plan yok; duraklamalar nefes ve konuşma kuyruklarıyla dolu. Yan gözlem [HYPOTHESIS]: sessizlik miktarı gruplara göre farklı (A1 toplam medyan sağlıklı 0.38 s, astım 0.7–1.0 s) — duraklama / nefes örüntüsü kendi başına bir fark olabilir |
 | Soru | 0a arka plan çıkarılabiliyor mu (envanter); 0b gerçekten arka plan mı (cinsiyet sızıntısı, A1–B tutarlılığı, kör dinleme); 0c arka plan tek başına etiketi / dönemi ayırıyor mu |
 | Türler | A1 oda tonu (birincil), A2 tüm sessizlik (nefes dahil), B durağan spektrum + sentez; model görünümünde, katılımcı başına 7 kayıttan |
 | Özellik / değerlendirme | ltas_abs, ltas_shape (1/3 oktav, 125 Hz–8 kHz), MFCC-44; gün-gruplu CV (splits_day 3 × 5), iç CV ile C, dengeli LR; havuz AUC + bootstrap GA |
