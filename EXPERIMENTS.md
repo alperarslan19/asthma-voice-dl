@@ -722,6 +722,20 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 
 ---
 
+## EXP-033 — Kendi sesim + veri setinden arka planlar → modellerin skoru (keşifsel gösterim)
+| Alan | Değer |
+|---|---|
+| DURUM | **Hazır, çalıştırılmadı** (2026-10-13); notebook 28 (GPU) |
+| Tür | Keşifsel / betimsel; istatistiksel çıkarım YOK (Alper'in isteği: tek tek gözle görmek). Tek konuşmacı |
+| Girdi | Alper'in 7 kaydı (`data_derived/alper_mix_v1/my_voices/`) × (orijinal + Alper'in kör dinlemede seçtiği 13 arka plan; EXP-032 izleri, seviye korunmuş) = 98 ses |
+| Karıştırma | Kodla: ses önbellek zincirinde tepe −1 dBFS'e ölçeklenir, bağışçının model görünümündeki arka planı 0 dB eklenir (konuşma / arka plan oranı korunur), sonra veri setiyle aynı önbellek zinciri |
+| Modeller | MFCC-44 + LR; dondurulmuş CNN10, CNN14, BEATs, WavLM Base+, WavLM Large + LR; fine-tune CNN10, CNN14, BEATs (D-043 epoch sayısı) |
+| Ezberleme önlemi | Bütün modeller 13 bağışçı ve onların kayıt günlerindeki herkes çıkarılarak yeniden eğitilir |
+| Okuma | Mutlak skor değil, orijinale göre logit kayması ve bunun bağışçı grubuyla (astım / sağlıklı) ilişkisi. B türü 0b'de konuşma spektrumu taşıdı → B kaymaları "ortam" diye okunmaz |
+| Kod / notebook | `scripts/my_voice_demo.py`; `tests/test_my_voice.py`; `notebooks/28_my_voice_backgrounds.ipynb` |
+
+---
+
 ## Planlanan deneyler (ID'ler başlarken verilecek)
 
 **Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**
