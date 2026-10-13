@@ -708,6 +708,19 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 
 ---
 
+## EXP-032 — Arka plan (ortam sesi) Adım 0: çıkarma, kalite kapısı, bilgi testi
+| Alan | Değer |
+|---|---|
+| DURUM | **Hazır, çalıştırılmadı** (2026-10-13); 0a–0b → kör dinleme → D-046 KABUL → 0c |
+| Soru | 0a arka plan çıkarılabiliyor mu (envanter); 0b gerçekten arka plan mı (cinsiyet sızıntısı, A1–B tutarlılığı, kör dinleme); 0c arka plan tek başına etiketi / dönemi ayırıyor mu |
+| Türler | A1 oda tonu (birincil), A2 tüm sessizlik (nefes dahil), B durağan spektrum + sentez; model görünümünde, katılımcı başına 7 kayıttan |
+| Özellik / değerlendirme | ltas_abs, ltas_shape (1/3 oktav, 125 Hz–8 kHz), MFCC-44; gün-gruplu CV (splits_day 3 × 5), iç CV ile C, dengeli LR; havuz AUC + bootstrap GA |
+| Birincil (0c) | A1 \| ltas_abs → astım / sağlıklı; GA alt sınırı > 0.5 → bilgi var; AUC ≥ 0.70 → güçlü |
+| Tasarım sırasında olumsuz sonuç | B için frekans başına kantil tahmini sentetik testte %60 doluluğunda +3–5 dB sapma (bırakıldı); yerine en sessiz kareler (≤ 0.5 dB) |
+| Kod / notebook | `scripts/background_extract.py`; `tests/test_background.py`; `notebooks/27_background_step0.ipynb`; `docs/BACKGROUND_DESIGN.md`; D-046 |
+
+---
+
 ## Planlanan deneyler (ID'ler başlarken verilecek)
 
 **Ana proje (D-012 merdiveni; D-028 ile değişmeden sürüyor):**

@@ -1056,3 +1056,16 @@ DURUM: **ÖNERİLDİ** (2026-10-12, 25. tur) · EXP-031 sonrası · Ayrıntı: `
 - **RİSK:** Hatalı olan dosyanın 20250704 dosyası olduğu güçlü çıkarım ama kesin değil; bildirim "doğrulama isteği" diliyle yazılmalı.
 - **BİLİMSEL SONUÇ:** Makalenin Görev 1 bulgusu kendi özellikleriyle de bağlamdan ayrılamıyor; astım içi klinik ilişki bu özelliklerle yok.
 - **UYGULAMA:** Bildirim metni (Alper onayıyla); Aşama A rapor iskeletine bölüm.
+
+## D-046 — Arka plan (ortam sesi) Adım 0: çıkarma, kalite kapısı, bilgi testi
+DURUM: **ÖNERİLDİ** (2026-10-13, 26. tur) · Yaklaşım Alper tarafından onaylandı; parametreler 0b'den sonra dondurulunca KABUL · Ayrıntı: `docs/BACKGROUND_DESIGN.md` · EXP-032
+- **KARAR (önerilen):**
+  1. Kayıtlardan üç tür arka plan çıkarılır, hepsi model görünümünde: A1 oda tonu (birincil), A2 tüm sessizlik (nefes dahil), B en sessiz karelerden durağan spektrum + sentez. Katılımcı düzeyinde 7 kayıttan birleştirilir; SNR ≤ 20 dB kayıtlar kullanılmaz.
+  2. 0b kalite kapıları (G-a envanter dengesi, G-b cinsiyetle konuşma sızıntısı, G-c A1–B tutarlılığı, G-d kör dinleme) astım etiketine bakmadan değerlendirilir; parametreler burada ayarlanıp dondurulur.
+  3. 0c bilgi testi yalnız bu karar KABUL olduktan sonra: birincil A1 | ltas_abs → astım / sağlıklı, gün-gruplu CV; okuma kuralı önceden yazılı (GA alt sınırı > 0.5 → bilgi var; AUC ≥ 0.70 → güçlü).
+  4. Arka plan değiştirme testi (Alper'in kayıtları; Adım 1–5) ayrı tasarım belgesiyle, 0c sonucundan sonra açılır.
+- **NEDEN:** Kenar sessizliği çok az (medyan 0.05 s); arka plan iç duraklamalardan ve kişi düzeyinde toplanmalı. Elle karıştırma ölçeklenmez ve etiketlere kör değil. "Arka planda bilgi var mı?" sorusu, "model kullanıyor mu?" sorusundan önce ve ucuza cevaplanabilir.
+- **ALTERNATİFLER:** Sinir ağıyla ayırma (artıkta konuşma sızıntısı riski; yedek); frekans başına kantil (minimum istatistik) — sentetik testte konuşma doluluğu yüksekken +3–5 dB sapma verdi, bırakıldı (olumsuz sonuç, tasarım belgesinde); doğrudan değiştirme testine geçmek.
+- **RİSK:** Nefes hastalık sinyali olabilir (A2; A1 dışlar). Düşük SNR / kısa sessizlik kaynaklı seçim yanlılığı (G-a). Yankı ve kanal yolu bu adımda sınanmaz.
+- **BİLİMSEL SONUÇ:** G2 (ortam) yolunun eklenen-arka-plan kısmı için ilk doğrudan ölçüm; değiştirme testinin yorum çerçevesi.
+- **UYGULAMA:** `scripts/background_extract.py`, `tests/test_background.py`, `notebooks/27_background_step0.ipynb` (CPU).
