@@ -1069,3 +1069,4 @@ DURUM: **ÖNERİLDİ** (2026-10-13, 26. tur) · Yaklaşım Alper tarafından ona
 - **RİSK:** Nefes hastalık sinyali olabilir (A2; A1 dışlar). Düşük SNR / kısa sessizlik kaynaklı seçim yanlılığı (G-a). Yankı ve kanal yolu bu adımda sınanmaz.
 - **BİLİMSEL SONUÇ:** G2 (ortam) yolunun eklenen-arka-plan kısmı için ilk doğrudan ölçüm; değiştirme testinin yorum çerçevesi.
 - **UYGULAMA:** `scripts/background_extract.py`, `tests/test_background.py`, `notebooks/27_background_step0.ipynb` (CPU).
+- **NOT (2026-10-13, 0a–0b sonrası):** Üç kalite kapısı (G-a, G-b, G-c) KALDI; Alper'in dinlemesi aynı yönde. **Öneri (ÖNERİLDİ, Alper onayı bekliyor):** 0c çalıştırılmaz (A1'de yalnız 4 sağlıklı; B konuşma taşıyor). Veri setinden bağışçı arka planıyla değiştirme testi bu veriyle yapılamaz. Alper'in kayıtları için daraltılmış soru: modellerin skoru kontrollü kayıt koşulu değişimine (SNR, oda, mesafe) duyarlı mı — yön değil, duyarlılık. Olumsuz sonuç EXP-032'de korunur.

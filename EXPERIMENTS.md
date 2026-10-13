@@ -711,13 +711,28 @@ K2 geçerlilik kuralı sağlandı (CV3 Wilson alt sınırı S1 0.015, S3 0.023).
 ## EXP-032 — Arka plan (ortam sesi) Adım 0: çıkarma, kalite kapısı, bilgi testi
 | Alan | Değer |
 |---|---|
-| DURUM | **Hazır, çalıştırılmadı** (2026-10-13); 0a–0b → kör dinleme → D-046 KABUL → 0c |
+| DURUM | **0a–0b tamamlandı (2026-10-13), kapılar KALDI; 0c çalıştırılmadı** (iptal önerildi, D-046 notu) |
+| **Sonuç 0a–0b (OLUMSUZ)** | Kayıtların konuşma oranı medyan 0.71 (p90 0.99); 375 / 2393 kayıt SNR ≤ 20 dB. Kayıt başına A1 / A2 medyan 0 s. Dahil olan: A1 77 / 342 (sağlıklı 4 / 59), A2 105 / 342 (sağlıklı 10 / 59) → gruplar arası 17–19 puan dengesizlik. Cinsiyet sızıntısı (gün-gruplu AUC): A1 0.62–0.67, A2 0.69–0.78, B 0.81–0.93 (konuşma pozitif kontrolü 0.91; bağlam 0.44) → üç türde de kapı KALDI. A1–B tutarlılık medyan 4.4 dB (KALDI). Kör dinleme (Alper, gayriresmî): bazılarında insan sesi, çoğunda nefes, azında saf arka plan. Okuma [INFERENCE]: bu protokolde (10 s'de 10 tekrar) temiz arka plan yok; duraklamalar nefes ve konuşma kuyruklarıyla dolu. Yan gözlem [HYPOTHESIS]: sessizlik miktarı gruplara göre farklı (A1 toplam medyan sağlıklı 0.38 s, astım 0.7–1.0 s) — duraklama / nefes örüntüsü kendi başına bir fark olabilir |
 | Soru | 0a arka plan çıkarılabiliyor mu (envanter); 0b gerçekten arka plan mı (cinsiyet sızıntısı, A1–B tutarlılığı, kör dinleme); 0c arka plan tek başına etiketi / dönemi ayırıyor mu |
 | Türler | A1 oda tonu (birincil), A2 tüm sessizlik (nefes dahil), B durağan spektrum + sentez; model görünümünde, katılımcı başına 7 kayıttan |
 | Özellik / değerlendirme | ltas_abs, ltas_shape (1/3 oktav, 125 Hz–8 kHz), MFCC-44; gün-gruplu CV (splits_day 3 × 5), iç CV ile C, dengeli LR; havuz AUC + bootstrap GA |
 | Birincil (0c) | A1 \| ltas_abs → astım / sağlıklı; GA alt sınırı > 0.5 → bilgi var; AUC ≥ 0.70 → güçlü |
 | Tasarım sırasında olumsuz sonuç | B için frekans başına kantil tahmini sentetik testte %60 doluluğunda +3–5 dB sapma (bırakıldı); yerine en sessiz kareler (≤ 0.5 dB) |
 | Kod / notebook | `scripts/background_extract.py`; `tests/test_background.py`; `notebooks/27_background_step0.ipynb`; `docs/BACKGROUND_DESIGN.md`; D-046 |
+
+---
+
+## EXP-033 — Kendi sesim + veri setinden arka planlar → modellerin skoru (keşifsel gösterim)
+| Alan | Değer |
+|---|---|
+| DURUM | **Hazır, çalıştırılmadı** (2026-10-13); notebook 28 (GPU) |
+| Tür | Keşifsel / betimsel; istatistiksel çıkarım YOK (Alper'in isteği: tek tek gözle görmek). Tek konuşmacı |
+| Girdi | Alper'in 7 kaydı (`data_derived/alper_mix_v1/my_voices/`) × (orijinal + Alper'in kör dinlemede seçtiği 13 arka plan; EXP-032 izleri, seviye korunmuş) = 98 ses |
+| Karıştırma | Kodla: ses önbellek zincirinde tepe −1 dBFS'e ölçeklenir, bağışçının model görünümündeki arka planı 0 dB eklenir (konuşma / arka plan oranı korunur), sonra veri setiyle aynı önbellek zinciri |
+| Modeller | MFCC-44 + LR; dondurulmuş CNN10, CNN14, BEATs, WavLM Base+, WavLM Large + LR; fine-tune CNN10, CNN14, BEATs (D-043 epoch sayısı) |
+| Ezberleme önlemi | Bütün modeller 13 bağışçı ve onların kayıt günlerindeki herkes çıkarılarak yeniden eğitilir |
+| Okuma | Mutlak skor değil, orijinale göre logit kayması ve bunun bağışçı grubuyla (astım / sağlıklı) ilişkisi. B türü 0b'de konuşma spektrumu taşıdı → B kaymaları "ortam" diye okunmaz |
+| Kod / notebook | `scripts/my_voice_demo.py`; `tests/test_my_voice.py`; `notebooks/28_my_voice_backgrounds.ipynb` |
 
 ---
 
